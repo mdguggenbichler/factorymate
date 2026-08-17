@@ -1,15 +1,9 @@
-import { getTranslations } from "next-intl/server"
+import { OverviewContent } from "@/components/overview/overview-content"
+import { serverApiFetch } from "@/lib/api-server"
+import type { StatusResponse } from "@/lib/api-types"
 
 export default async function OverviewPage() {
-  const t = await getTranslations("home")
+  const status = await serverApiFetch<StatusResponse>("/status")
 
-  return (
-    <div className="flex flex-1 flex-col gap-4 p-4 md:p-6">
-      <div className="flex flex-col gap-2">
-        <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
-        <p className="text-muted-foreground">{t("description")}</p>
-        <p className="text-sm text-muted-foreground">{t("status")}</p>
-      </div>
-    </div>
-  )
+  return <OverviewContent status={status} />
 }

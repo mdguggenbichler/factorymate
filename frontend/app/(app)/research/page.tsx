@@ -1,8 +1,9 @@
-import { getTranslations } from "next-intl/server"
-
-import { PagePlaceholder } from "@/components/page-placeholder"
+import { ResearchView } from "@/components/research/research-view"
+import { serverApiFetch } from "@/lib/api-server"
+import type { ResearchResponse } from "@/lib/api-types"
 
 export default async function ResearchPage() {
-  const t = await getTranslations("nav")
-  return <PagePlaceholder title={t("research")} />
+  const data = await serverApiFetch<ResearchResponse>("/research")
+
+  return <ResearchView trees={data.trees} />
 }

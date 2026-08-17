@@ -1,8 +1,9 @@
-import { getTranslations } from "next-intl/server"
-
-import { PagePlaceholder } from "@/components/page-placeholder"
+import { DronesTable } from "@/components/drones/drones-table"
+import { serverApiFetch } from "@/lib/api-server"
+import type { DronesResponse } from "@/lib/api-types"
 
 export default async function DronesPage() {
-  const t = await getTranslations("nav")
-  return <PagePlaceholder title={t("drones")} />
+  const data = await serverApiFetch<DronesResponse>("/drones")
+
+  return <DronesTable drones={data.drones} />
 }

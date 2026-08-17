@@ -1,8 +1,9 @@
-import { getTranslations } from "next-intl/server"
-
-import { PagePlaceholder } from "@/components/page-placeholder"
+import { DoggosTable } from "@/components/doggos/doggos-table"
+import { serverApiFetch } from "@/lib/api-server"
+import type { DoggosResponse } from "@/lib/api-types"
 
 export default async function DoggosPage() {
-  const t = await getTranslations("nav")
-  return <PagePlaceholder title={t("doggos")} />
+  const data = await serverApiFetch<DoggosResponse>("/doggos")
+
+  return <DoggosTable doggos={data.doggos} />
 }

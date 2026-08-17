@@ -1,8 +1,32 @@
-import { getTranslations } from "next-intl/server"
-
-import { PagePlaceholder } from "@/components/page-placeholder"
+import { ElevatorView } from "@/components/elevator/elevator-view"
+import { getCurrentUser } from "@/lib/auth-server"
+import { serverApiFetch } from "@/lib/api-server"
+import type {
+  ElevatorResponse,
+  ElevatorUnknownLogResponse,
+} from "@/lib/api-types"
 
 export default async function ElevatorPage() {
-  const t = await getTranslations("nav")
-  return <PagePlaceholder title={t("elevator")} />
+  const user = await getCurrentUser()
+  const elevator = await serverApiFetch<ElevatorResponse>("/elevator")
+
+  let unknownLog: ElevatorUnknownLogResponse["items"] = []
+  if (user?.role === "admin") {
+    try {
+      const logData = await serverApiFetch<ElevatorUnknownLogResponse>(
+        "/elevator/unknown-log"
+      )
+      unknownLog = logData.items
+    } catch {
+      unknownLog = []
+    }
+  }
+
+  return (
+    <ElevatorView
+      elevator={elevator}
+      unknownLog={unknownLog}
+      userRole={user?.role ?? "viewer"}
+    />
+  )
 }

@@ -4,13 +4,40 @@
     "loading": "Loading…",
     "save": "Save",
     "cancel": "Cancel",
+    "error": "Something went wrong. Please try again.",
     "comingSoonTitle": "Coming soon",
     "comingSoonDescription": "This page will be available in an upcoming milestone."
   },
+  "charts": {
+    "intervalLabel": "Select time range",
+    "interval7d": "Last 7 days",
+    "interval30d": "Last 30 days",
+    "interval90d": "Last 90 days",
+    "intervalAll": "All retained data",
+    "loading": "Loading chart data…",
+    "noData": "No data for the selected range."
+  },
   "home": {
     "title": "Overview",
-    "description": "At-a-glance server status from your Satisfactory save will appear here.",
-    "status": "Viewer pages are implemented in the next milestone."
+    "description": "At-a-glance status from your Satisfactory server.",
+    "serverStatus": "Server status",
+    "serverOnline": "Online",
+    "serverOffline": "Offline",
+    "playersOnline": "Players online",
+    "fuseTrips": "Power circuits",
+    "trippedCount": "{count, plural, one {# tripped} other {# tripped}}",
+    "allClear": "All clear",
+    "trippedCircuits": "Tripped circuits: {circuits}",
+    "latestMilestone": "Latest milestone",
+    "noMilestone": "No milestones unlocked yet",
+    "milestoneMeta": "Tier {tier} · Unlocked {date}",
+    "elevatorTitle": "Space Elevator",
+    "elevatorPhase": "Phase {phase}",
+    "elevatorPhaseUnknown": "Phase unknown",
+    "upgradeReady": "Upgrade ready",
+    "phaseProgress": "Phase progress",
+    "powerAlertTitle": "Fuse trips detected",
+    "powerAlertDescription": "One or more power circuits have tripped. Check the Power page for details."
   },
   "nav": {
     "overview": "Overview",
@@ -58,5 +85,205 @@
     "genericError": "Something went wrong. Please try again.",
     "roleAdmin": "Admin",
     "roleViewer": "Viewer"
+  },
+  "players": {
+    "title": "Players",
+    "description": "Full player roster and join/leave history.",
+    "rosterTitle": "Roster",
+    "empty": "No players recorded yet.",
+    "historyTitle": "Join / leave history",
+    "historyEmpty": "No session events recorded yet.",
+    "columns": {
+      "player": "Player",
+      "status": "Status",
+      "lastSeen": "Last seen"
+    },
+    "status": {
+      "online": "Online",
+      "offline": "Offline"
+    },
+    "event": {
+      "joined": "{name} joined",
+      "left": "{name} left",
+      "onlineCount": "{count, plural, one {# player online} other {# players online}}"
+    }
+  },
+  "power": {
+    "title": "Power",
+    "description": "Per-circuit power status, fuse events, and historical metrics.",
+    "circuitsTitle": "Circuits",
+    "empty": "No circuit data available.",
+    "chartTitle": "Historical metrics",
+    "circuitFilter": "Select circuit",
+    "circuitLabel": "Circuit {id}",
+    "historyTitle": "Fuse events",
+    "historyEmpty": "No fuse trip or restore events recorded.",
+    "fuseAlertTitle": "Fuse tripped",
+    "fuseAlertDescription": "Circuit(s) {circuits} currently have a tripped fuse.",
+    "columns": {
+      "circuit": "Circuit",
+      "status": "Status",
+      "production": "Production",
+      "consumed": "Consumed",
+      "capacity": "Capacity",
+      "battery": "Battery"
+    },
+    "status": {
+      "tripped": "Tripped",
+      "ok": "OK"
+    },
+    "event": {
+      "tripped": "Fuse tripped",
+      "restored": "Power restored"
+    },
+    "batteryDetail": "Δ {differential} · Empty {empty} · Full {full}"
+  },
+  "production": {
+    "title": "Production",
+    "description": "Overall item throughput and per-machine production detail.",
+    "tabs": {
+      "overall": "Overall",
+      "detailed": "Detailed"
+    },
+    "overallTitle": "Overall production",
+    "overallEmpty": "No production stats available.",
+    "detailedTitle": "Detailed production",
+    "detailedEmpty": "No factory machines recorded.",
+    "ingredients": "Ingredients",
+    "outputs": "Outputs",
+    "columns": {
+      "item": "Item",
+      "rate": "Rate",
+      "prodPercent": "Prod %",
+      "consPercent": "Cons %",
+      "current": "Current / max",
+      "building": "Building",
+      "recipe": "Recipe",
+      "speed": "Speed",
+      "status": "Status"
+    },
+    "currentValues": "Prod {prod}/{maxProd} · Cons {cons}/{maxCons}",
+    "status": {
+      "producing": "Producing",
+      "paused": "Paused",
+      "idle": "Idle",
+      "notConfigured": "Not configured"
+    }
+  },
+  "resourceSink": {
+    "title": "Resource Sink",
+    "description": "A.W.E.S.O.M.E. Sink coupon status and historical points.",
+    "chartTitle": "Historical trend",
+    "pointsToCoupon": "{points} points to next coupon",
+    "cards": {
+      "coupons": "Coupons",
+      "progress": "Progress to next coupon",
+      "totalPoints": "Total points"
+    }
+  },
+  "drones": {
+    "title": "Drones",
+    "description": "Drone flight status across your factory network.",
+    "tableTitle": "Active drones",
+    "empty": "No drones recorded.",
+    "notPaired": "Not paired",
+    "speedValue": "{current} / {max}",
+    "columns": {
+      "id": "Drone",
+      "home": "Home station",
+      "paired": "Paired station",
+      "destination": "Destination",
+      "mode": "Flying mode",
+      "speed": "Speed"
+    }
+  },
+  "doggos": {
+    "title": "Lizard Doggos",
+    "description": "What your lizard doggos are carrying right now.",
+    "tableTitle": "Doggo inventory",
+    "empty": "No lizard doggos found.",
+    "unnamed": "Unnamed doggo",
+    "emptyInventory": "Empty paws",
+    "columns": {
+      "name": "Name",
+      "inventory": "Inventory"
+    }
+  },
+  "vehicles": {
+    "title": "Vehicles",
+    "description": "Trains and wheeled vehicles across your factory.",
+    "tabs": {
+      "trains": "Trains",
+      "wheeled": "Wheeled vehicles"
+    },
+    "trainsTitle": "Trains",
+    "trainsEmpty": "No trains recorded.",
+    "wheeledTitle": "Wheeled vehicles",
+    "wheeledEmpty": "No wheeled vehicles recorded.",
+    "columns": {
+      "name": "Name",
+      "type": "Type",
+      "status": "Status",
+      "station": "Station",
+      "driver": "Driver",
+      "speed": "Speed",
+      "flags": "Flags"
+    },
+    "badges": {
+      "derailed": "Derailed",
+      "pendingDerail": "Pending derail",
+      "fuelEmpty": "Out of fuel",
+      "stuck": "Stuck",
+      "autopilot": "Autopilot",
+      "followingPath": "Following path"
+    }
+  },
+  "milestones": {
+    "title": "Milestones",
+    "description": "Schematics grouped by type and tech tier.",
+    "empty": "No schematics in this category.",
+    "tierGroup": "Tier {tier}",
+    "schematicCount": "{count, plural, one {# schematic} other {# schematics}}",
+    "recipes": "Recipes",
+    "tabs": {
+      "milestone": "Milestones",
+      "hardDrive": "Hard drives",
+      "alternate": "Alternates"
+    },
+    "status": {
+      "unlocked": "Unlocked",
+      "locked": "Locked",
+      "available": "Available"
+    }
+  },
+  "research": {
+    "title": "Research",
+    "description": "M.A.M. research trees and node costs.",
+    "empty": "No research data available.",
+    "nodeCount": "{count, plural, one {# node} other {# nodes}}",
+    "costItem": "{name} × {amount}",
+    "columns": {
+      "name": "Node",
+      "state": "State",
+      "tier": "Tier",
+      "cost": "Cost"
+    }
+  },
+  "elevator": {
+    "title": "Space Elevator",
+    "description": "Current phase progress and required items.",
+    "defaultName": "Space Elevator",
+    "phaseLabel": "Phase {phase}",
+    "phaseUnknown": "Phase unknown",
+    "upgradeReady": "Upgrade ready",
+    "overallProgress": "Overall phase progress",
+    "itemsTitle": "Required items",
+    "itemsEmpty": "No phase items recorded.",
+    "itemProgress": "{remaining} / {total} remaining · Need {amount}",
+    "unknownAlertTitle": "Unknown elevator phase detected",
+    "unknownAlertDescription": "{count, plural, one {# unresolved diagnostic entry requires admin attention.} other {# unresolved diagnostic entries require admin attention.}}",
+    "unknownDetectedAt": "Detected {date}",
+    "resolve": "Mark resolved",
+    "resolveSuccess": "Diagnostic entry marked as resolved."
   }
 }

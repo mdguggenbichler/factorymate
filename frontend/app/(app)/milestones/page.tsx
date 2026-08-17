@@ -1,8 +1,9 @@
-import { getTranslations } from "next-intl/server"
-
-import { PagePlaceholder } from "@/components/page-placeholder"
+import { MilestonesView } from "@/components/milestones/milestones-view"
+import { serverApiFetch } from "@/lib/api-server"
+import type { MilestonesResponse } from "@/lib/api-types"
 
 export default async function MilestonesPage() {
-  const t = await getTranslations("nav")
-  return <PagePlaceholder title={t("milestones")} />
+  const data = await serverApiFetch<MilestonesResponse>("/milestones")
+
+  return <MilestonesView groups={data.groups} />
 }
