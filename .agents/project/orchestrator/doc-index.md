@@ -14,7 +14,8 @@ Quick reference for orchestrator **DOC REFERENCE** blocks. Sub-agents read these
 | --- | --- | --- |
 | `spec` | `docs/factorymate-spec.md` | Full product spec |
 | `roadmap` | `docs/factorymate-roadmap.md` | Milestones M0–M14 |
-| `frm` | `docs/frm-docs/modules/ROOT/pages/json/Read/` | FRM endpoint adocs |
+| `frm` | `docs/frm-docs/modules/ROOT/pages/json/Read/` | FRM endpoint adocs (read-only vendored copy — see `docs/frm-docs-reference.md`) |
+| `frm-ref` | `docs/frm-docs-reference.md` | What `frm-docs/` is and how to refresh it |
 | `defaults` | `backend/data/message_defaults.json` | Seeded notification templates |
 
 Reference sections as `§N`, e.g. `spec §4.2`, `spec §7.1`.
@@ -36,6 +37,7 @@ Reference sections as `§N`, e.g. `spec §4.2`, `spec §7.1`.
 | `spec §6` | Auth + SQLite sessions |
 | `spec §7` | REST API table + pagination/date rules |
 | `spec §7.1` | Response JSON schemas |
+| `spec §7.2` | Mutating request bodies |
 | `spec §8` / `§8.1` | Frontend pages + shadcn mapping |
 | `spec §8.2` | Frontend i18n (next-intl, `messages/en.json`, no hardcoded UI strings) |
 | `spec §9` | Environment variables |
@@ -52,7 +54,7 @@ Reference sections as `§N`, e.g. `spec §4.2`, `spec §7.1`.
 | M5 | spec §5.4, §5.4.1, defaults |
 | M6 | spec §5.3, §3 `notification_log` |
 | M7 | spec §6 |
-| M8 | spec §7, §7.1 |
+| M8 | spec §7, §7.1, §7.2 |
 | M9 | spec §4.1 (slow poll) |
 | M10–M12 | spec §8, §8.1, **§8.2** |
 | M13 | spec §2.4, §9 |

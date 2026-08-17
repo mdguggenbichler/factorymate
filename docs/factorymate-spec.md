@@ -15,7 +15,7 @@ It replaces an earlier n8n-based polling workflow with a single self-contained G
 ### 1.1 Goals
 
 - Reliable, self-hosted polling of FRM with correct diff/edge-triggered event detection (no duplicate or missed notifications across restarts).
-- Rich, well-formatted Discord notifications (embeds with color, fields, footer) — not limited to plain text.
+- Rich, well-formatted Discord notifications (embeds with color, fields; footer/timestamp deferred — §10) — not limited to plain text.
 - A central place to configure **where** notifications go (Notification Targets) and **which** message types go **where** (assignment), decoupled from message formatting.
 - A templating system so operators get sensible default messages out of the box, but can edit the wording/format per message type without touching code.
 - A small dashboard, protected by login, that can be shared with all group members — not just the admin — covering player status, power status, production stats (produced vs. consumed per item, over time, plus per-machine detail), the AWESOME Sink, drones, Lizard Doggos, milestones, M.A.M. research, vehicles, and Space Elevator progress.
@@ -94,7 +94,7 @@ It replaces an earlier n8n-based polling workflow with a single self-contained G
 | Backend language | Go | Single static binary, easy Docker image, good HTTP + concurrency primitives for the poller loop |
 | Backend framework | net/http + **chi** router | Lightweight REST API — chi is the chosen router for v1 |
 | Database | SQLite (`modernc.org/sqlite`, pure Go, no CGO) | Sufficient for single-server scale; simplifies deployment (no separate DB container) |
-| Notification delivery | **Custom `Provider` interface**, no third-party notification library | Full control over Discord embed structure (title, description, color, fields, footer, timestamp, username/avatar override). Discord is the primary/only provider in v1; interface is designed so ntfy/Telegram/Slack providers can be added later without touching the dispatcher or templating system. |
+| Notification delivery | **Custom `Provider` interface**, no third-party notification library | Full control over Discord embed structure (title, description, color, fields; footer/timestamp deferred v1). Discord is the primary/only provider in v1; interface is designed so ntfy/Telegram/Slack providers can be added later without touching the dispatcher or templating system. |
 | Templating | Custom `{VarName}` substitution (plain + structured embed model) — see §5.4 | Two render paths: plain string, or structured embed object |
 | Frontend framework | Next.js (App Router) | |
 | Frontend i18n | **next-intl** | All UI strings via locale files — see §8.2; English only in v1 |
@@ -130,6 +130,7 @@ type DiscordEmbed struct {
     Description string
     Color       string // hex, e.g. "#57F287"
     Fields      []DiscordEmbedField
+    // Footer and timestamp are deferred for v1 (§10) — Discord provider may omit them
 }
 
 type DiscordEmbedField struct {
@@ -188,7 +189,7 @@ CREATE TABLE notification_targets (
     id INTEGER PRIMARY KEY,
     name TEXT NOT NULL,                 -- display name, e.g. "Main Discord Channel"
     provider_type TEXT NOT NULL,        -- 'discord' (v1), extensible later
-    config_json TEXT NOT NULL,          -- provider-specific config (webhook URL, username/avatar override, etc.)
+    config_json TEXT NOT NULL,          -- provider-specific config only (see §5.1) — NOT the outer provider_type wrapper
     enabled BOOLEAN NOT NULL DEFAULT 1,
     created_at TEXT NOT NULL
 );
@@ -203,7 +204,7 @@ CREATE TABLE message_types (
     category TEXT NOT NULL,             -- 'player' | 'power' | 'progression' | 'vehicle' | 'server'
     enabled BOOLEAN NOT NULL DEFAULT 1, -- admin on/off switch, independent of target assignment (see §5.3)
     default_template_json TEXT NOT NULL,-- built-in default (see §5.4)
-    variables_json TEXT NOT NULL        -- documented available template variables for this type
+    variables_json TEXT NOT NULL        -- JSON array of variable name strings, e.g. ["PlayerName","OnlineCount"] — for template editor chips (§5.2)
 );
 
 -- Per-message-type template override (if absent, default_template_json from message_types is used)
@@ -227,7 +228,7 @@ CREATE TABLE message_type_targets (
 CREATE TABLE notification_log (
     id INTEGER PRIMARY KEY,
     message_type_key TEXT NOT NULL,
-    target_id INTEGER NOT NULL,
+    target_id INTEGER NOT NULL,         -- intentionally no FK / ON DELETE CASCADE: audit history must survive target deletion; this value may reference a deleted notification_targets row (UI: §8.1; GET /api/notification-log LEFT JOIN: §7)
     rendered_preview TEXT NOT NULL,
     success BOOLEAN NOT NULL,
     error TEXT,
@@ -279,7 +280,7 @@ CREATE TABLE player_state (
     player_id TEXT PRIMARY KEY,         -- FRM Char_Player_C_... ID
     name TEXT,
     online BOOLEAN NOT NULL,
-    last_seen_at TEXT
+    last_seen_at TEXT                   -- set to poll timestamp on player_left (online true→false); unchanged while online; NULL until first leave
 );
 
 CREATE TABLE circuit_state (
@@ -305,7 +306,8 @@ CREATE TABLE schematic_state (
     locked BOOLEAN NOT NULL,
     tech_tier INTEGER,
     recipes_json TEXT,                  -- JSON array of FRM Recipes[] — for {RecipeNames}/{RecipeOptions} and Hard Drive UI
-    updated_at TEXT NOT NULL
+    purchased_at TEXT,                  -- set once when Purchased flips false→true; used for latestMilestone ordering (§7.1); NULL if never purchased
+    updated_at TEXT NOT NULL            -- updated every poll upsert (do not use for milestone recency)
 );
 
 CREATE TABLE elevator_state (
@@ -511,9 +513,25 @@ Two separate cadences: the **fast poll** drives notification/event detection (§
 |---|---|
 | `GET /getProdStats` | Produced/consumed rates per item — feeds both `prod_stats_state` (current snapshot, "Overall Prod" table) and `production_snapshots` (historical trend, appended each cycle) from the same call |
 | `GET /getResourceSink` | A.W.E.S.O.M.E. Sink coupon/points status → `resource_sink_state` (current) and `resource_sink_snapshots` (history, for the `/resource-sink` chart). FRM's own response includes a rolling `GraphPoints` window, but that's a fixed, non-interval-selectable view with no real historical depth — this project builds its own proper time series here rather than mirroring that limitation, same as it already does for production data. |
-| `GET /getFactory` | Every producer-type building (Assembler, Foundry, Smelter, Constructor, Manufacturer, Blender, Packager, Refinery, Converter, Encoder, Particle Accelerator) → `factory_machine_state`, "Detailed Prod" table. `getFactory` is a single aggregated endpoint covering all of these — not one call per building type. |
+| `GET /getFactory` | Every producer-type building (Assembler, Foundry, Smelter, Constructor, Manufacturer, Blender, Packager, Refinery, Converter, Encoder, Particle Accelerator) → `factory_machine_state`, "Detailed Prod" table. `getFactory` is a single aggregated endpoint covering all of these — not one call per building type. Derive `building_type` from `ClassName` using the mapping table below. |
 | `GET /getDrone` | All drones → `drone_state` |
 | `GET /getDoggo` | All Lizard Doggos → `doggo_state`, storing the `Inventory[]` array as-is — each item already has a display `Name` (e.g. "SAM"), so no separate "found SAM" flag or ClassName matching is needed |
+
+**`getFactory` `building_type` mapping:** `factory_machine_state.building_type` is derived from each machine's `ClassName`. FRM's per-type endpoints (`getAssembler`, `getFoundry`, `getSmelter`, `getConstructor`, `getManufacturer`, `getBlender`, `getPackager`, `getRefinery`, `getConverter`, `getEncoder`, `getParticle`) have **no separate `.adoc` files** in `docs/frm-docs` — they all xref to `getFactory.adoc`, whose example response contains only a Constructor. ClassNames below are only those that appear as a `"ClassName"` field in vendored docs; Mk2/Mk3 (and any other) variants are listed only when found. Do not invent missing ClassNames.
+
+| Building type | ClassName(s) | Source / notes |
+|---|---|---|
+| Constructor | `Build_ConstructorMk1_C` | `getFactory.adoc` example response. No Mk2/Mk3 ClassName in vendored docs. |
+| Refinery | `Build_OilRefinery_C` | `getPowerUsage.adoc` example (`ClassName` of a factory building). Not present in `getFactory.adoc`. No other refinery variants in vendored docs. |
+| Assembler | — | not found in docs, verify against a live `getFactory` response before implementing |
+| Foundry | — | not found in docs, verify against a live `getFactory` response before implementing |
+| Smelter | — | not found in docs, verify against a live `getFactory` response before implementing |
+| Manufacturer | — | not found in docs, verify against a live `getFactory` response before implementing |
+| Blender | — | not found in docs, verify against a live `getFactory` response before implementing |
+| Packager | — | not found in docs, verify against a live `getFactory` response before implementing |
+| Converter | — | not found in docs, verify against a live `getFactory` response before implementing |
+| Encoder | — | not found in docs, verify against a live `getFactory` response before implementing |
+| Particle Accelerator | — | not found in docs, verify against a live `getFactory` response before implementing |
 
 **FRM client notes (validated against `docs/frm-docs`):**
 
@@ -523,7 +541,7 @@ Two separate cadences: the **fast poll** drives notification/event detection (§
 - **`getProdStats` requires the [Production Stats mod](https://ficsit.app/mod/3tsvcG3A6gqKX1)** (Andre Aquila) on the Satisfactory server. Without it, production dashboard data will be empty.
 - **`getResourceSink`:** response is a JSON **array** (typically one element); use the first element. Alias endpoint `getExplorationSink` exists but FactoryMate uses `getResourceSink`.
 - **`getPower` vs `getPowerUsage`:** use `getPower` for circuit-level fuse detection and dashboard metrics; `getPowerUsage` is per-building detail and is not polled.
-- **JSON quirks:** `getVehicles.ID` may be string or integer in JSON; `getDrone` speed fields may be number or string in docs vs live responses — client must unmarshal flexibly (see roadmap M2).
+- **JSON quirks:** `getVehicles.ID` may be string or integer; `getVehicles.Status` is in the adoc field table but missing from the example — treat as optional string; `getVehicles.FollowingPath` is response-confirmed but missing from the adoc field table; `getDrone` speed fields may be number or string; `getResourceSink.GraphPoints` may use `Value` or `value`; `getFactory` `ingredients`/`production` `Amount` may be string or integer in JSON — flexible unmarshal in M2.
 
 Each slow-poll cycle also writes to `circuit_snapshots` (§3) for the `/power` chart — this does **not** require an additional FRM call; `circuit_state` is already kept current by the fast poll's `getPower` call (see the Fast poll table above), so the slow-poll job simply copies its current values into a new `circuit_snapshots` row each cycle. This keeps power's historical chart resolution at the slower cadence (sensible for a trend view) without duplicating the fuse-detection polling.
 
@@ -533,8 +551,31 @@ All requests target `http://{frm_host}:{frm_port}/{endpoint}`. A request timeout
 
 ### 4.1.1 FRM → DB field mapping (fast + slow poll)
 
+Poll upsert rules: `updated_at` on every successful upsert for state tables. Exception: `schematic_state.purchased_at` is set only on `Purchased` `false → true` and never cleared.
+
 | FRM endpoint | FRM field | DB table.column |
 |---|---|---|
+| `getPlayer` | `ID` | `player_state.player_id` |
+| `getPlayer` | `Name` | `player_state.name` |
+| `getPlayer` | `Online` | `player_state.online` |
+| `getPlayer` | (on leave) | `player_state.last_seen_at` ← poll timestamp when `Online` `true → false` |
+| `getPower` | `CircuitGroupID` | `circuit_state.circuit_id` |
+| `getPower` | `FuseTriggered` | `circuit_state.tripped` |
+| `getPower` | `PowerProduction` … `BatteryTimeFull` | matching `circuit_state.*` columns (see §3) |
+| `getSchematics` | `ID` | `schematic_state.schematic_id` |
+| `getSchematics` | `Name` | `schematic_state.name` |
+| `getSchematics` | `Type` | `schematic_state.type` |
+| `getSchematics` | `Purchased` / `Locked` / `TechTier` | `schematic_state.purchased` / `locked` / `tech_tier` |
+| `getSchematics` | `Recipes` | `schematic_state.recipes_json` |
+| `getSchematics` | (on `Purchased` false→true) | `schematic_state.purchased_at` ← poll timestamp |
+| `getSpaceElevator` | `ID` | `elevator_state.elevator_id` |
+| `getSpaceElevator` | `Name` | `elevator_state.name` |
+| `getSpaceElevator` | `UpgradeReady` | `elevator_state.upgrade_ready` |
+| `getSpaceElevator` | `CurrentPhase` | `elevator_state.current_phase_json` |
+| `getResearchTrees` | `Nodes[].ID` | `research_node_state.node_id` |
+| `getResearchTrees` | tree `Name` | `research_node_state.tree_name` |
+| `getResearchTrees` | node fields | `research_node_state.name`, `category`, `state`, `tech_tier` |
+| `getResearchTrees` | `Nodes[].Cost` | `research_node_state.cost_json` |
 | `getTrains` | `ID` | `train_state.train_id` |
 | `getTrains` | `Name` | `train_state.name` |
 | `getTrains` | `Derailed` | `train_state.derailed` |
@@ -546,27 +587,28 @@ All requests target `http://{frm_host}:{frm_port}/{endpoint}`. A request timeout
 | `getTrains` | `Path` | `train_state.path_status` |
 | `getVehicles` | `ID` (string or int) | `vehicle_state.vehicle_id` (TEXT) |
 | `getVehicles` | `VehicleType` | `vehicle_state.vehicle_type` and `vehicle_state.display_name` |
-| `getVehicles` | `Status` | `vehicle_state.status` |
+| `getVehicles` | `Status` | `vehicle_state.status` (optional in live JSON) |
 | `getVehicles` | `Driver` | `vehicle_state.driver` |
 | `getVehicles` | `AutoPilot` | `vehicle_state.autopilot` |
 | `getVehicles` | `FollowingPath` | `vehicle_state.following_path` |
 | `getVehicles` | `ForwardSpeed` | `vehicle_state.forward_speed` |
-| `getSchematics` | `Name` | `schematic_state.name` |
-| `getSchematics` | `Recipes` | `schematic_state.recipes_json` |
-| `getSpaceElevator` | `Name` | `elevator_state.name` |
-| `getSpaceElevator` | `CurrentPhase` | `elevator_state.current_phase_json` |
-| `getResearchTrees` | `Nodes[].Cost` | `research_node_state.cost_json` |
+| `getVehicles` | `Fuel[]` (sum `Amount`) | `vehicle_state.fuel_empty` derived; fuels `vehicle_out_of_fuel` (§4.2) |
+| `getProdStats` | all rate fields | `prod_stats_state.*` + append `production_snapshots` |
+| `getResourceSink` | coupon/points fields | `resource_sink_state.*` + append `resource_sink_snapshots` |
+| `getFactory` | machine + power fields | `factory_machine_state.*` (see §3) |
 | `getFactory` | `ingredients` / `production` | `factory_machine_state.ingredients_json` / `production_json` |
+| `getDrone` | all listed fields | `drone_state.*` (see §3) |
+| `getDoggo` | `ID`, `Name`, `Inventory` | `doggo_state.*` |
 
 ### 4.2 Diff / Event Detection Logic
 
-All detection is **edge-triggered** (fires only on state transitions, not on every poll where a condition remains true), mirroring the working logic from the prior n8n implementation. Detection and dispatch are decoupled: the poller always evaluates every transition below and updates state regardless of a message type's `enabled` flag (see §5.3) — a disabled type simply skips the render-and-send step. This matters because several of these transitions are edge-triggered against the *previous stored value* (e.g. `player_left` only fires if `player_joined` was previously observed as `true`); if detection paused while a type was disabled, re-enabling it later could misfire or miss the next transition.
+All detection is **edge-triggered** (fires only on state transitions, not on every poll where a condition remains true), mirroring the working logic from the prior n8n implementation. Detection and dispatch are decoupled: the poller always evaluates every transition below (except First Observation — no previous row to diff against, see below) and updates state regardless of a message type's `enabled` flag (see §5.3) — a disabled type simply skips the render-and-send step. This matters because several of these transitions are edge-triggered against the *previous stored value* (e.g. `player_left` only fires if `player_joined` was previously observed as `true`); if detection paused while a type was disabled, re-enabling it later could misfire or miss the next transition.
 
 | Message Type | Trigger Condition |
 |---|---|
 | `server_online` | Previous poll unreachable/offline → current poll reachable |
 | `server_offline` | Previous poll reachable → current poll unreachable (timeout or connection error on any polled endpoint) |
-| `player_joined` | Player's `Online` flag: `false`/unknown → `true` |
+| `player_joined` | Player's `Online` flag: `false` → `true` |
 | `player_left` | Player's `Online` flag: `true` → `false` |
 | `fuse_tripped` | Circuit's `FuseTriggered`: `false` → `true` |
 | `power_restored` | Circuit's `FuseTriggered`: `true` → `false` |
@@ -577,6 +619,12 @@ All detection is **edge-triggered** (fires only on state transitions, not on eve
 | `train_derailed` | Train's `Derailed`: `false` → `true` |
 | `vehicle_out_of_fuel` | Vehicle's total `Fuel[]` amount: `> 0` → `0` |
 | `vehicle_stuck` | `vehicle_state.stuck`: `false` → `true` (itself a debounced, heuristic-derived value — see note below, not a raw API field) |
+
+**First Observation:** When the poller has no previous state row for an entity (player, circuit, schematic, research node, train, vehicle, elevator), it inserts the baseline row with the entity's current values but does **not** evaluate or emit any of the transitions in the trigger table for that entity on that poll. There is no real previous value to diff against, so nothing fires. A missing row must not be treated as an implicit `false`/`off`/zero. This applies uniformly to every message type in the table — the intended first deploy is an already-progressed save, and treating "unknown" as `false` would fire a burst of `milestone_unlocked`, `research_unlocked`, `fuse_tripped`, and similar events for work that completed long before FactoryMate was installed.
+
+The same rule applies to `server_online`: `server_state.server_online` starts `NULL` (unset) at first boot; the first successful (reachable) poll sets it to `true` silently without firing `server_online`.
+
+`vehicle_stuck` needs no extra special-case under this rule: that trigger requires the derived `stuck` flag to hold across 3 consecutive polls before flipping `false → true`, so it cannot fire on a first observation regardless.
 
 **`research_unlocked` state uncertainty:** `getResearchTrees` documents `State` as "Purchase/Hidden of the Research Node," and the confirmed example only shows `"Purchased"`. Given the response also includes `UnhiddenBy` (nodes that reveal this one), there may be an intermediate "visible but not yet purchased" state not named in the documentation. The trigger is therefore written to fire on *any* transition into `"Purchased"` rather than specifically `"Hidden" → "Purchased"`, so it stays correct regardless of how many intermediate states actually exist — this should be spot-checked against a live response the same way `getPower`'s fields were, before shipping.
 
@@ -614,7 +662,7 @@ FactoryMate ships this table as a maintained data file (not hardcoded inline), m
 
 On unreachable state, only the `server_offline` transition is evaluated; player/power/schematic/elevator/research/train/vehicle state (i.e. every fast-poll table) is left untouched (not reset), so that when the server comes back, transitions are computed against the last known-good state rather than an empty one.
 
-**`server_state` updates:** On every fast poll, upsert `server_state` row `id=1`. Emit `server_online` when previous poll was unreachable and current is reachable; emit `server_offline` when previous was reachable and current is unreachable. **First successful poll** when `server_online` IS NULL: set `server_online = true` without emitting `server_online` (avoid a spurious notification on first boot).
+**`server_state` updates:** On every fast poll, upsert `server_state` row `id=1`. Emit `server_online` when previous poll was unreachable and current is reachable; emit `server_offline` when previous was reachable and current is unreachable. First successful poll when `server_online` IS NULL follows the First Observation rule above (set `true`, do not emit `server_online`).
 
 ### 4.2.1 Event variable population
 
@@ -661,16 +709,17 @@ A **Notification Target** is a named destination with a provider type and provid
 
 **v1 provider: Discord**
 
+`notification_targets.provider_type` = `"discord"`. `config_json` stores **only** the inner object below (not `provider_type`):
+
 ```json
 {
-  "provider_type": "discord",
-  "config": {
-    "webhook_url": "https://discord.com/api/webhooks/{id}/{token}",
-    "username_override": "F.I.C.S.I.T. Oracle",
-    "avatar_url_override": "https://.../avatar.png"
-  }
+  "webhook_url": "https://discord.com/api/webhooks/{id}/{token}",
+  "username_override": "F.I.C.S.I.T. Oracle",
+  "avatar_url_override": "https://.../avatar.png"
 }
 ```
+
+API request/response bodies for targets use `{ "name", "providerType", "config", "enabled" }` where `config` matches the shape above (§7.2).
 
 Targets can be created, edited, disabled (without deleting, to preserve message-type assignments), deleted, and **test-sent** (sends a sample notification using that target's config and a placeholder message, without needing a real trigger to fire). Deleting a target cascades to remove its `message_type_targets` assignments (`ON DELETE CASCADE`, see §3) — message types themselves and their templates are unaffected, they simply lose that one destination. The UI surfaces a confirmation showing how many message types are currently assigned to a target before deletion.
 
@@ -694,7 +743,7 @@ Fixed, seeded set of message types (not user-creatable in v1 — new event types
 | `vehicle_out_of_fuel` | Vehicle Out of Fuel | vehicle | `{VehicleType}`, `{VehicleName}` (same value as VehicleType in v1) |
 | `vehicle_stuck` | Vehicle Stuck | vehicle | `{VehicleType}`, `{VehicleName}` (same value as VehicleType in v1) |
 
-Each row's `variables_json` in the DB schema is the machine-readable source of truth the dashboard's template editor uses to show "insert variable" affordances (e.g. autocomplete chips) — this table is the human-readable equivalent.
+Each row's `variables_json` in the DB is a **JSON array of strings** matching the variable names in the table above, e.g. `["PlayerName","OnlineCount"]` for `player_joined`. Seeded from §5.2 at M1.
 
 ### 5.3 Enabling & Assignment: Message Type → Targets
 
@@ -742,7 +791,7 @@ Two render paths exist, selected automatically by the target's `provider_type` a
 
 **Defaults:** Every message type ships with built-in defaults in `backend/data/message_defaults.json` (canonical source) and is copied into `message_types.default_template_json` at seed time (M1). Shape: `{ "plain": "...", "embed": { "title": ..., "description": ..., "color": ..., "fields": [...] } }`. Seeded defaults are never mutated in place.
 
-**Overrides:** `message_templates.template_json` contains **only overridden keys** — e.g. `{"embed": {...}}` when only the embed variant is customized. An absent key falls back to `default_template_json` for that variant. `POST .../template/reset?variant=embed` removes only the `embed` key; deletes the entire row if both keys would be absent.
+**Overrides:** `message_templates.template_json` contains **only overridden keys** — e.g. `{"embed": {...}}` when only the embed variant is customized. An absent key falls back to `default_template_json` for that variant. `PUT /api/message-types/:key/template` (§7) accepts a partial body of the same shape (`{ "plain": "..." }`, `{ "embed": {...} }`, or both) and merges it into the existing override row (creating one if absent), so an admin can customize just the `embed` variant while leaving `plain` unset — matching the independent-override design here. `POST .../template/reset?variant=embed` removes only the `embed` key; deletes the entire row if both keys would be absent.
 
 **Optional variables:** When a variable value is empty (e.g. `{PhaseNumber}` when unknown), the renderer substitutes an empty string. Embed fields whose rendered `value` is empty are omitted from the Discord payload. Plain templates should phrase around optional variables (e.g. "Phase {PhaseNumber} complete" → "Phase  complete" if empty — prefer templates that work without optional vars, or omit the field in embed defaults).
 
@@ -816,7 +865,7 @@ All endpoints under `/api`, JSON in/out, session-cookie authenticated unless not
 | GET | `/api/research` | session | Current M.A.M. research tree state, grouped by tree/category |
 | GET | `/api/vehicles` | session | Current trains and wheeled vehicles, with derailed/fuel/stuck status |
 | GET | `/api/elevator` | session | Current elevator phase state |
-| GET | `/api/elevator/unknown-log` | admin | Unresolved (and recent resolved) `elevator_phase_unknown_log` entries |
+| GET | `/api/elevator/unknown-log` | admin | Unresolved entries plus resolved entries from the last 30 days (`resolved_at` within window), max 50 rows total |
 | POST | `/api/elevator/unknown-log/:id/resolve` | admin | Mark a diagnostic entry as resolved (after correcting the reference table) |
 | GET | `/api/notification-targets` | admin | List targets |
 | POST | `/api/notification-targets` | admin | Create target |
@@ -825,11 +874,11 @@ All endpoints under `/api`, JSON in/out, session-cookie authenticated unless not
 | POST | `/api/notification-targets/:id/test` | admin | Send a sample notification through this target |
 | GET | `/api/message-types` | admin | List message types with `enabled` state, current template (override or default), and assigned target IDs |
 | PUT | `/api/message-types/:key/enabled` | admin | Toggle a message type on/off |
-| PUT | `/api/message-types/:key/template` | admin | Save template override |
+| PUT | `/api/message-types/:key/template` | admin | Save template override. Request body only needs the variant(s) being updated — a partial `{ "plain": "..." }`, `{ "embed": {...} }`, or both. The backend merges provided keys into the existing `message_templates` override row (creating one if absent) rather than requiring a full replace of both variants; omitted variants are left unchanged. Matches independent plain/embed overrides in §5.4. |
 | POST | `/api/message-types/:key/template/reset?variant=plain\|embed\|all` | admin | Delete override for the given variant (or both), revert to default |
 | POST | `/api/message-types/:key/template/preview` | admin | Render given (unsaved) template against sample data, return rendered result for live preview |
 | PUT | `/api/message-types/:key/targets` | admin | Replace target assignment set for this message type |
-| GET | `/api/notification-log?type=&target=&limit=` | admin | Recent sent-notification audit log |
+| GET | `/api/notification-log?type=&target=&limit=&offset=` | admin | Recent sent-notification audit log (`notification_log`), paginated. Query with a LEFT JOIN on `notification_targets` (not INNER JOIN) so rows whose `target_id` no longer exists are still returned; `target_id` has no FK (§3). |
 | GET | `/api/settings` | admin | App settings (FRM host/port, poll intervals, retention) |
 | PUT | `/api/settings` | admin | Update app settings |
 | GET | `/api/users` | admin | List users |
@@ -837,9 +886,9 @@ All endpoints under `/api`, JSON in/out, session-cookie authenticated unless not
 | PUT | `/api/users/:id` | admin | Update user (role, password reset) |
 | DELETE | `/api/users/:id` | admin | Delete user |
 
-### 7.1 Response schemas (representative)
+### 7.1 Response schemas
 
-Implement handlers to match these shapes; M8 tests assert against them.
+JSON field names use **camelCase** in API responses; DB columns remain snake_case. M8 tests assert against the shapes below. Endpoints not listed here return objects that mirror §3 table columns (same fields, camelCase) — e.g. `GET /api/power` → `{ "circuits": [ { "circuitId", "tripped", "powerProduction", ... } ] }`.
 
 **`GET /api/status`**
 ```json
@@ -848,11 +897,12 @@ Implement handlers to match these shapes; M8 tests assert against them.
   "serverName": "GuggiRaid Factory",
   "onlinePlayerCount": 3,
   "trippedCircuits": [1],
-  "latestMilestone": { "name": "Oil Processing", "techTier": 5, "unlockedAt": null },
+  "latestMilestone": { "name": "Oil Processing", "techTier": 5, "unlockedAt": "2026-08-16T14:30:00Z" },
   "elevator": { "name": "Space Elevator", "phaseNumber": 2, "upgradeReady": false, "percentComplete": 45.2 }
 }
 ```
-`latestMilestone` is the most recently unlocked Milestone-type schematic (by `schematic_state.updated_at` where `purchased` flipped true), or `null`. `elevator.percentComplete` is derived from `current_phase_json` RemainingCost/TotalCost aggregates, or `null` if no phase data.
+- `latestMilestone`: row in `schematic_state` with `type = "Milestone"` and `purchased = true`, highest `purchased_at` (§3); `null` if none. `unlockedAt` = `purchased_at` ISO string.
+- `elevator.percentComplete`: `100 * (1 - sum(RemainingCost) / sum(TotalCost))` over items in `current_phase_json`; `null` if empty or sums are zero.
 
 **`GET /api/players`**
 ```json
@@ -910,6 +960,23 @@ Implement handlers to match these shapes; M8 tests assert against them.
 
 **Errors:** `400` validation, `401` unauthenticated, `403` forbidden, `404` not found, `500` internal. Error body: `{ "error": "message" }`.
 
+### 7.2 Request bodies (mutating endpoints)
+
+| Endpoint | Body |
+|---|---|
+| `POST /api/auth/setup` | `{ "username", "password" }` |
+| `POST /api/auth/login` | `{ "username", "password" }` |
+| `PUT /api/account/password` | `{ "password" }` (new password) |
+| `POST /api/notification-targets` | `{ "name", "providerType": "discord", "config": { webhook_url, username_override?, avatar_url_override? }, "enabled": true }` |
+| `PUT /api/notification-targets/:id` | same fields, partial update allowed |
+| `PUT /api/message-types/:key/enabled` | `{ "enabled": boolean }` |
+| `PUT /api/message-types/:key/template` | Partial `{ "plain"?: "...", "embed"?: { title, description, color, fields } }` — merge into the existing override; omitted variants are left unchanged (not a full replace; see §5.4, §7) |
+| `POST /api/message-types/:key/template/preview` | `{ "variant", "template" }` |
+| `PUT /api/message-types/:key/targets` | `{ "targetIds": [1, 2, ...] }` |
+| `PUT /api/settings` | subset of settings fields from `GET /api/settings` |
+| `POST /api/users` | `{ "username", "password", "role": "admin" \| "viewer" }` |
+| `PUT /api/users/:id` | `{ "role"?, "password"? }` |
+
 ---
 
 ## 8. Page Inventory (Frontend)
@@ -946,7 +1013,7 @@ Concrete shadcn/ui components — and, where one exists, a full shadcn **block**
 |---|---|---|---|
 | `/setup`, `/login` | `login-01` (centered card login form) as starting point | `Card`, `Form`, `Input`, `Label`, `Button` | None — block covers this directly |
 | App shell (all pages) | `sidebar-07` (collapsible sidebar with grouped nav + user menu footer) | `Sidebar`, `Breadcrumb`, `Avatar`, `DropdownMenu`, `Separator` | Nav items/groups (every viewer-accessible route from §8's table, plus a Settings group admin-only) are your own data, block only provides the shell |
-| `/` (Overview) | `dashboard-01` as loose layout reference (card grid) | `Card`, `Badge`, `Avatar` (online players), `Progress` (elevator bar), `Alert` (admin diagnostic banner) | The status-card content itself (server online/offline logic, latest milestone) — block gives layout, not your data bindings |
+| `/` (Overview) | `dashboard-01` as loose layout reference (card grid) | `Card`, `Badge`, `Avatar` (online players), `Progress` (elevator bar from `/api/status`) | Status cards from `GET /api/status` — no elevator unknown-log alert here (admin alert is on `/elevator` only, §8) |
 | `/players` | — | `Table` (+ `@tanstack/react-table` for sort/filter — shadcn's "Data Table" pattern), `Avatar`, `Badge` (online/offline) | **Timeline** for join/leave history has no stock shadcn component — compose from `Card` + `Separator` + a simple vertical list |
 | `/production` | — | `Tabs` (Overall / Detailed), `Table` (Data Table pattern, both views), `Chart` (shadcn's Recharts wrapper: `ChartContainer`/`ChartTooltip`/`ChartLegend`, rendered inline below an expanded row), `Calendar`+`Popover`/`Select` (date-range for the expanded chart), `Badge` (producing/paused status) | The "click a row to expand a chart/detail panel beneath it" interaction (mirroring FRM's own web UI, per the page's purpose in §8) isn't a single stock component — compose from `Table`'s row click handler + a conditionally rendered `Chart`/`Card` block |
 | `/power` | — | `Table` (Data Table pattern, full battery/power column set), `Progress` (capacity/consumption bars), `Badge`/`Alert` (tripped state), `Chart` (Recharts wrapper, per-circuit historical trend), `Combobox` (circuit picker) + `Calendar`+`Popover`/`Select` (date-range, same pattern as `/production`) | None |
@@ -959,7 +1026,7 @@ Concrete shadcn/ui components — and, where one exists, a full shadcn **block**
 | `/elevator` | — | `Card`, `Progress` (per required item), `Alert` (destructive variant, admin-only unresolved diagnostics) | None |
 | `/settings/notifications/targets` | — | `Table`, `Dialog` (create/edit form), `AlertDialog` (delete confirmation — important given cascade-delete warning in §5.1), `Form`, `Input`, `Select` (provider type), `Switch` (enabled) | None |
 | `/settings/notifications/templates` | — | `Table`/list (left pane, with `Switch` per row for `enabled`), `Tabs` (Plain / Embed sub-editor), `Textarea` (plain template, embed description), `Input` (embed title), `Command`+`Popover` (variable-insert picker), `Checkbox`/`Toggle Group` (target assignment), `Card`+`Separator` (embed live-preview) | **Three real gaps here, no stock component:** (1) a repeatable "Fields" array editor for embed fields (build with `react-hook-form`'s `useFieldArray` + `Input` pairs + an "Add field" `Button`); (2) a hex color picker (shadcn has none — pair a `Popover` with a small custom swatch grid, or a plain `Input type="color"`); (3) the Discord-embed-style preview card itself (colored left border, title/description/fields layout) is a custom composition of `Card`+`Separator`, not a stock look |
-| `/settings/notifications/log` | — | `Table`, `Badge` (success/fail) | None |
+| `/settings/notifications/log` | — | `Table`, `Badge` (success/fail) | When a log row's `target_id` no longer resolves to a `notification_targets` row (target was deleted; `target_id` has no FK, §3), render "Deleted target" (or similar) instead of crashing or showing a blank. `GET /api/notification-log` LEFT JOINs so these rows are present (§7). |
 | `/settings/general` | — | `Form`, `Input`, `Label` | None |
 | `/settings/users` | — | `Table`, `Dialog`, `AlertDialog`, `Select` (role) | None |
 | `/account` | — | `Card`, `Form`, `Input`, `Button` | None |
@@ -1023,3 +1090,4 @@ Everything below was genuinely open earlier in this project's design discussion 
 - **Per-message-type polling cadence** (e.g. faster polling for player join/leave than for schematics): **decided against for v1.** A single shared `poll_interval_seconds` (default 20s, §4.1) is well under any latency the group would notice for a 5–6 player casual server, and per-type scheduling would meaningfully complicate M3's poll loop for no observed benefit.
 - **Confirming Phases 3–5's Space Elevator ClassName mapping against live data**: not a decision to make, just not yet possible — the group hasn't reached those phases. The self-correcting `elevator_phase_unknown_log` mechanism (§4.2) closes this automatically as the save progresses; no action needed until an entry actually appears there.
 - **Additional UI languages** (German, etc.): **deferred for v1.** i18n infrastructure ships with English only (§8.2); adding locales is additive (`messages/de.json` + switcher) once the group wants it.
+- **Discord embed footer/timestamp:** deferred for v1 — v1 embeds use title, description, color, and fields only (§2.3).

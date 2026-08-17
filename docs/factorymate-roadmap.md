@@ -39,8 +39,8 @@
 **Goal:** Every table from spec §3 exists, migratable, with a seed step for the fixed message-type catalog.
 
 - [ ] Implement a migration runner (numbered `.sql` files + `schema_migrations` table).
-- [ ] Migration 001: create every table exactly as defined in **spec §3** — including `sessions`, `player_session_events`, `power_circuit_events`, and all extended columns on `schematic_state`, `elevator_state`, `vehicle_state`, `research_node_state`, `factory_machine_state`, `app_settings` (`frm_auth_token`). Copy SQL verbatim from spec §3.
-- [ ] Seed step (idempotent, every startup): read `backend/data/message_defaults.json` (§5.5) and `INSERT OR IGNORE` the 13 rows into `message_types` per **spec §5.2**, with `default_template_json` from the file and `variables_json` as the array of variable names from §5.2. **Never overwrite** existing rows' `enabled` column.
+- [ ] Migration 001: create every table exactly as defined in **spec §3** — including `sessions`, `player_session_events`, `power_circuit_events`, `schematic_state.purchased_at`, and all extended columns on `schematic_state`, `elevator_state`, `vehicle_state`, `research_node_state`, `factory_machine_state`, `app_settings` (`frm_auth_token`). Copy SQL verbatim from spec §3.
+- [ ] Seed step (idempotent, every startup): read `backend/data/message_defaults.json` (§5.5) and `INSERT OR IGNORE` the 13 rows into `message_types` per **spec §5.2**, with `default_template_json` from the file and `variables_json` as JSON array of strings per §5.2 (e.g. `["PlayerName","OnlineCount"]`). **Never overwrite** existing rows' `enabled` column.
 - [ ] Seed `app_settings` with `id=1` if missing — `server_name` default per §3, `frm_host`/`frm_port` from env §9 (empty host allowed). Do **not** seed `notification_targets` or `message_type_targets` (§5.3).
 - [ ] Unit test: migrations + seed twice on fresh DB — second run is no-op.
 
@@ -59,11 +59,11 @@
   - `getSpaceElevator` → `[]Elevator{ID, Name, CurrentPhase []PhaseItem{...}, UpgradeReady}`
   - `getResearchTrees` → full node struct including `Cost []Item` (§4.1.1)
   - `getTrains` → field names match FRM exactly (§4.1.1 mapping)
-  - `getVehicles` → `ID` via flexible unmarshal (string or int → TEXT); include `FollowingPath bool` (response-confirmed, adoc-incomplete)
+  - `getVehicles` → flexible `ID`; include `FollowingPath`, `Fuel []Item{Name, ClassName, Amount}` (§4.1.1, §4.2 fuel detection)
 - [ ] Slow-poll structs:
   - `getProdStats` → per §3 `prod_stats_state` fields
   - `getResourceSink` → array response; use first element; `GraphPoint` accepts `Value` or `value` JSON key (ignored for history — §4.1)
-  - `getFactory` → include `ingredients` and `production` arrays for M9 persistence (§3)
+  - `getFactory` → include `ingredients` and `production` arrays; flexible unmarshal on item `Amount` (string or int)
   - `getDrone` → `FlyingSpeed`/`MaxSpeed` as `float64` with flexible unmarshal (adoc vs live mismatch)
   - `getDoggo` → `Inventory` as-is
 - [ ] HTTP client: 5s timeout, no retry, config from `app_settings` (host/port/token), `X-FRM-Authorization` when token set (§4.1).
@@ -79,8 +79,9 @@
 **Goal:** Edge-triggered detection per **spec §4.2**, state persistence, event history, variable population per **§4.2.1**.
 
 - [ ] Poll loop: `app_settings.poll_interval_seconds` (default 20s), `frm.Client.GetFast`.
-- [ ] Reachability + **`server_state` updates** per §4.2 (`server_online`/`server_offline`, first-poll no-spurious-online rule).
-- [ ] Edge-trigger all message types in §4.2 table for: `player_state`, `circuit_state`, `schematic_state`, `elevator_state`, `research_node_state`, `train_state`, `vehicle_state`.
+- [ ] Reachability + **`server_state` updates** per §4.2 (`server_online`/`server_offline`; First Observation when `server_online` IS NULL — write baseline, do not emit).
+- [ ] Edge-trigger all message types in §4.2 table; set `schematic_state.purchased_at` on `Purchased` false→true; set `player_state.last_seen_at` on leave (§4.1.1). When upserting `player_state`/`circuit_state`/`schematic_state`/`elevator_state`/`research_node_state`/`train_state`/`vehicle_state` and `server_state`, check whether a previous row existed for that entity before this poll. If not, write the baseline row and skip event emission for that entity this cycle — do not treat a missing previous row as an implicit `false` or `off` value when evaluating the §4.2 trigger table, per the First Observation rule in spec §4.2.
+- [ ] Unit test: seed an empty database, run one poll cycle against a fixture where several entities are already in a "positive" state (a milestone already Purchased, a fuse already tripped, a player already online), and assert zero notifications are emitted on that first cycle, with all state tables nonetheless populated correctly as the baseline.
 - [ ] On each event: populate variables per **§4.2.1**; INSERT `player_session_events` / `power_circuit_events` as specified (regardless of `enabled`).
 - [ ] `vehicle_stuck` debounce per §4.2 (3 consecutive polls, edge on `stuck` column).
 - [ ] Detection runs regardless of `message_types.enabled` — M6 filters at dispatch (§4.2 opening paragraph).
@@ -130,9 +131,9 @@
 - [ ] Skip dispatch when `message_types.enabled = 0`; lookup `message_type_targets`; render per provider type.
 - [ ] Dispatch to enabled targets; log to `notification_log` (not a substitute for event history tables — §3).
 - [ ] Wire into M3 poll loop as final step.
-- [ ] E2E manual test: real player join → Discord message within one poll interval.
+- [ ] E2E manual test: with target configured (API insert after M8 or dev seed), real player join → Discord within one poll interval.
 
-**DoD:** In-game join produces Discord message + `notification_log` row.
+**DoD:** Dispatch path verified — integration test with test webhook + `notification_log` row, or full in-game E2E when target exists.
 
 ---
 
@@ -152,18 +153,16 @@
 
 ## M8 — REST API
 
-**Goal:** Every endpoint in **spec §7**, response shapes per **§7.1**.
+**Goal:** Every endpoint in **spec §7**, response shapes per **§7.1** and §7.2 request bodies.
 
-Build sub-order:
+**DoD:** Every §7 row has a handler + at least one request/response test. Assert full JSON for endpoints in §7.1; for other GETs, assert camelCase mapping from §3 columns per §7.1 intro.
 
 - [ ] **Read-only data** (session auth): all GET endpoints from §7 table — verify admin vs session per row. History endpoints use pagination envelope (§7).
 - [ ] **Notification target CRUD** (admin) + test send.
 - [ ] **Message type / template** endpoints (admin) including preview (M5, unsaved input).
 - [ ] **Settings, users, elevator diagnostics, notification log** (admin).
 - [ ] `GET /healthz` (no auth) — may already exist from M0; ensure §7.1 shape.
-- [ ] Mutating endpoints: server-side validation (templates via M5 validator).
-
-**DoD:** Every §7 row has a handler + at least one request/response test against §7.1 schemas.
+- [ ] Mutating endpoints: server-side validation (templates via M5 validator); request bodies per §7.2.
 
 ---
 
@@ -174,7 +173,7 @@ Build sub-order:
 - [ ] Ticker at `production_snapshot_interval_seconds`, `frm.Client.GetSlow`.
 - [ ] `getProdStats` → `prod_stats_state` + `production_snapshots`.
 - [ ] `getResourceSink` → `resource_sink_state` (first array element) + `resource_sink_snapshots`.
-- [ ] `getFactory` → `factory_machine_state` including **`ingredients_json` and `production_json`** (§3, §4.1.1); derive `building_type` from ClassName.
+- [ ] `getFactory` → `factory_machine_state` including **`ingredients_json` and `production_json`** (§3, §4.1.1); derive `building_type` from `ClassName` using the mapping table in **spec §4.1** (several of the 11 types have no ClassName in vendored FRM docs and must be verified against a live `getFactory` response before implementing).
 - [ ] `getResearchTrees` cost → already on fast poll (`research_node_state.cost_json`); slow poll does not re-poll research.
 - [ ] `getDrone` → `drone_state`; `getDoggo` → `doggo_state`.
 - [ ] Append `circuit_snapshots` from current `circuit_state` (no extra FRM call).
@@ -215,7 +214,7 @@ Build order:
 - [ ] `/production` — Overall + Detailed tabs; Detailed expand uses `ingredients`/`production` from API
 - [ ] `/` Overview — **primarily `GET /api/status`** (§7.1 includes milestone + elevator summaries)
 
-**DoD:** All 11 pages render real live data; edge cases per milestone DoD notes in original spec.
+**DoD:** All 11 pages render real live data; edge cases per `factorymate-spec.md` §8 DoD notes (e.g. Phase 2 on `/elevator`, fuse detail on `/power`).
 
 ---
 
