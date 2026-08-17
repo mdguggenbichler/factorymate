@@ -40,6 +40,8 @@ When generating the invite URL (or in **OAuth2 → URL Generator**), enable thes
 
 **Message Content Intent** is **not** required — FactoryMate uses slash commands and embeds only.
 
+On the **Bot** tab, under **Privileged Gateway Intents**, enable **Server Members Intent**. FactoryMate needs this for role-based permissions and auto-linking Discord members to players. Without it, the gateway closes with `4014: Disallowed intent(s)` and the bot cannot connect.
+
 ## 5. OAuth2 scopes
 
 In **OAuth2 → URL Generator**, select:

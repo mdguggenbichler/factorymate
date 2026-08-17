@@ -15,6 +15,10 @@ services:
       FRM_HOST: ${FRM_HOST:-satisfactory-server}
       FRM_PORT: ${FRM_PORT:-8080}
       BACKEND_URL: http://127.0.0.1:8080
+      DISCORD_BOT_TOKEN: ${DISCORD_BOT_TOKEN:-}
+      DISCORD_GUILD_ID: ${DISCORD_GUILD_ID:-}
+      DISCORD_ADMIN_ROLE_IDS: ${DISCORD_ADMIN_ROLE_IDS:-}
+      FACTORYMATE_PUBLIC_URL: ${FACTORYMATE_PUBLIC_URL:-}
     volumes:
       - ./data:/data
     networks:

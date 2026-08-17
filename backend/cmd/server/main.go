@@ -61,7 +61,7 @@ func main() {
 	}
 
 	if err := bot.Start(ctx); err != nil {
-		log.Fatalf("discord bot start: %v", err)
+		log.Printf("discord bot start: %v — dashboard and FRM polling will continue without bot features", err)
 	}
 
 	connSvc := connection.NewService(database, bot)
