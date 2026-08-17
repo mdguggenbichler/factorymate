@@ -1,0 +1,37 @@
+---
+description: shadcn/ui — use MCP registry tools, §8.1 mapping, owned source under components/ui
+globs: frontend/**
+alwaysApply: false
+---
+
+# shadcn/ui (mandatory for frontend UI)
+
+FactoryMate dashboard UI is built from shadcn/ui components and blocks. Spec: `docs/factorymate-spec.md` §8.1 ("Component Mapping").
+
+## MCP server first
+
+- **Always** use the shadcn MCP server's tools (browse/search/install) to work with shadcn/ui components and blocks.
+- **Never** hand-write a component that already exists in the shadcn registry.
+- **Never** guess prop names or APIs from training data when the MCP server can be queried directly.
+
+## §8.1 is authoritative
+
+Before building any page's UI, re-check the §8.1 component-mapping table — do not assume which block or component belongs to which route.
+
+## Owned project source
+
+Components installed via `shadcn add` live under `frontend/components/ui/` (or wherever `components.json` points). They are **not** an npm dependency.
+
+- Edit installed components **in place** when customization is needed.
+- Do **not** wrap them in an extra abstraction layer.
+
+## Custom compositions (no third-party substitutes)
+
+Where §8.1 marks a real gap with no stock component, build it as a normal composition of existing shadcn primitives:
+
+- Repeatable embed-fields array (template editor)
+- Hex color picker
+- Discord-style preview card
+- Join/leave timeline (`/players`)
+
+Do **not** invent or install a random third-party component for these instead.
