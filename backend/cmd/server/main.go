@@ -1,17 +1,31 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"log"
 	"net/http"
 	"os"
 
+	"factorymate/internal/db"
+
 	"github.com/go-chi/chi/v5"
 	_ "golang.org/x/crypto/bcrypt"
-	_ "modernc.org/sqlite"
 )
 
 func main() {
+	ctx := context.Background()
+
+	database, err := db.Open(db.DefaultPath())
+	if err != nil {
+		log.Fatalf("open database: %v", err)
+	}
+	defer database.Close()
+
+	if err := db.Init(ctx, database, db.SeedConfigFromEnv()); err != nil {
+		log.Fatalf("database init: %v", err)
+	}
+
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
