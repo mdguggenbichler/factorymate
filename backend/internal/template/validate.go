@@ -8,6 +8,7 @@ import (
 const (
 	maxTitleLen       = 256
 	maxDescriptionLen = 4096
+	maxFooterLen      = 2048
 	maxFieldCount     = 25
 	maxFieldNameLen   = 256
 	maxFieldValueLen  = 1024
@@ -55,6 +56,9 @@ func validateRendered(msg RenderedMessage) error {
 	}
 	if len(e.Description) > maxDescriptionLen {
 		return discordLimitError("description", len(e.Description), maxDescriptionLen)
+	}
+	if len(e.Footer) > maxFooterLen {
+		return discordLimitError("footer", len(e.Footer), maxFooterLen)
 	}
 	if len(e.Fields) > maxFieldCount {
 		return &ValidationError{

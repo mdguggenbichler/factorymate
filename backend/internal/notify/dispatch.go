@@ -54,7 +54,7 @@ func (d *Dispatcher) HandleEvent(ctx context.Context, messageTypeKey string, var
 		return err
 	}
 
-	rendered := template.Render(tmpl, vars)
+	rendered := template.Render(tmpl, d.mergeSystemVariables(ctx, vars))
 	for _, target := range targets {
 		_ = d.dispatchToTarget(ctx, messageTypeKey, target, rendered)
 	}
@@ -171,6 +171,8 @@ func toNotifyEmbed(embed *template.DiscordEmbed) *DiscordEmbed {
 		Title:       embed.Title,
 		Description: embed.Description,
 		Color:       embed.Color,
+		Footer:      embed.Footer,
+		Timestamp:   embed.Timestamp,
 	}
 	for _, f := range embed.Fields {
 		out.Fields = append(out.Fields, DiscordEmbedField{
@@ -180,6 +182,35 @@ func toNotifyEmbed(embed *template.DiscordEmbed) *DiscordEmbed {
 		})
 	}
 	return out
+}
+
+func (d *Dispatcher) mergeSystemVariables(ctx context.Context, vars map[string]string) map[string]string {
+	now := d.Now().UTC()
+	out := make(map[string]string, len(vars)+3)
+	for k, v := range vars {
+		out[k] = v
+	}
+	out["Timestamp"] = formatDispatchTimestamp(now)
+	out["TimestampISO"] = now.Format(time.RFC3339)
+	if out["ServerName"] == "" {
+		if name := d.loadServerName(ctx); name != "" {
+			out["ServerName"] = name
+		}
+	}
+	return out
+}
+
+func (d *Dispatcher) loadServerName(ctx context.Context) string {
+	var name string
+	err := d.DB.QueryRowContext(ctx, `SELECT server_name FROM app_settings WHERE id = 1`).Scan(&name)
+	if err != nil {
+		return ""
+	}
+	return name
+}
+
+func formatDispatchTimestamp(t time.Time) string {
+	return t.Format("Jan 2, 2006 · 15:04 UTC")
 }
 
 func renderedPreview(providerType string, rendered template.RenderedMessage) string {

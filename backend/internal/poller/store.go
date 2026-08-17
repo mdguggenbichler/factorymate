@@ -44,9 +44,10 @@ func loadAppSettings(ctx context.Context, db *sql.DB) (appSettings, error) {
 	return s, nil
 }
 
-func syncServerNameFromFRM(ctx context.Context, db *sql.DB, settings appSettings) (string, error) {
+func syncSessionFromFRM(ctx context.Context, db *sql.DB, settings appSettings) (sessionSnapshot, error) {
+	var snap sessionSnapshot
 	if strings.TrimSpace(settings.FRMHost) == "" {
-		return "", nil
+		return snap, nil
 	}
 	token := ""
 	if settings.FRMAuthToken.Valid {
@@ -58,17 +59,20 @@ func syncServerNameFromFRM(ctx context.Context, db *sql.DB, settings appSettings
 		Token: token,
 	})
 	info, err := client.GetSessionInfo(ctx)
-	if err != nil || strings.TrimSpace(info.SessionName) == "" {
-		return "", err
+	if err != nil {
+		return snap, err
 	}
-	if info.SessionName == settings.ServerName {
-		return "", nil
+	if strings.TrimSpace(info.SessionName) != "" {
+		snap.ServerName = info.SessionName
 	}
-	if _, err := db.ExecContext(ctx, `
-		UPDATE app_settings SET server_name = ? WHERE id = 1`, info.SessionName); err != nil {
-		return "", fmt.Errorf("update server_name: %w", err)
+	snap.InGameTime = formatInGameTime(info)
+	if info.SessionName != "" && info.SessionName != settings.ServerName {
+		if _, err := db.ExecContext(ctx, `
+			UPDATE app_settings SET server_name = ? WHERE id = 1`, info.SessionName); err != nil {
+			return snap, fmt.Errorf("update server_name: %w", err)
+		}
 	}
-	return info.SessionName, nil
+	return snap, nil
 }
 
 type serverStateRow struct {
@@ -464,7 +468,7 @@ func upsertVehicleState(ctx context.Context, db *sql.DB, v frm.Vehicle, fuelEmpt
 			low_speed_since = excluded.low_speed_since,
 			stuck = excluded.stuck,
 			updated_at = excluded.updated_at`,
-		v.ID.String(), vtype, vtype, v.Status, v.Driver, v.IsAutoPilot(),
+		v.ID.String(), vtype, v.DisplayName(), v.Status, v.Driver, v.IsAutoPilot(),
 		v.FollowingPath, v.ForwardSpeed, fuelEmpty, lowSpeedSince, stuck,
 		now.UTC().Format(time.RFC3339),
 	)

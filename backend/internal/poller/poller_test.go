@@ -319,6 +319,75 @@ func TestVehicleStuckDebounce(t *testing.T) {
 	}
 }
 
+func TestPowerEventVariables(t *testing.T) {
+	t.Chdir("../..")
+
+	ctx := context.Background()
+	database := openTestDB(t)
+	defer database.Close()
+
+	if err := db.Init(ctx, database, db.SeedConfig{}); err != nil {
+		t.Fatalf("init: %v", err)
+	}
+
+	phases, _ := poller.LoadElevatorPhases("data/elevator_phases.json")
+	engine := &poller.Engine{DB: database, ElevatorPhases: phases}
+	now := time.Date(2026, 8, 17, 12, 0, 0, 0, time.UTC)
+
+	baseline := frm.FastPollResult{
+		Power: []frm.Circuit{{
+			CircuitGroupID:   1,
+			FuseTriggered:    false,
+			PowerProduction:  100,
+			PowerConsumed:    80,
+			PowerCapacity:    90,
+			BatteryCapacity:  500,
+			BatteryPercent:   75,
+			BatteryTimeEmpty: "1h 30m",
+		}},
+	}
+	if _, err := engine.PollOnce(ctx, baseline, now); err != nil {
+		t.Fatalf("baseline poll: %v", err)
+	}
+
+	tripped := frm.FastPollResult{
+		Power: []frm.Circuit{{
+			CircuitGroupID:   1,
+			FuseTriggered:    true,
+			PowerProduction:  100,
+			PowerConsumed:    80,
+			PowerCapacity:    90,
+			BatteryCapacity:  500,
+			BatteryPercent:   75,
+			BatteryTimeEmpty: "1h 30m",
+		}},
+	}
+	events, err := engine.PollOnce(ctx, tripped, now.Add(20*time.Second))
+	if err != nil {
+		t.Fatalf("tripped poll: %v", err)
+	}
+	if len(events) != 1 || events[0].MessageTypeKey != "fuse_tripped" {
+		t.Fatalf("expected fuse_tripped, got %+v", events)
+	}
+
+	vars := events[0].Variables
+	if vars["CircuitID"] != "1" {
+		t.Fatalf("CircuitID = %q", vars["CircuitID"])
+	}
+	if vars["PowerProduction"] != "100" {
+		t.Fatalf("PowerProduction = %q", vars["PowerProduction"])
+	}
+	if vars["PowerConsumed"] != "80" {
+		t.Fatalf("PowerConsumed = %q", vars["PowerConsumed"])
+	}
+	if vars["BatteryPercent"] != "75" {
+		t.Fatalf("BatteryPercent = %q", vars["BatteryPercent"])
+	}
+	if vars["BatteryTimeEmpty"] != "1h 30m" {
+		t.Fatalf("BatteryTimeEmpty = %q", vars["BatteryTimeEmpty"])
+	}
+}
+
 var errUnreachable = &fixtureError{msg: "connection refused"}
 
 type fixtureError struct{ msg string }

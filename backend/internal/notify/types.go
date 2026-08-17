@@ -23,6 +23,8 @@ type DiscordEmbed struct {
 	Description string
 	Color       string // hex, e.g. "#57F287"
 	Fields      []DiscordEmbedField
+	Footer      string
+	Timestamp   string // ISO 8601 for Discord native timestamp
 }
 
 // DiscordEmbedField is a single embed field.

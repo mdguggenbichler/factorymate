@@ -343,6 +343,8 @@ export type EmbedTemplate = {
   description: string
   color: string
   fields: EmbedField[]
+  footer?: string
+  show_timestamp?: boolean
 }
 
 export type MessageTemplate = {

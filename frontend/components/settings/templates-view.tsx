@@ -50,6 +50,112 @@ const defaultEmbed: EmbedTemplate = {
   description: "",
   color: "#5865F2",
   fields: [],
+  footer: "",
+  show_timestamp: false,
+}
+
+const PREVIEW_SAMPLE_VARS: Record<string, Record<string, string>> = {
+  server_online: {
+    ServerName: "CBC | Conveyor Belt Cult",
+    InGameTime: "Day 42, 14:37",
+    Timestamp: "Aug 17, 2026 · 14:37 UTC",
+  },
+  server_offline: {
+    ServerName: "CBC | Conveyor Belt Cult",
+    InGameTime: "Day 42, 14:37",
+    Timestamp: "Aug 17, 2026 · 14:37 UTC",
+  },
+  player_joined: {
+    PlayerName: "Michael",
+    OnlineCount: "4",
+    ServerName: "CBC | Conveyor Belt Cult",
+    Timestamp: "Aug 17, 2026 · 14:37 UTC",
+  },
+  player_left: {
+    PlayerName: "Michael",
+    OnlineCount: "4",
+    ServerName: "CBC | Conveyor Belt Cult",
+    Timestamp: "Aug 17, 2026 · 14:37 UTC",
+  },
+  fuse_tripped: {
+    CircuitID: "1",
+    PowerProduction: "120",
+    PowerConsumed: "95",
+    PowerCapacity: "100",
+    BatteryPercent: "68",
+    BatteryTimeEmpty: "2h 15m",
+    ServerName: "CBC | Conveyor Belt Cult",
+    Timestamp: "Aug 17, 2026 · 14:37 UTC",
+  },
+  power_restored: {
+    CircuitID: "1",
+    PowerProduction: "120",
+    PowerConsumed: "95",
+    PowerCapacity: "100",
+    BatteryPercent: "68",
+    BatteryTimeEmpty: "2h 15m",
+    ServerName: "CBC | Conveyor Belt Cult",
+    Timestamp: "Aug 17, 2026 · 14:37 UTC",
+  },
+  milestone_unlocked: {
+    SchematicName: "Oil Processing",
+    TechTier: "5",
+    RecipeNames: "Plastic, Rubber",
+    ServerName: "CBC | Conveyor Belt Cult",
+    Timestamp: "Aug 17, 2026 · 14:37 UTC",
+  },
+  hard_drive_ready: {
+    SchematicName: "Hard Drive (MAM)",
+    RecipeOptions: "Steel Screw\nCopper Sheet",
+    ServerName: "CBC | Conveyor Belt Cult",
+    Timestamp: "Aug 17, 2026 · 14:37 UTC",
+  },
+  elevator_phase_complete: {
+    ElevatorName: "Space Elevator",
+    PhaseNumber: "2",
+    PhaseRequirements: "Smart Plating: 0/250",
+    ServerName: "CBC | Conveyor Belt Cult",
+    Timestamp: "Aug 17, 2026 · 14:37 UTC",
+  },
+  research_unlocked: {
+    NodeName: "Oil Processing",
+    TreeName: "MAM",
+    TechTier: "5",
+    ResearchCost: "Copper Sheet × 10",
+    ServerName: "CBC | Conveyor Belt Cult",
+    Timestamp: "Aug 17, 2026 · 14:37 UTC",
+  },
+  train_derailed: {
+    TrainName: "Train 1",
+    StationName: "Main Station",
+    TrainStatus: "Self-Driving",
+    SelfDriving: "No error",
+    ServerName: "CBC | Conveyor Belt Cult",
+    Timestamp: "Aug 17, 2026 · 14:37 UTC",
+  },
+  vehicle_out_of_fuel: {
+    VehicleType: "Explorer",
+    VehicleName: "Tractor",
+    Driver: "Michael",
+    ForwardSpeed: "0.0 km/h",
+    ServerName: "CBC | Conveyor Belt Cult",
+    Timestamp: "Aug 17, 2026 · 14:37 UTC",
+  },
+  vehicle_stuck: {
+    VehicleType: "Explorer",
+    VehicleName: "Tractor",
+    Driver: "Michael",
+    ForwardSpeed: "0.0 km/h",
+    ServerName: "CBC | Conveyor Belt Cult",
+    Timestamp: "Aug 17, 2026 · 14:37 UTC",
+  },
+}
+
+function substituteTemplateVars(
+  text: string,
+  vars: Record<string, string>
+): string {
+  return text.replace(/\{(\w+)\}/g, (_, key: string) => vars[key] ?? "")
 }
 
 function cloneTemplate(template: MessageTemplate): MessageTemplate {
@@ -534,6 +640,50 @@ export function TemplatesView({
                           }
                         />
                       </Field>
+                      <Field>
+                        <FieldLabel htmlFor="embed-footer">
+                          {t("embedFooter")}
+                        </FieldLabel>
+                        <Input
+                          id="embed-footer"
+                          value={draft.embed?.footer ?? ""}
+                          onChange={(event) =>
+                            setDraft((currentDraft) =>
+                              currentDraft
+                                ? {
+                                    ...currentDraft,
+                                    embed: {
+                                      ...(currentDraft.embed ?? defaultEmbed),
+                                      footer: event.target.value,
+                                    },
+                                  }
+                                : currentDraft
+                            )
+                          }
+                        />
+                      </Field>
+                      <Field orientation="horizontal">
+                        <Switch
+                          id="embed-show-timestamp"
+                          checked={draft.embed?.show_timestamp ?? false}
+                          onCheckedChange={(checked) =>
+                            setDraft((currentDraft) =>
+                              currentDraft
+                                ? {
+                                    ...currentDraft,
+                                    embed: {
+                                      ...(currentDraft.embed ?? defaultEmbed),
+                                      show_timestamp: Boolean(checked),
+                                    },
+                                  }
+                                : currentDraft
+                            )
+                          }
+                        />
+                        <FieldLabel htmlFor="embed-show-timestamp" className="font-normal">
+                          {t("embedShowTimestamp")}
+                        </FieldLabel>
+                      </Field>
                     </FieldGroup>
 
                     <EmbedFieldsEditor
@@ -553,7 +703,18 @@ export function TemplatesView({
                       }
                     />
 
-                    <EmbedPreview embed={preview?.embed ?? draft.embed} />
+                    <EmbedPreview
+                      embed={preview?.embed ?? draft.embed}
+                      footerText={
+                        draft.embed?.footer
+                          ? substituteTemplateVars(
+                              draft.embed.footer,
+                              PREVIEW_SAMPLE_VARS[selected.key] ?? {}
+                            )
+                          : undefined
+                      }
+                      showTimestamp={draft.embed?.show_timestamp}
+                    />
                   </TabsContent>
                 </Tabs>
 

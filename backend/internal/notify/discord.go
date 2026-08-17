@@ -50,6 +50,12 @@ type discordAPIEmbed struct {
 	Description string            `json:"description,omitempty"`
 	Color       int               `json:"color,omitempty"`
 	Fields      []discordAPIField `json:"fields,omitempty"`
+	Footer      *discordAPIFooter `json:"footer,omitempty"`
+	Timestamp   string            `json:"timestamp,omitempty"`
+}
+
+type discordAPIFooter struct {
+	Text string `json:"text"`
 }
 
 type discordAPIField struct {
@@ -141,6 +147,15 @@ func toDiscordAPIEmbed(embed DiscordEmbed) (discordAPIEmbed, error) {
 		Color:       color,
 	}
 
+	if footer := strings.TrimSpace(embed.Footer); footer != "" {
+		apiEmbed.Footer = &discordAPIFooter{
+			Text: truncate(footer, discordFooterMaxLen),
+		}
+	}
+	if embed.Timestamp != "" {
+		apiEmbed.Timestamp = embed.Timestamp
+	}
+
 	for _, field := range embed.Fields {
 		if strings.TrimSpace(field.Value) == "" {
 			continue
@@ -174,11 +189,14 @@ func hexColorToDiscordInt(color string) (int, error) {
 func SampleRenderedMessage() RenderedMessage {
 	return RenderedMessage{
 		Embed: &DiscordEmbed{
-			Title:       "🟢 NEW PLAYER DETECTED",
-			Description: "**Guggi** has entered the factory.",
-			Color:       "#57F287",
+			Title:     "👤 A player joined the server",
+			Color:     "#57F287",
+			Footer:    "🏭 CBC | Conveyor Belt Cult · Aug 17, 2026 · 14:37 UTC",
+			Timestamp: "2026-08-17T14:37:00Z",
 			Fields: []DiscordEmbedField{
-				{Name: "Players online", Value: "3", Inline: true},
+				{Name: "👤 Player", Value: "Michael", Inline: true},
+				{Name: "🏭 Factory", Value: "CBC | Conveyor Belt Cult", Inline: true},
+				{Name: "👥 Online", Value: "4 players online", Inline: true},
 			},
 		},
 	}

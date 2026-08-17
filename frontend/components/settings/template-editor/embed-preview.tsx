@@ -9,6 +9,8 @@ import type { EmbedTemplate } from "@/lib/api-types"
 type EmbedPreviewProps = {
   embed: EmbedTemplate | undefined
   title?: string
+  footerText?: string
+  showTimestamp?: boolean
 }
 
 function hexToBorderColor(hex: string): string {
@@ -19,7 +21,12 @@ function hexToBorderColor(hex: string): string {
   return `#${normalized}`
 }
 
-export function EmbedPreview({ embed, title }: EmbedPreviewProps) {
+export function EmbedPreview({
+  embed,
+  title,
+  footerText,
+  showTimestamp,
+}: EmbedPreviewProps) {
   const t = useTranslations("settings.templates")
 
   if (!embed) {
@@ -36,6 +43,8 @@ export function EmbedPreview({ embed, title }: EmbedPreviewProps) {
   }
 
   const borderColor = hexToBorderColor(embed.color)
+  const footer = footerText ?? embed.footer
+  const displayTimestamp = showTimestamp ?? embed.show_timestamp
 
   return (
     <Card>
@@ -70,6 +79,17 @@ export function EmbedPreview({ embed, title }: EmbedPreviewProps) {
                     <p className="text-sm whitespace-pre-wrap">{field.value}</p>
                   </div>
                 ))}
+              </div>
+            </>
+          ) : null}
+          {footer || displayTimestamp ? (
+            <>
+              <Separator className="my-3" />
+              <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
+                {footer ? <span>{footer}</span> : <span />}
+                {displayTimestamp ? (
+                  <span className="shrink-0">{t("previewTimestampSample")}</span>
+                ) : null}
               </div>
             </>
           ) : null}

@@ -1,6 +1,9 @@
 package frm
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"strings"
+)
 
 // --- Fast poll types ---
 
@@ -110,6 +113,7 @@ type Train struct {
 // Vehicle is a FRM getVehicles entry.
 type Vehicle struct {
 	ID            FlexibleID `json:"ID"`
+	Name          string     `json:"Name"`
 	VehicleType   string     `json:"VehicleType"`
 	Status        string     `json:"Status"`
 	Driver        string     `json:"Driver"`
@@ -134,6 +138,14 @@ func (v Vehicle) Type() string {
 	return v.Features.Properties.Type
 }
 
+// DisplayName returns the in-game vehicle name when set, otherwise the type.
+func (v Vehicle) DisplayName() string {
+	if strings.TrimSpace(v.Name) != "" {
+		return v.Name
+	}
+	return v.Type()
+}
+
 // IsAutoPilot reports whether autopilot is engaged (handles both JSON spellings).
 func (v Vehicle) IsAutoPilot() bool {
 	return v.AutoPilot || v.Autopilot
@@ -151,8 +163,12 @@ func (v Vehicle) Fuels() []Item {
 
 // SessionInfo is the FRM getSessionInfo response (subset used by FactoryMate).
 type SessionInfo struct {
-	SessionName string `json:"SessionName"`
-	IsPaused    bool   `json:"IsPaused"`
+	SessionName       string  `json:"SessionName"`
+	IsPaused          bool    `json:"IsPaused"`
+	PassedDays        int     `json:"PassedDays"`
+	Hours             int     `json:"Hours"`
+	Minutes           int     `json:"Minutes"`
+	TotalPlayDuration float64 `json:"TotalPlayDuration"`
 }
 
 // --- Slow poll types ---

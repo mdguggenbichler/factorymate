@@ -59,7 +59,7 @@ func TestDispatcher_PlayerJoined(t *testing.T) {
 		t.Fatalf("HandleEvent: %v", err)
 	}
 
-	if gotTitle != "🟢 NEW PLAYER DETECTED" {
+	if gotTitle != "👤 A player joined the server" {
 		t.Fatalf("webhook title = %q, want player joined embed title", gotTitle)
 	}
 
