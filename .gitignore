@@ -1,1 +1,39 @@
-node_modules
+# Dependencies
+node_modules/
+frontend/node_modules/
+
+# Next.js
+frontend/.next/
+frontend/out/
+
+# Build / tooling
+*.tsbuildinfo
+frontend/next-env.d.ts
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Database (local dev)
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+data/
+
+# OS / editor
+.DS_Store
+*.swp
+*.swo
+.idea/
+.vscode/
+
+# Agent session memory (orchestrator — never commit)
+.agents/project/agent-memory/active/
+
+# Go
+backend/bin/
+backend/tmp/
+*.exe
+*.test

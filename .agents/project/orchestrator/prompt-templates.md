@@ -15,7 +15,10 @@
 1. Same header + AC + DOC REFERENCES
 2. **Three-layer verification** checklist
 3. **SCOPED CI GATE**
-4. On PASS: mark roadmap checkbox `- [x]` for this milestone only
+4. On PASS: mark **all** task checkboxes under this milestone `- [x]` in roadmap; report PASS summary
+5. On FAIL: mark them `- [!] failed — <reason>`; report FAIL with fix hints for re-dispatch
+
+See `.agents/project/orchestrator/verifier-checklist.md` for the full checklist.
 
 ---
 
@@ -75,7 +78,7 @@ READ SCOPE:
 - docs/factorymate-roadmap.md — milestone section only
 
 WRITE SCOPE:
-- docs/factorymate-roadmap.md — change only this milestone's `- [ ]` → `- [x]` or `- [!]` on PASS/FAIL
+- docs/factorymate-roadmap.md — on PASS/FAIL, update **all** task checkboxes under this milestone section (`- [ ]` → `- [x]` or `- [!] failed — <reason>`)
 
 SCOPED CI GATE: <same scoped commands as execution>
 
@@ -92,8 +95,8 @@ Layer 3 — Logic review:
   3d. Migrations: numbered .sql only — hand-written SQL outside migrations → FAIL
 
 RESULT:
-- PASS → set milestone checkboxes to `- [x]` in roadmap; report PASS summary
-- FAIL → set `- [!]` with reason; report FAIL with fix hints for re-dispatch
+- PASS → set **all** task checkboxes under this milestone to `- [x]` in roadmap; report PASS summary
+- FAIL → set them to `- [!] failed — <reason>`; report FAIL with fix hints for re-dispatch
 ```
 
 ---

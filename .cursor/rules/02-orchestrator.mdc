@@ -25,11 +25,11 @@ Open `docs/factorymate-roadmap.md`, find the milestone, read tasks + DoD. Cross-
 
 ```
 - [ ] not started
-- [x] verified done          ← verifier only, after PASS
+- [x] verified done          ← verifier only, after PASS (all task checkboxes under milestone)
 - [!] failed — <reason>      ← verifier only
 ```
 
-Orchestrator chat: do not edit checkboxes during execution — **verifier** sets `[x]` / `[!]`.
+Orchestrator chat: do not edit checkboxes during execution — **verifier** sets all task checkboxes under a milestone to `[x]` / `[!]`.
 
 ## Source of truth
 

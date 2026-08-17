@@ -1,0 +1,31 @@
+# FactoryMate — local development stack
+# M0: service definitions only. Dockerfiles added in M13.
+# Until then: `go run ./cmd/server` + `npm run dev` (see docs/development.md).
+
+services:
+  backend:
+    build:
+      context: ./backend
+    ports:
+      - "8080:8080"
+    environment:
+      PORT: "8080"
+      DATABASE_PATH: /data/factorymate.db
+      SESSION_SECRET: ${SESSION_SECRET:-dev-secret-change-me}
+      FRM_HOST: ${FRM_HOST:-}
+      FRM_PORT: ${FRM_PORT:-8080}
+    volumes:
+      - factorymate-data:/data
+
+  frontend:
+    build:
+      context: ./frontend
+    ports:
+      - "3000:3000"
+    environment:
+      BACKEND_URL: http://backend:8080
+    depends_on:
+      - backend
+
+volumes:
+  factorymate-data:

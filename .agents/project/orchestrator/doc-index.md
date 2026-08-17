@@ -17,6 +17,8 @@ Quick reference for orchestrator **DOC REFERENCE** blocks. Sub-agents read these
 | `frm` | `docs/frm-docs/modules/ROOT/pages/json/Read/` | FRM endpoint adocs (read-only vendored copy — see `docs/frm-docs-reference.md`) |
 | `frm-ref` | `docs/frm-docs-reference.md` | What `frm-docs/` is and how to refresh it |
 | `defaults` | `backend/data/message_defaults.json` | Seeded notification templates |
+| `scopes` | `.agents/project/orchestrator/milestone-scopes.md` | Per-milestone READ/WRITE + scoped CI |
+| `testing` | `docs/testing.md` | FRM fixtures, Discord httptest mocks |
 
 Reference sections as `§N`, e.g. `spec §4.2`, `spec §7.1`.
 

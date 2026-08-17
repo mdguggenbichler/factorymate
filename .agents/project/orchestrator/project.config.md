@@ -15,9 +15,29 @@
 
 ## Milestone IDs
 
-Roadmap milestones: `M0` … `M14` (checkboxes in plan file).
+Roadmap milestones: `M0` … `M13` (autonomous loop). **M14** is deferred backlog — no checkboxes, not dispatched.
 
 Commit subject pattern: `feat(M3): implement fast-poll diff engine` (conventional commits + milestone ref).
+
+## Live vs fixture testing
+
+See `docs/testing.md`. Summary for verifiers:
+
+| Dependency | CI / autonomous PASS | Opt-in live |
+| --- | --- | --- |
+| Discord webhook | Go `httptest` mock server | `DISCORD_TEST_WEBHOOK_URL` |
+| FRM API | JSON fixtures in `backend/testdata/frm/` | `go test -tags=integration` when `FRM_TEST_HOST` set |
+| GuggiRaid deploy | `docker compose build` | Human smoke test at M13 DoD |
+
+## Milestone scopes
+
+Per-milestone READ/WRITE paths and scoped CI: `.agents/project/orchestrator/milestone-scopes.md`
+
+Verifier checklist: `.agents/project/orchestrator/verifier-checklist.md`
+
+## Checkbox authority
+
+**Verifier only** marks roadmap checkboxes on PASS (`- [x]`) or FAIL (`- [!] failed — <reason>`). Granularity: **all task checkboxes under the milestone section** (not milestone-level summary only). Orchestrator does not edit checkboxes during execution.
 
 ## Verification commands
 

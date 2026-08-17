@@ -1,0 +1,13 @@
+{
+  "common": {
+    "appName": "FactoryMate",
+    "loading": "Loading…",
+    "save": "Save",
+    "cancel": "Cancel"
+  },
+  "home": {
+    "title": "FactoryMate",
+    "description": "Satisfactory server monitoring and notifications for the CBC group.",
+    "status": "Dashboard scaffolding is in progress. Sign in when authentication is available."
+  }
+}

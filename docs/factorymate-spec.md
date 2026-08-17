@@ -822,6 +822,7 @@ All 13 message types: see `backend/data/message_defaults.json`. M1 seed reads th
 ## 6. Authentication & Authorization
 
 - Username + password login, session cookie (HTTP-only, secure, SameSite=Lax), backed by the **`sessions` table in SQLite** (§3) — sessions survive process restarts; expired rows cleaned up periodically.
+- **Session cookie:** name `factorymate_session`; value = opaque session ID (matches `sessions.id`). **Max age:** 30 days (`expires_at = now + 30d` on login). **Flags:** `HttpOnly`, `Secure` when request is HTTPS (omit in local HTTP dev), `SameSite=Lax`, `Path=/`. **Cleanup:** background job every hour deletes rows where `expires_at < now()` and invalidates matching cookies on next request.
 - Passwords hashed with bcrypt.
 - Two roles:
   - **admin** — full access: settings, notification targets, message templates, target assignment, user management.
@@ -889,6 +890,11 @@ All endpoints under `/api`, JSON in/out, session-cookie authenticated unless not
 ### 7.1 Response schemas
 
 JSON field names use **camelCase** in API responses; DB columns remain snake_case. M8 tests assert against the shapes below. Endpoints not listed here return objects that mirror §3 table columns (same fields, camelCase) — e.g. `GET /api/power` → `{ "circuits": [ { "circuitId", "tripped", "powerProduction", ... } ] }`.
+
+**`GET /healthz`**
+```json
+{ "status": "ok" }
+```
 
 **`GET /api/status`**
 ```json
@@ -1061,6 +1067,19 @@ The frontend uses **proper i18n from the first commit** — no user-facing hardc
 **Future languages:** Adding `de.json` (or others) is a file + config change only — no component rewrites if v1 follows this rule. Locale switcher UI is **out of scope for v1** (see §10).
 
 **M0 sets up** next-intl wiring; **every page milestone (M10–M12)** adds keys to `en.json` alongside the UI — never defer i18n to a later cleanup pass.
+
+### 8.3 Page acceptance criteria (M11 DoD)
+
+Verifier checks for M11 edge cases — concrete acceptance beyond "renders real data":
+
+| Page | Acceptance |
+|---|---|
+| `/elevator` | When `elevator.phaseNumber` is `2`, progress bars reflect Phase 2 required items from `currentPhase`; `percentComplete` matches §7.1 formula |
+| `/elevator` | Admin sees destructive `Alert` when `elevator_phase_unknown_log` has unresolved rows; viewer does not |
+| `/power` | Tripped circuit shows `Badge`/`Alert` tripped state; fuse trip/restore events appear in history list; expanded chart shows per-circuit metrics from `circuit_snapshots` |
+| `/production` | Row expand reveals chart (Overall) or ingredient/production breakdown (Detailed) — not a navigation away |
+| `/players` | Join/leave timeline composed from history endpoint (custom composition per §8.1) |
+| `/settings/notifications/log` | Rows with deleted `target_id` show "Deleted target" (or i18n equivalent), not blank or crash |
 
 ---
 

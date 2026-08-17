@@ -10,7 +10,7 @@
 
 **Goal:** An empty but runnable skeleton for both backend and frontend, in one repository.
 
-- [ ] Create repo with `/backend` (Go module) and `/frontend` (Next.js App Router) directories.
+- [x] Create repo with `/backend` (Go module) and `/frontend` (Next.js App Router) directories.
 - [ ] `backend`: `go mod init`, add dependencies: `modernc.org/sqlite` (§3), `chi` router (§2.1), `golang.org/x/crypto/bcrypt` (§6).
 - [ ] `backend`: directory layout —
   ```
@@ -25,9 +25,9 @@
     internal/auth/        -- sessions, bcrypt (M7)
     data/                 -- static reference data: elevator phases (M3.1), message_defaults.json (M1)
   ```
-- [ ] `frontend`: `npx create-next-app` (App Router, TypeScript, Tailwind), then `npx shadcn init`. Configure `next.config` API rewrite to backend for production (§2.4).
-- [ ] `frontend`: install and wire **next-intl** per **spec §8.2** — `messages/en.json` with `common` namespace stub, `i18n` config, provider in root layout. Default page uses `t()` (no hardcoded UI strings even in skeleton).
-- [ ] `docker-compose.yml` skeleton with two service stubs (`backend`, `frontend`) — filled in at M13.
+- [x] `frontend`: `npx create-next-app` (App Router, TypeScript, Tailwind), then `npx shadcn init`. Configure `next.config` API rewrite to backend for production (§2.4).
+- [x] `frontend`: install and wire **next-intl** per **spec §8.2** — `messages/en.json` with `common` namespace stub, `i18n` config, provider in root layout. Default page uses `t()` (no hardcoded UI strings even in skeleton).
+- [x] `docker-compose.yml` skeleton with two service stubs (`backend`, `frontend`) — filled in at M13.
 - [ ] Backend: `GET /healthz` per §7 (liveness only). Frontend: default Next.js page.
 
 **DoD:** `docker-compose up` (or `go run` + `npm run dev` locally) starts both processes cleanly with no business logic yet.
@@ -188,7 +188,7 @@
 
 **Goal:** shadcn set, auth pages, shell per **§8.1**; API wiring per **§2.4**; i18n per **§8.2**.
 
-- [ ] `shadcn add` all components from §8.1 table.
+- [x] `shadcn add` all components from §8.1 table.
 - [ ] `/setup`, `/login` (`login-01`), wired to M7 — **all labels/buttons via `messages/en.json`** (§8.2).
 - [ ] App shell (`sidebar-07`): viewer nav + admin Settings group — nav item labels from `nav` namespace.
 - [ ] Auth guard + `/account` password form (M7) — form strings from `auth` namespace.
@@ -214,7 +214,7 @@ Build order:
 - [ ] `/production` — Overall + Detailed tabs; Detailed expand uses `ingredients`/`production` from API
 - [ ] `/` Overview — **primarily `GET /api/status`** (§7.1 includes milestone + elevator summaries)
 
-**DoD:** All 11 pages render real live data; edge cases per `factorymate-spec.md` §8 DoD notes (e.g. Phase 2 on `/elevator`, fuse detail on `/power`).
+**DoD:** All 11 pages render real live data; edge cases per **spec §8.3** (e.g. Phase 2 on `/elevator`, fuse detail on `/power`).
 
 ---
 

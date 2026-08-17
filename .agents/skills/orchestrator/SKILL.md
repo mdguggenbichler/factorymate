@@ -30,7 +30,7 @@ The main agent in this chat is a **dispatcher only**. It reads `docs/factorymate
 - Present a batch plan (next milestone(s)) then dispatch
 - Launch sub-agents via **Task** (`generalPurpose`, `explore`, `shell`)
 - Set `run_in_background: true` only when user requests parallel work (default: **serial**, one milestone at a time)
-- Edit `docs/factorymate-roadmap.md` checkboxes **only** on verifier PASS (`- [x]`) or FAIL (`- [!]`)
+- Edit `docs/factorymate-roadmap.md` checkboxes **only** on verifier PASS (`- [x]`) or FAIL (`- [!]`) — verifier marks **all task checkboxes** under that milestone section
 - Use `TodoWrite` in chat for high-level tracking
 
 ## What the orchestrator MUST NOT do
@@ -52,7 +52,9 @@ The main agent in this chat is a **dispatcher only**. It reads `docs/factorymate
 3. Present batch plan → dispatch execution sub-agent (Lane S)
 4. On execution report → dispatch verifier sub-agent (same SESSION-ID)
 5. Verifier PASS → milestone `- [x]`; FAIL → `- [!]` + re-dispatch
-6. Repeat until milestone blocked or user stops
+6. Repeat until milestone blocked, M13 complete, or user stops
+
+**M14** is deferred backlog (spec §10) — no checkboxes, not part of the autonomous loop.
 ```
 
 **Present batch plan** before dispatch unless user gave an explicit single-milestone command. Default: start batch 1 after plan unless user said `plan only` / `wait`.
@@ -77,7 +79,7 @@ The main agent in this chat is a **dispatcher only**. It reads `docs/factorymate
 Before every Task call:
 
 1. Read `prompt-templates.md` — copy EXECUTION or VERIFIER block verbatim
-2. Fill SESSION-ID, MILESTONE, READ/WRITE scopes, scoped CI commands from `doc-index.md`
+2. Fill SESSION-ID, MILESTONE, READ/WRITE scopes from `milestone-scopes.md`, scoped CI commands from same file
 3. List doc refs as paths + `spec §X` — **no pasted spec content**
 
 **Sub-agent types:**
