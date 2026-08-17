@@ -28,6 +28,7 @@ import {
 import { apiFetch } from "@/lib/api"
 import {
   buildDateRangeQuery,
+  isShortTimePreset,
   presetToDateRange,
   type DateRangePreset,
 } from "@/lib/date-range"
@@ -47,9 +48,9 @@ type PowerViewProps = {
 }
 
 const chartConfig = {
-  production: { label: "Production", color: "hsl(var(--chart-1))" },
-  consumed: { label: "Consumption", color: "hsl(var(--chart-2))" },
-  battery: { label: "Battery", color: "hsl(var(--chart-3))" },
+  production: { label: "Production", color: "var(--chart-1)" },
+  consumed: { label: "Consumption", color: "var(--chart-2)" },
+  battery: { label: "Battery", color: "var(--chart-3)" },
 } satisfies ChartConfig
 
 export function PowerView({
@@ -202,6 +203,7 @@ export function PowerView({
                 { key: "battery" },
               ]}
               yAxisLabel="MW / %"
+              compactTimeAxis={isShortTimePreset(interval)}
             />
           )}
         </CardContent>

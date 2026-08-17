@@ -32,6 +32,9 @@ export function IntervalPicker({ value, onChange }: IntervalPickerProps) {
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
+        <SelectItem value="6h">{t("interval6h")}</SelectItem>
+        <SelectItem value="12h">{t("interval12h")}</SelectItem>
+        <SelectItem value="24h">{t("interval24h")}</SelectItem>
         <SelectItem value="7d">{t("interval7d")}</SelectItem>
         <SelectItem value="30d">{t("interval30d")}</SelectItem>
         <SelectItem value="90d">{t("interval90d")}</SelectItem>

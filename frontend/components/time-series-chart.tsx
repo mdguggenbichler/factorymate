@@ -22,6 +22,7 @@ type TimeSeriesChartProps = {
   series: { key: string; label?: string }[]
   className?: string
   yAxisLabel?: string
+  compactTimeAxis?: boolean
 }
 
 export function TimeSeriesChart({
@@ -30,6 +31,7 @@ export function TimeSeriesChart({
   series,
   className,
   yAxisLabel,
+  compactTimeAxis = false,
 }: TimeSeriesChartProps) {
   return (
     <ChartContainer config={config} className={className ?? "aspect-auto h-[280px] w-full"}>
@@ -43,6 +45,12 @@ export function TimeSeriesChart({
           minTickGap={32}
           tickFormatter={(value) => {
             const date = new Date(String(value))
+            if (compactTimeAxis) {
+              return date.toLocaleTimeString(undefined, {
+                hour: "2-digit",
+                minute: "2-digit",
+              })
+            }
             return date.toLocaleDateString(undefined, {
               month: "short",
               day: "numeric",

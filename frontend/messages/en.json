@@ -10,6 +10,9 @@
   },
   "charts": {
     "intervalLabel": "Select time range",
+    "interval6h": "Last 6 hours",
+    "interval12h": "Last 12 hours",
+    "interval24h": "Last 24 hours",
     "interval7d": "Last 7 days",
     "interval30d": "Last 30 days",
     "interval90d": "Last 90 days",

@@ -19,6 +19,7 @@ import {
 import { apiFetch } from "@/lib/api"
 import {
   buildDateRangeQuery,
+  isShortTimePreset,
   presetToDateRange,
   type DateRangePreset,
 } from "@/lib/date-range"
@@ -37,8 +38,8 @@ type ProductionViewProps = {
 }
 
 const chartConfig = {
-  produced: { label: "Produced", color: "hsl(var(--chart-1))" },
-  consumed: { label: "Consumed", color: "hsl(var(--chart-2))" },
+  produced: { label: "Produced", color: "var(--chart-1)" },
+  consumed: { label: "Consumed", color: "var(--chart-2)" },
 } satisfies ChartConfig
 
 export function ProductionView({ overallItems, machines }: ProductionViewProps) {
@@ -192,6 +193,7 @@ function OverallTab({ items }: { items: ProductionItem[] }) {
                                 { key: "consumed" },
                               ]}
                               yAxisLabel="/min"
+                              compactTimeAxis={isShortTimePreset(interval)}
                             />
                           )}
                         </TableCell>

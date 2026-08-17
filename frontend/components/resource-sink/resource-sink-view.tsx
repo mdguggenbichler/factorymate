@@ -10,6 +10,7 @@ import { Progress } from "@/components/ui/progress"
 import { apiFetch } from "@/lib/api"
 import {
   buildDateRangeQuery,
+  isShortTimePreset,
   presetToDateRange,
   type DateRangePreset,
 } from "@/lib/date-range"
@@ -26,8 +27,8 @@ type ResourceSinkViewProps = {
 }
 
 const chartConfig = {
-  coupons: { label: "Coupons", color: "hsl(var(--chart-1))" },
-  points: { label: "Points", color: "hsl(var(--chart-2))" },
+  coupons: { label: "Coupons", color: "var(--chart-1)" },
+  points: { label: "Points", color: "var(--chart-2)" },
 } satisfies ChartConfig
 
 export function ResourceSinkView({
@@ -136,6 +137,7 @@ export function ResourceSinkView({
               data={chartData}
               config={chartConfig}
               series={[{ key: "coupons" }, { key: "points" }]}
+              compactTimeAxis={isShortTimePreset(interval)}
             />
           )}
         </CardContent>
