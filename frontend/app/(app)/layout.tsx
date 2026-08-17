@@ -14,5 +14,9 @@ export default async function AppLayout({
     redirect("/login")
   }
 
+  if (user.status === "pending_approval") {
+    return children
+  }
+
   return <AppShell user={user}>{children}</AppShell>
 }

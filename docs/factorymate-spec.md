@@ -144,7 +144,15 @@ type Provider interface {
     Type() string
     Send(ctx context.Context, target NotificationTarget, msg RenderedMessage) error
 }
+
+// DirectMessageProvider extends Provider with per-user DM delivery (bot token transport).
+type DirectMessageProvider interface {
+    Provider
+    SendDirect(ctx context.Context, platform, externalUserID string, msg RenderedMessage) error
+}
 ```
+
+Discord is the v1 implementation: channel posts use `Send` with `notification_targets.config_json.channel_id`; player DMs (welcome, connection details, password reset, notification prefs) use `SendDirect` with the user's `external_user_id` when `external_platform = 'discord'`.
 
 ### 2.4 Frontend / backend wiring
 
@@ -172,9 +180,24 @@ CREATE TABLE users (
     username TEXT UNIQUE NOT NULL,
     password_hash TEXT NOT NULL,
     role TEXT NOT NULL CHECK (role IN ('admin', 'viewer')),
-    player_id TEXT REFERENCES player_state(player_id),  -- optional admin mapping to game player
-    created_at TEXT NOT NULL
+    player_id TEXT REFERENCES player_state(player_id),  -- optional mapping to game player
+    created_at TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'active'
+        CHECK (status IN ('pending_approval', 'active')),
+    external_platform TEXT
+        CHECK (external_platform IS NULL OR external_platform IN ('discord', 'slack')),
+    external_user_id TEXT,
+    external_username TEXT,
+    external_display_name TEXT,
+    external_linked_at TEXT,
+    pending_player_name TEXT,
+    registration_source TEXT NOT NULL DEFAULT 'web_invite'
+        CHECK (registration_source IN ('setup', 'web_invite', 'discord')),
+    dm_player_personal BOOLEAN NOT NULL DEFAULT 0
 );
+CREATE UNIQUE INDEX idx_users_external_identity
+    ON users(external_platform, external_user_id)
+    WHERE external_user_id IS NOT NULL;
 
 CREATE TABLE invites (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -244,11 +267,14 @@ CREATE TABLE message_type_targets (
 CREATE TABLE notification_log (
     id INTEGER PRIMARY KEY,
     message_type_key TEXT NOT NULL,
-    target_id INTEGER NOT NULL,         -- intentionally no FK / ON DELETE CASCADE: audit history must survive target deletion; this value may reference a deleted notification_targets row (UI: §8.1; GET /api/notification-log LEFT JOIN: §7)
+    target_id INTEGER,                  -- NULL for DM rows; may reference deleted notification_targets for channel rows (no FK)
     rendered_preview TEXT NOT NULL,
     success BOOLEAN NOT NULL,
     error TEXT,
-    sent_at TEXT NOT NULL
+    sent_at TEXT NOT NULL,
+    delivery_mode TEXT NOT NULL DEFAULT 'channel'
+        CHECK (delivery_mode IN ('channel', 'dm')),
+    recipient_external_user_id TEXT    -- populated when delivery_mode = 'dm'
 );
 
 -- Discrete player join/leave events for /api/players/history (written by M3 on
@@ -534,6 +560,9 @@ Two separate cadences: the **fast poll** drives notification/event detection (§
 | `GET /getFactory` | Every producer-type building (Assembler, Foundry, Smelter, Constructor, Manufacturer, Blender, Packager, Refinery, Converter, Encoder, Particle Accelerator) → `factory_machine_state`, "Detailed Prod" table. `getFactory` is a single aggregated endpoint covering all of these — not one call per building type. Derive `building_type` from `ClassName` using the mapping table below. |
 | `GET /getDrone` | All drones → `drone_state` |
 | `GET /getDoggo` | All Lizard Doggos → `doggo_state`, storing the `Inventory[]` array as-is — each item already has a display `Name` (e.g. "SAM"), so no separate "found SAM" flag or ClassName matching is needed |
+| `GET /getModList` | Server mod manifest → `mods_cache` (dashboard `/mods`, SMM profile export, Discord `/mods`) |
+
+**`getModList` notes:** Returns game build, SML version, and per-mod metadata (`Name`, `Version`, `RemoteVersionRange`, `CreatedBy`, docs URL, `RequiredOnRemote`). Polled on admin refresh and cached in SQLite; not part of the recurring slow-poll loop unless refreshed explicitly.
 
 **`getFactory` `building_type` mapping:** `factory_machine_state.building_type` is derived from each machine's `ClassName`. FRM's per-type endpoints (`getAssembler`, `getFoundry`, `getSmelter`, `getConstructor`, `getManufacturer`, `getBlender`, `getPackager`, `getRefinery`, `getConverter`, `getEncoder`, `getParticle`) have **no separate `.adoc` files** in `docs/frm-docs` — they all xref to `getFactory.adoc`, whose example response contains only a Constructor. ClassNames below are only those that appear as a `"ClassName"` field in vendored docs; Mk2/Mk3 (and any other) variants are listed only when found. Do not invent missing ClassNames.
 
@@ -1210,7 +1239,7 @@ Verifier checks for M11 edge cases — concrete acceptance beyond "renders real 
 
 **Startup behavior:** If `SESSION_SECRET` is unset, the backend exits with a clear error. If `FRM_HOST` is unset, seed `app_settings` with empty `frm_host` — poller logs errors until configured via `/settings/general`.
 
-Notification target credentials (Discord webhook URLs) are **not** environment variables — they live in the `notification_targets` table, configured via the UI, so they can be managed without redeploying the container.
+Notification target credentials (Discord **channel IDs** for channel posts) live in the `notification_targets` table, configured via the UI — not environment variables. The Discord bot token (`DISCORD_BOT_TOKEN`) enables channel posts via the bot API and direct messages; webhook URLs are **not** used in v1.
 
 ---
 

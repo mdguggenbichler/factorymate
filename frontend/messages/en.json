@@ -86,10 +86,17 @@
     "passwordChanged": "Password updated successfully.",
     "passwordMismatch": "Passwords do not match.",
     "loginFailed": "Invalid username or password.",
+    "pendingApproval": "Your account is waiting for admin approval. You can sign out below once approved.",
     "setupFailed": "Could not create account. Setup may already be complete.",
     "genericError": "Something went wrong. Please try again.",
     "roleAdmin": "Admin",
-    "roleViewer": "Viewer"
+    "roleViewer": "Viewer",
+    "awaitingApproval": {
+      "title": "Awaiting approval",
+      "description": "An admin must approve your registration before you can use the dashboard.",
+      "hint": "You will receive a Discord DM when your account is approved. You can sign out below if needed.",
+      "logout": "Sign out"
+    }
   },
   "invite": {
     "title": "Accept invite",
@@ -120,9 +127,15 @@
     "disclaimerDescription": "This list shows every mod on the server. RequiredOnRemote is not always reliable — use Download SMM profile to sync Satisfactory Mod Manager before connecting.",
     "frmUnreachableTitle": "FRM unreachable",
     "frmUnreachableDescription": "FactoryMate could not reach the FRM server. Mod data may be stale until the connection is restored.",
+    "searchPlaceholder": "Search mods by name",
+    "searchEmpty": "No mods match your search.",
+    "docsLink": "Docs",
     "columns": {
       "name": "Mod",
       "version": "Version",
+      "remoteVersionRange": "Remote version",
+      "createdBy": "Author",
+      "docs": "Docs",
       "smrName": "SMR name",
       "required": "Required on remote"
     }
@@ -619,6 +632,10 @@
       "revokeInviteDescription": "Revoke this {role} invite created {createdAt}? This link will no longer work.",
       "revokeInviteDescriptionFallback": "This invite link will no longer work.",
       "playersLoadFailed": "Could not load players.",
+      "linkToUser": "Link",
+      "linkUserPlaceholder": "Select user",
+      "linkUserRequired": "Select a user to link.",
+      "playerLinked": "Linked {name} to the selected user.",
       "revokeInviteConfirm": "Revoke invite",
       "editTitle": "Edit user",
       "editDescription": "Update role, player mapping, or reset password.",
@@ -646,6 +663,8 @@
       "columns": {
         "username": "Username",
         "discord": "Discord",
+        "registrationSource": "Registration",
+        "linkedAt": "Discord linked",
         "role": "Role",
         "state": "State",
         "player": "Player",

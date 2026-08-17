@@ -127,7 +127,9 @@ export function UsersView({
   const [promoteUser, setPromoteUser] = useState<AppUser | null>(null)
   const [revokeInvite, setRevokeInvite] = useState<Invite | null>(null)
   const [pending, setPending] = useState(initialPending)
-  const [unmapped] = useState(initialUnmapped)
+  const [unmapped, setUnmapped] = useState(initialUnmapped)
+  const [linkSelections, setLinkSelections] = useState<Record<string, string>>({})
+  const [linkingPlayerId, setLinkingPlayerId] = useState<string | null>(null)
   const [rejectRegistration, setRejectRegistration] =
     useState<PendingRegistration | null>(null)
   const [rejectComment, setRejectComment] = useState("")
@@ -342,6 +344,40 @@ export function UsersView({
     }
   }
 
+  const linkableUsers = useMemo(
+    () => users.filter((user) => !user.playerId && user.status === "active"),
+    [users]
+  )
+
+  async function handleLinkUnmappedPlayer(player: UnmappedPlayer) {
+    const selectedUserId = linkSelections[player.playerId]
+    if (!selectedUserId) {
+      toast.error(t("linkUserRequired"))
+      return
+    }
+
+    setLinkingPlayerId(player.playerId)
+    try {
+      const updated = await apiFetch<AppUser>(`/users/${selectedUserId}`, {
+        method: "PUT",
+        body: JSON.stringify({ playerId: player.playerId }),
+      })
+      setUsers((current) =>
+        current.map((user) =>
+          user.id === updated.id ? { ...user, ...updated } : user
+        )
+      )
+      setUnmapped((current) =>
+        current.filter((item) => item.playerId !== player.playerId)
+      )
+      toast.success(t("playerLinked", { name: player.name }))
+    } catch {
+      toast.error(tCommon("error"))
+    } finally {
+      setLinkingPlayerId(null)
+    }
+  }
+
   function externalLabel(user: AppUser): string {
     if (user.externalDisplayName) {
       return user.externalDisplayName
@@ -481,6 +517,7 @@ export function UsersView({
                   <TableHead>{t("columns.player")}</TableHead>
                   <TableHead>{t("columns.status")}</TableHead>
                   <TableHead>{t("columns.lastSeen")}</TableHead>
+                  <TableHead className="text-right">{t("columns.actions")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -494,6 +531,44 @@ export function UsersView({
                     </TableCell>
                     <TableCell>
                       {player.lastSeenAt ? formatDateTime(player.lastSeenAt) : "—"}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex flex-wrap items-center justify-end gap-2">
+                        <Select
+                          value={linkSelections[player.playerId] ?? ""}
+                          onValueChange={(value) =>
+                            setLinkSelections((current) => ({
+                              ...current,
+                              [player.playerId]: value ?? "",
+                            }))
+                          }
+                          items={linkableUsers.map((user) => ({
+                            label: user.username,
+                            value: String(user.id),
+                          }))}
+                        >
+                          <SelectTrigger className="w-[180px]">
+                            <SelectValue placeholder={t("linkUserPlaceholder")} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectGroup>
+                              {linkableUsers.map((user) => (
+                                <SelectItem key={user.id} value={String(user.id)}>
+                                  {user.username}
+                                </SelectItem>
+                              ))}
+                            </SelectGroup>
+                          </SelectContent>
+                        </Select>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={linkingPlayerId === player.playerId}
+                          onClick={() => void handleLinkUnmappedPlayer(player)}
+                        >
+                          {t("linkToUser")}
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -537,6 +612,8 @@ export function UsersView({
               <TableRow>
                 <TableHead>{t("columns.username")}</TableHead>
                 <TableHead>{t("columns.discord")}</TableHead>
+                <TableHead>{t("columns.registrationSource")}</TableHead>
+                <TableHead>{t("columns.linkedAt")}</TableHead>
                 <TableHead>{t("columns.role")}</TableHead>
                 <TableHead>{t("columns.state")}</TableHead>
                 <TableHead>{t("columns.player")}</TableHead>
@@ -558,6 +635,8 @@ export function UsersView({
                       <TableCell className="text-muted-foreground">
                         {invite.acceptedUsername ?? "—"}
                       </TableCell>
+                      <TableCell>—</TableCell>
+                      <TableCell>—</TableCell>
                       <TableCell>—</TableCell>
                       <TableCell>
                         <Badge variant="outline">{roleLabel(invite.role)}</Badge>
@@ -599,6 +678,12 @@ export function UsersView({
                   <TableRow key={`user-${user.id}`}>
                     <TableCell className="font-medium">{user.username}</TableCell>
                     <TableCell>{externalLabel(user)}</TableCell>
+                    <TableCell>{user.registrationSource ?? "—"}</TableCell>
+                    <TableCell>
+                      {user.externalLinkedAt
+                        ? formatDateTime(user.externalLinkedAt)
+                        : "—"}
+                    </TableCell>
                     <TableCell>
                       <Badge variant="outline">{roleLabel(user.role)}</Badge>
                     </TableCell>

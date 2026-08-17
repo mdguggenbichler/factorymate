@@ -17,11 +17,13 @@ import (
 )
 
 // InvitePermissions matches §15.2 bot permissions bitmask.
+// PermissionCreatePrivateThreads is the discordgo name for the portal's DM/thread capability.
 const InvitePermissions = discordgo.PermissionViewChannel |
 	discordgo.PermissionSendMessages |
 	discordgo.PermissionEmbedLinks |
 	discordgo.PermissionUseSlashCommands |
-	discordgo.PermissionSendMessagesInThreads
+	discordgo.PermissionSendMessagesInThreads |
+	discordgo.PermissionCreatePrivateThreads
 
 // Channel is a guild text channel exposed to the admin API.
 type Channel struct {

@@ -152,6 +152,12 @@ func (b *Bot) handleApplicationCommand(ctx context.Context, s *discordgo.Session
 		}
 		respondEphemeral(s, i, msg)
 		_ = LogBotCommand(ctx, b.db, externalID, "registration auto-approve", true, enabled)
+	case "registrations":
+		b.handleRegistrationsCommand(ctx, s, i, data, externalID, perms, state)
+	case "unlink":
+		b.handleUnlinkCommand(ctx, s, i, data, externalID, perms, state)
+	case "password-reset":
+		b.handlePasswordResetCommand(ctx, s, i, data, externalID, perms, state)
 	case "status":
 		if !CanRunCommand(perms, CommandGroupPlayer, state) {
 			b.logAndDeny(ctx, s, i, externalID, "status", "forbidden")
@@ -311,15 +317,16 @@ func (b *Bot) handleModalSubmit(ctx context.Context, s *discordgo.Session, i *di
 
 func (b *Bot) submitRegisterModal(ctx context.Context, s *discordgo.Session, i *discordgo.InteractionCreate, customID, externalID string, member *discordgo.Member) {
 	values := modalValues(i)
-	username := values["fm_username"]
 	password := values["password"]
 	playerName := values["player_name"]
 	forceApprove := strings.HasPrefix(customID, modalRegisterAdmin)
 
-	if username == "" || password == "" || playerName == "" {
+	if password == "" || playerName == "" {
 		respondEphemeral(s, i, "All fields are required.")
 		return
 	}
+
+	username := registration.DeriveUsername(memberDisplayName(member), memberDisplay(member))
 
 	role, err := FMRoleForMember(ctx, b.db, memberRoleIDsFromMember(member))
 	if err != nil {
@@ -339,8 +346,6 @@ func (b *Bot) submitRegisterModal(ctx context.Context, s *discordgo.Session, i *
 	if err != nil {
 		msg := "Registration failed."
 		switch {
-		case errors.Is(err, registration.ErrUsernameTaken):
-			msg = "That username is already taken."
 		case errors.Is(err, registration.ErrAlreadyRegistered):
 			msg = "You are already registered."
 		case errors.Is(err, auth.ErrWeakPassword):
@@ -431,6 +436,18 @@ func (b *Bot) handleApproveButton(ctx context.Context, s *discordgo.Session, i *
 		return
 	}
 
+	expired, err := b.registration.RegistrationButtonExpired(ctx, userID)
+	if err != nil {
+		respondEphemeral(s, i, "Could not verify registration age.")
+		_ = LogBotCommand(ctx, b.db, externalID, "registration approve", false, err.Error())
+		return
+	}
+	if expired {
+		respondEphemeral(s, i, "Button expired — use web UI or `/registrations approve`.")
+		_ = LogBotCommand(ctx, b.db, externalID, "registration approve", false, "expired")
+		return
+	}
+
 	approved, err := b.registration.ApproveRegistration(ctx, userID, adminUser.ID)
 	if err != nil {
 		msg := "Could not approve registration."
@@ -459,6 +476,16 @@ func (b *Bot) handleRejectButton(ctx context.Context, s *discordgo.Session, i *d
 	adminUser, err := b.registration.GetByExternal(ctx, registration.PlatformDiscord, externalID)
 	if err != nil || adminUser == nil || adminUser.Role != auth.RoleAdmin {
 		respondEphemeral(s, i, "Only admins can reject registrations.")
+		return
+	}
+
+	expired, err := b.registration.RegistrationButtonExpired(ctx, userID)
+	if err != nil {
+		respondEphemeral(s, i, "Could not verify registration age.")
+		return
+	}
+	if expired {
+		respondEphemeral(s, i, "Button expired — use web UI or `/registrations reject`.")
 		return
 	}
 
@@ -606,13 +633,10 @@ func showRegisterModal(s *discordgo.Session, i *discordgo.InteractionCreate, cus
 			Title:    title,
 			Components: []discordgo.MessageComponent{
 				discordgo.ActionsRow{Components: []discordgo.MessageComponent{discordgo.TextInput{
-					CustomID: "fm_username", Label: "FactoryMate username", Style: discordgo.TextInputShort, Required: true, MaxLength: 32,
+					CustomID: "player_name", Label: "In-game player name", Style: discordgo.TextInputShort, Required: true, MaxLength: 64,
 				}}},
 				discordgo.ActionsRow{Components: []discordgo.MessageComponent{discordgo.TextInput{
 					CustomID: "password", Label: "Dashboard password", Style: discordgo.TextInputShort, Required: true, MinLength: 8,
-				}}},
-				discordgo.ActionsRow{Components: []discordgo.MessageComponent{discordgo.TextInput{
-					CustomID: "player_name", Label: "In-game player name", Style: discordgo.TextInputShort, Required: true, MaxLength: 64,
 				}}},
 			},
 		},

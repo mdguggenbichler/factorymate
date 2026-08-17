@@ -44,6 +44,14 @@ export function LoginForm({
     } catch (error) {
       if (error instanceof ApiError && error.status === 401) {
         toast.error(t("loginFailed"))
+      } else if (
+        error instanceof ApiError &&
+        error.status === 403 &&
+        error.message === "account pending approval"
+      ) {
+        toast.error(t("pendingApproval"))
+        router.push("/awaiting-approval")
+        router.refresh()
       } else {
         toast.error(t("genericError"))
       }

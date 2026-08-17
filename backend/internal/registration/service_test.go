@@ -169,6 +169,42 @@ func TestApproveAndRejectRegistration(t *testing.T) {
 	}
 }
 
+func TestRegisterUsernameAutoSuffix(t *testing.T) {
+	t.Chdir("../..")
+	ctx := context.Background()
+	database := openTestDB(t)
+	defer database.Close()
+	if err := db.Init(ctx, database, db.SeedConfig{}); err != nil {
+		t.Fatalf("init db: %v", err)
+	}
+
+	authSvc := auth.NewService(database)
+	regSvc := registration.NewService(database, authSvc)
+
+	_, err := database.ExecContext(ctx, `
+		INSERT INTO users (username, password_hash, role, created_at)
+		VALUES ('michael', 'hash', 'viewer', 'now')`)
+	if err != nil {
+		t.Fatalf("seed username: %v", err)
+	}
+
+	result, err := regSvc.Register(ctx, registration.RegisterParams{
+		Username:          "michael",
+		Password:          "password123",
+		PendingPlayerName: "Michael2",
+		External: registration.ExternalIdentity{
+			Platform: registration.PlatformDiscord,
+			UserID:   "discord-suffix",
+		},
+	})
+	if err != nil {
+		t.Fatalf("register: %v", err)
+	}
+	if result.User.Username != "michael-2" {
+		t.Fatalf("username = %q, want michael-2", result.User.Username)
+	}
+}
+
 func openTestDB(t *testing.T) *sql.DB {
 	t.Helper()
 	path := filepath.Join(t.TempDir(), "test.db")

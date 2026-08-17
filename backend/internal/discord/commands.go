@@ -68,6 +68,12 @@ func (b *Bot) registerSlashCommands(ctx context.Context) error {
 			Description: "Get or set game join connection details",
 			Options: []*discordgo.ApplicationCommandOption{
 				{
+					Type:        discordgo.ApplicationCommandOptionBoolean,
+					Name:        "public",
+					Description: "Show join details in this channel instead of DM",
+					Required:    false,
+				},
+				{
 					Type:        discordgo.ApplicationCommandOptionSubCommand,
 					Name:        "set",
 					Description: "Update join details and broadcast to players (admin)",
@@ -120,6 +126,60 @@ func (b *Bot) registerSlashCommands(ctx context.Context) error {
 							},
 						},
 					},
+				},
+			},
+		},
+		{
+			Name:        "registrations",
+			Description: "Manage pending registration queue (admin)",
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Type:        discordgo.ApplicationCommandOptionSubCommand,
+					Name:        "list",
+					Description: "Pending approval queue summary",
+				},
+				{
+					Type:        discordgo.ApplicationCommandOptionSubCommand,
+					Name:        "approve",
+					Description: "Approve a pending registration",
+					Options: []*discordgo.ApplicationCommandOption{
+						{Type: discordgo.ApplicationCommandOptionUser, Name: "user", Description: "Discord user", Required: false},
+						{Type: discordgo.ApplicationCommandOptionInteger, Name: "id", Description: "FactoryMate user id", Required: false},
+					},
+				},
+				{
+					Type:        discordgo.ApplicationCommandOptionSubCommand,
+					Name:        "reject",
+					Description: "Reject a pending registration",
+					Options: []*discordgo.ApplicationCommandOption{
+						{Type: discordgo.ApplicationCommandOptionUser, Name: "user", Description: "Discord user", Required: false},
+						{Type: discordgo.ApplicationCommandOptionInteger, Name: "id", Description: "FactoryMate user id", Required: false},
+						{Type: discordgo.ApplicationCommandOptionString, Name: "reason", Description: "Optional reason", Required: false},
+					},
+				},
+			},
+		},
+		{
+			Name:        "unlink",
+			Description: "Remove Discord link from a FactoryMate account (admin)",
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Type:        discordgo.ApplicationCommandOptionUser,
+					Name:        "user",
+					Description: "Discord user to unlink",
+					Required:    true,
+				},
+			},
+		},
+		{
+			Name:        "password-reset",
+			Description: "Reset a user's dashboard password and DM a temporary password (admin)",
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Type:        discordgo.ApplicationCommandOptionUser,
+					Name:        "user",
+					Description: "Discord user",
+					Required:    true,
 				},
 			},
 		},

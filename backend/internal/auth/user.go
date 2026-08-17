@@ -67,14 +67,36 @@ func (s *Service) Authenticate(ctx context.Context, username, password string) (
 	return user, nil
 }
 
+// CheckCredentials validates username/password and returns the user even when pending approval.
+func (s *Service) CheckCredentials(ctx context.Context, username, password string) (User, error) {
+	var user User
+	var hash, status string
+	err := s.db.QueryRowContext(ctx, `
+		SELECT id, username, password_hash, role, status FROM users WHERE username = ?`,
+		username,
+	).Scan(&user.ID, &user.Username, &hash, &user.Role, &status)
+	if err == sql.ErrNoRows {
+		return User{}, ErrInvalidCredentials
+	}
+	if err != nil {
+		return User{}, fmt.Errorf("query user: %w", err)
+	}
+	if !CheckPassword(hash, password) {
+		return User{}, ErrInvalidCredentials
+	}
+	user.Status = status
+	return user, nil
+}
+
 func (s *Service) GetUserByID(ctx context.Context, id int64) (User, error) {
 	var user User
 	var playerID, playerName, pendingName sql.NullString
 	var createdAt, status string
+	var regSource sql.NullString
 	var extPlatform, extUserID, extUsername, extDisplay, extLinked sql.NullString
 	err := s.db.QueryRowContext(ctx, `
 		SELECT u.id, u.username, u.role, u.created_at, u.status, u.player_id, p.name,
-			u.pending_player_name,
+			u.pending_player_name, u.registration_source,
 			u.external_platform, u.external_user_id, u.external_username,
 			u.external_display_name, u.external_linked_at
 		FROM users u
@@ -82,7 +104,7 @@ func (s *Service) GetUserByID(ctx context.Context, id int64) (User, error) {
 		WHERE u.id = ?`, id,
 	).Scan(
 		&user.ID, &user.Username, &user.Role, &createdAt, &status, &playerID, &playerName,
-		&pendingName,
+		&pendingName, &regSource,
 		&extPlatform, &extUserID, &extUsername, &extDisplay, &extLinked,
 	)
 	if err == sql.ErrNoRows {
@@ -105,6 +127,10 @@ func (s *Service) GetUserByID(ctx context.Context, id int64) (User, error) {
 		name := pendingName.String
 		user.PendingPlayerName = &name
 	}
+	if regSource.Valid {
+		src := regSource.String
+		user.RegistrationSource = &src
+	}
 	user.External = loadExternalFields(extPlatform, extUserID, extUsername, extDisplay, extLinked)
 	return user, nil
 }
@@ -114,10 +140,11 @@ func (s *Service) GetMeUser(ctx context.Context, id int64) (MeUser, error) {
 	var me MeUser
 	var playerID, playerName, pendingName sql.NullString
 	var createdAt, status string
+	var regSource sql.NullString
 	var extPlatform, extUserID, extUsername, extDisplay, extLinked sql.NullString
 	err := s.db.QueryRowContext(ctx, `
 		SELECT u.id, u.username, u.role, u.created_at, u.status, u.player_id, p.name,
-			u.pending_player_name,
+			u.pending_player_name, u.registration_source,
 			u.external_platform, u.external_user_id, u.external_username,
 			u.external_display_name, u.external_linked_at
 		FROM users u
@@ -125,7 +152,7 @@ func (s *Service) GetMeUser(ctx context.Context, id int64) (MeUser, error) {
 		WHERE u.id = ?`, id,
 	).Scan(
 		&me.ID, &me.Username, &me.Role, &createdAt, &status, &playerID, &playerName,
-		&pendingName,
+		&pendingName, &regSource,
 		&extPlatform, &extUserID, &extUsername, &extDisplay, &extLinked,
 	)
 	if err == sql.ErrNoRows {
@@ -148,6 +175,10 @@ func (s *Service) GetMeUser(ctx context.Context, id int64) (MeUser, error) {
 		name := pendingName.String
 		me.PendingPlayerName = &name
 	}
+	if regSource.Valid {
+		src := regSource.String
+		me.RegistrationSource = &src
+	}
 	me.External = loadExternalFields(extPlatform, extUserID, extUsername, extDisplay, extLinked)
 	return me, nil
 }
@@ -155,7 +186,7 @@ func (s *Service) GetMeUser(ctx context.Context, id int64) (MeUser, error) {
 func (s *Service) ListUsers(ctx context.Context) ([]User, error) {
 	rows, err := s.db.QueryContext(ctx, `
 		SELECT u.id, u.username, u.role, u.created_at, u.status, u.player_id, p.name,
-			u.pending_player_name,
+			u.pending_player_name, u.registration_source,
 			u.external_platform, u.external_user_id, u.external_username,
 			u.external_display_name, u.external_linked_at
 		FROM users u
@@ -171,10 +202,11 @@ func (s *Service) ListUsers(ctx context.Context) ([]User, error) {
 		var user User
 		var playerID, playerName, pendingName sql.NullString
 		var createdAt, status string
+		var regSource sql.NullString
 		var extPlatform, extUserID, extUsername, extDisplay, extLinked sql.NullString
 		if err := rows.Scan(
 			&user.ID, &user.Username, &user.Role, &createdAt, &status, &playerID, &playerName,
-			&pendingName,
+			&pendingName, &regSource,
 			&extPlatform, &extUserID, &extUsername, &extDisplay, &extLinked,
 		); err != nil {
 			return nil, fmt.Errorf("scan user: %w", err)
@@ -192,6 +224,10 @@ func (s *Service) ListUsers(ctx context.Context) ([]User, error) {
 		if pendingName.Valid {
 			name := pendingName.String
 			user.PendingPlayerName = &name
+		}
+		if regSource.Valid {
+			src := regSource.String
+			user.RegistrationSource = &src
 		}
 		user.External = loadExternalFields(extPlatform, extUserID, extUsername, extDisplay, extLinked)
 		users = append(users, user)

@@ -151,12 +151,9 @@ func (s *Service) Register(ctx context.Context, params RegisterParams) (Register
 		return RegisterResult{}, ErrAlreadyRegistered
 	}
 
-	var taken int
-	if err := s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM users WHERE username = ?`, username).Scan(&taken); err != nil {
-		return RegisterResult{}, fmt.Errorf("check username: %w", err)
-	}
-	if taken > 0 {
-		return RegisterResult{}, ErrUsernameTaken
+	username, err = AllocateUsername(ctx, s.db, username)
+	if err != nil {
+		return RegisterResult{}, err
 	}
 
 	autoApprove, err := s.AutoApproveEnabled(ctx)
@@ -437,6 +434,45 @@ func (s *Service) RejectRegistration(ctx context.Context, userID, actedByUserID 
 		return "", fmt.Errorf("commit tx: %w", err)
 	}
 	return externalUserID, nil
+}
+
+const registrationButtonExpiry = 7 * 24 * time.Hour
+
+// RegistrationSubmittedAt returns when a user submitted their registration request.
+func (s *Service) RegistrationSubmittedAt(ctx context.Context, userID int64) (time.Time, error) {
+	var createdAt string
+	err := s.db.QueryRowContext(ctx, `
+		SELECT created_at FROM registration_audit_log
+		WHERE user_id = ? AND action = 'submitted'
+		ORDER BY id ASC LIMIT 1`, userID,
+	).Scan(&createdAt)
+	if err == sql.ErrNoRows {
+		var userCreated string
+		err = s.db.QueryRowContext(ctx, `SELECT created_at FROM users WHERE id = ?`, userID).Scan(&userCreated)
+		if err == sql.ErrNoRows {
+			return time.Time{}, ErrUserNotFound
+		}
+		if err != nil {
+			return time.Time{}, fmt.Errorf("query user created_at: %w", err)
+		}
+		createdAt = userCreated
+	} else if err != nil {
+		return time.Time{}, fmt.Errorf("query registration submitted: %w", err)
+	}
+	parsed, err := time.Parse(time.RFC3339, createdAt)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("parse submitted at: %w", err)
+	}
+	return parsed, nil
+}
+
+// RegistrationButtonExpired reports whether approval buttons are older than 7 days.
+func (s *Service) RegistrationButtonExpired(ctx context.Context, userID int64) (bool, error) {
+	submitted, err := s.RegistrationSubmittedAt(ctx, userID)
+	if err != nil {
+		return false, err
+	}
+	return time.Since(submitted) > registrationButtonExpiry, nil
 }
 
 // ListPending returns users awaiting approval.

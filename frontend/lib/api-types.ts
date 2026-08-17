@@ -511,6 +511,7 @@ export type AppUser = {
   externalUsername?: string | null
   externalDisplayName?: string | null
   externalLinkedAt?: string | null
+  registrationSource?: string | null
 }
 
 export type UsersResponse = {

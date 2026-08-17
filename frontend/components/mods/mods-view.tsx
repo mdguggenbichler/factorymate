@@ -1,8 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { useTranslations } from "next-intl"
-import { DownloadIcon, RefreshCwIcon } from "lucide-react"
+import { DownloadIcon, ExternalLinkIcon, RefreshCwIcon } from "lucide-react"
 import { toast } from "sonner"
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
@@ -14,6 +14,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
 import {
   Table,
   TableBody,
@@ -37,6 +38,15 @@ export function ModsView({ initialData, isAdmin }: ModsViewProps) {
   const [data, setData] = useState(initialData)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [isDownloading, setIsDownloading] = useState(false)
+  const [searchQuery, setSearchQuery] = useState("")
+
+  const filteredMods = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase()
+    if (!query) {
+      return data.mods
+    }
+    return data.mods.filter((mod) => mod.name.toLowerCase().includes(query))
+  }, [data.mods, searchQuery])
 
   async function handleRefresh() {
     setIsRefreshing(true)
@@ -151,27 +161,55 @@ export function ModsView({ initialData, isAdmin }: ModsViewProps) {
       </div>
 
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <CardTitle>{t("tableTitle")}</CardTitle>
+          <Input
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
+            placeholder={t("searchPlaceholder")}
+            className="max-w-sm"
+          />
         </CardHeader>
         <CardContent>
           {data.mods.length === 0 ? (
             <p className="text-sm text-muted-foreground">{t("empty")}</p>
+          ) : filteredMods.length === 0 ? (
+            <p className="text-sm text-muted-foreground">{t("searchEmpty")}</p>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>{t("columns.name")}</TableHead>
                   <TableHead>{t("columns.version")}</TableHead>
+                  <TableHead>{t("columns.remoteVersionRange")}</TableHead>
+                  <TableHead>{t("columns.createdBy")}</TableHead>
+                  <TableHead>{t("columns.docs")}</TableHead>
                   <TableHead>{t("columns.smrName")}</TableHead>
                   <TableHead>{t("columns.required")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {data.mods.map((mod) => (
+                {filteredMods.map((mod) => (
                   <TableRow key={`${mod.smrName}-${mod.version}`}>
                     <TableCell className="font-medium">{mod.name}</TableCell>
                     <TableCell>{mod.version}</TableCell>
+                    <TableCell>{mod.remoteVersionRange || "—"}</TableCell>
+                    <TableCell>{mod.createdBy || "—"}</TableCell>
+                    <TableCell>
+                      {mod.docsUrl ? (
+                        <a
+                          href={mod.docsUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-sm text-primary underline-offset-4 hover:underline"
+                        >
+                          <ExternalLinkIcon className="size-3.5" />
+                          {t("docsLink")}
+                        </a>
+                      ) : (
+                        "—"
+                      )}
+                    </TableCell>
                     <TableCell className="text-muted-foreground">
                       {mod.smrName}
                     </TableCell>

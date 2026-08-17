@@ -71,17 +71,24 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := h.auth.Authenticate(r.Context(), req.Username, req.Password)
+	user, err := h.auth.CheckCredentials(r.Context(), req.Username, req.Password)
 	if err != nil {
 		if errors.Is(err, auth.ErrInvalidCredentials) {
 			writeError(w, r, http.StatusUnauthorized, "invalid credentials")
 			return
 		}
-		if errors.Is(err, auth.ErrPendingApproval) {
-			writeError(w, r, http.StatusForbidden, "account pending approval")
+		writeError(w, r, http.StatusInternalServerError, "internal error")
+		return
+	}
+
+	if user.Status == auth.StatusPendingApproval {
+		sess, err := h.auth.CreateSession(r.Context(), user.ID)
+		if err != nil {
+			writeError(w, r, http.StatusInternalServerError, "internal error")
 			return
 		}
-		writeError(w, r, http.StatusInternalServerError, "internal error")
+		auth.SetSessionCookie(w, r, sess.ID)
+		writeError(w, r, http.StatusForbidden, "account pending approval")
 		return
 	}
 
