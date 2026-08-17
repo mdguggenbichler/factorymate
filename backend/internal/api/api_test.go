@@ -16,6 +16,7 @@ import (
 	"factorymate/internal/auth"
 	"factorymate/internal/db"
 	"factorymate/internal/notify"
+	"factorymate/internal/registration"
 )
 
 func TestHealthz(t *testing.T) {
@@ -51,7 +52,8 @@ func TestReadEndpoints(t *testing.T) {
 	seedAPIFixtures(t, ctx, database)
 
 	svc := auth.NewService(database)
-	handler := api.NewHandlerWithDiscordSession(database, svc, notify.NewMockDiscordSession())
+	regSvc := registration.NewService(database, svc)
+	handler := api.NewHandlerWithDiscordSession(database, svc, regSvc, notify.NewMockDiscordSession())
 	router := newTestRouter(handler, svc)
 
 	setupAdmin(t, router)
@@ -483,8 +485,9 @@ func TestAdminEndpoints(t *testing.T) {
 	}
 
 	svc := auth.NewService(database)
+	regSvc := registration.NewService(database, svc)
 	mockDiscord := notify.NewMockDiscordSession()
-	handler := api.NewHandlerWithDiscordSession(database, svc, mockDiscord)
+	handler := api.NewHandlerWithDiscordSession(database, svc, regSvc, mockDiscord)
 	router := newTestRouter(handler, svc)
 	adminCookie := setupAdmin(t, router)
 	seedAdminAPIFixtures(t, ctx, database)

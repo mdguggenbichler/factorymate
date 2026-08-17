@@ -30,6 +30,9 @@ type DiscordProvider struct {
 	session DiscordSession
 }
 
+// SendEnabled, when set, gates outbound Discord sends on the bot kill switch.
+var SendEnabled func(ctx context.Context) (bool, error)
+
 // NewDiscordProvider constructs a Discord bot provider. session may be nil when the bot is offline.
 func NewDiscordProvider(session DiscordSession) *DiscordProvider {
 	return &DiscordProvider{session: session}
@@ -42,6 +45,9 @@ func (p *DiscordProvider) Type() string {
 
 // Send posts msg to the target's Discord channel.
 func (p *DiscordProvider) Send(ctx context.Context, target NotificationTarget, msg RenderedMessage) error {
+	if err := p.checkSendEnabled(ctx); err != nil {
+		return err
+	}
 	if target.ProviderType != discordProviderType {
 		return fmt.Errorf("discord provider cannot send to target type %q", target.ProviderType)
 	}
@@ -75,6 +81,9 @@ func (p *DiscordProvider) Send(ctx context.Context, target NotificationTarget, m
 
 // SendDirect delivers msg to an external user via DM.
 func (p *DiscordProvider) SendDirect(ctx context.Context, platform, externalUserID string, msg RenderedMessage) error {
+	if err := p.checkSendEnabled(ctx); err != nil {
+		return err
+	}
 	if platform != "" && platform != discordProviderType {
 		return fmt.Errorf("discord provider cannot DM platform %q", platform)
 	}
@@ -98,6 +107,20 @@ func (p *DiscordProvider) SendDirect(ctx context.Context, platform, externalUser
 	_, err = p.session.ChannelMessageSendComplex(channel.ID, send, discordgo.WithContext(ctx))
 	if err != nil {
 		return fmt.Errorf("discord dm send: %w", err)
+	}
+	return nil
+}
+
+func (p *DiscordProvider) checkSendEnabled(ctx context.Context) error {
+	if SendEnabled == nil {
+		return nil
+	}
+	enabled, err := SendEnabled(ctx)
+	if err != nil {
+		return fmt.Errorf("discord enabled check: %w", err)
+	}
+	if !enabled {
+		return fmt.Errorf("discord bot is disabled")
 	}
 	return nil
 }

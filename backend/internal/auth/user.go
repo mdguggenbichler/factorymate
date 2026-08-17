@@ -69,14 +69,22 @@ func (s *Service) Authenticate(ctx context.Context, username, password string) (
 
 func (s *Service) GetUserByID(ctx context.Context, id int64) (User, error) {
 	var user User
-	var playerID, playerName sql.NullString
+	var playerID, playerName, pendingName sql.NullString
 	var createdAt, status string
+	var extPlatform, extUserID, extUsername, extDisplay, extLinked sql.NullString
 	err := s.db.QueryRowContext(ctx, `
-		SELECT u.id, u.username, u.role, u.created_at, u.status, u.player_id, p.name
+		SELECT u.id, u.username, u.role, u.created_at, u.status, u.player_id, p.name,
+			u.pending_player_name,
+			u.external_platform, u.external_user_id, u.external_username,
+			u.external_display_name, u.external_linked_at
 		FROM users u
 		LEFT JOIN player_state p ON p.player_id = u.player_id
 		WHERE u.id = ?`, id,
-	).Scan(&user.ID, &user.Username, &user.Role, &createdAt, &status, &playerID, &playerName)
+	).Scan(
+		&user.ID, &user.Username, &user.Role, &createdAt, &status, &playerID, &playerName,
+		&pendingName,
+		&extPlatform, &extUserID, &extUsername, &extDisplay, &extLinked,
+	)
 	if err == sql.ErrNoRows {
 		return User{}, ErrUserNotFound
 	}
@@ -93,7 +101,55 @@ func (s *Service) GetUserByID(ctx context.Context, id int64) (User, error) {
 		name := playerName.String
 		user.PlayerName = &name
 	}
+	if pendingName.Valid {
+		name := pendingName.String
+		user.PendingPlayerName = &name
+	}
+	user.External = loadExternalFields(extPlatform, extUserID, extUsername, extDisplay, extLinked)
 	return user, nil
+}
+
+// GetMeUser returns the extended profile for GET /api/auth/me.
+func (s *Service) GetMeUser(ctx context.Context, id int64) (MeUser, error) {
+	var me MeUser
+	var playerID, playerName, pendingName sql.NullString
+	var createdAt, status string
+	var extPlatform, extUserID, extUsername, extDisplay, extLinked sql.NullString
+	err := s.db.QueryRowContext(ctx, `
+		SELECT u.id, u.username, u.role, u.created_at, u.status, u.player_id, p.name,
+			u.pending_player_name,
+			u.external_platform, u.external_user_id, u.external_username,
+			u.external_display_name, u.external_linked_at
+		FROM users u
+		LEFT JOIN player_state p ON p.player_id = u.player_id
+		WHERE u.id = ?`, id,
+	).Scan(
+		&me.ID, &me.Username, &me.Role, &createdAt, &status, &playerID, &playerName,
+		&pendingName,
+		&extPlatform, &extUserID, &extUsername, &extDisplay, &extLinked,
+	)
+	if err == sql.ErrNoRows {
+		return MeUser{}, ErrUserNotFound
+	}
+	if err != nil {
+		return MeUser{}, fmt.Errorf("query me user: %w", err)
+	}
+	me.Status = status
+	me.CreatedAt = createdAt
+	if playerID.Valid {
+		id := playerID.String
+		me.PlayerID = &id
+	}
+	if playerName.Valid {
+		name := playerName.String
+		me.PlayerName = &name
+	}
+	if pendingName.Valid {
+		name := pendingName.String
+		me.PendingPlayerName = &name
+	}
+	me.External = loadExternalFields(extPlatform, extUserID, extUsername, extDisplay, extLinked)
+	return me, nil
 }
 
 func (s *Service) ListUsers(ctx context.Context) ([]User, error) {

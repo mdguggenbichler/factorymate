@@ -9,6 +9,8 @@ import (
 	"sort"
 	"strings"
 
+	"factorymate/internal/registration"
+
 	"github.com/bwmarrin/discordgo"
 )
 
@@ -27,15 +29,16 @@ type Channel struct {
 
 // Bot manages the discordgo gateway session (§5.1, §15).
 type Bot struct {
-	db      *sql.DB
-	token   string
-	session *discordgo.Session
+	db           *sql.DB
+	token        string
+	session      *discordgo.Session
+	registration *registration.Service
 }
 
 // NewBot constructs a bot from env. token may be empty (soft dependency).
-func NewBot(db *sql.DB) (*Bot, error) {
+func NewBot(db *sql.DB, regSvc *registration.Service) (*Bot, error) {
 	token := strings.TrimSpace(os.Getenv("DISCORD_BOT_TOKEN"))
-	return &Bot{db: db, token: token}, nil
+	return &Bot{db: db, token: token, registration: regSvc}, nil
 }
 
 // Connected reports whether the gateway session is open.
@@ -48,10 +51,19 @@ func (b *Bot) Session() *discordgo.Session {
 	return b.session
 }
 
-// Start opens the gateway when a token is configured.
+// Start opens the gateway when a token is configured and bot_enabled is true.
 func (b *Bot) Start(ctx context.Context) error {
 	if b.token == "" {
 		log.Printf("discord bot: DISCORD_BOT_TOKEN unset — bot features disabled")
+		return nil
+	}
+
+	enabled, err := BotEnabled(ctx, b.db)
+	if err != nil {
+		return fmt.Errorf("discord bot_enabled: %w", err)
+	}
+	if !enabled {
+		log.Printf("discord bot: kill switch off — bot features disabled")
 		return nil
 	}
 
@@ -60,12 +72,17 @@ func (b *Bot) Start(ctx context.Context) error {
 		return fmt.Errorf("discord session: %w", err)
 	}
 	dg.Identify.Intents = discordgo.IntentsGuilds
+	dg.AddHandler(b.handleInteraction)
 
 	if err := dg.Open(); err != nil {
 		return fmt.Errorf("discord gateway: %w", err)
 	}
 	b.session = dg
 	log.Printf("discord bot: connected as %s", dg.State.User.Username)
+
+	if err := b.registerSlashCommands(ctx); err != nil {
+		log.Printf("discord bot: register commands: %v", err)
+	}
 
 	go func() {
 		<-ctx.Done()
@@ -101,6 +118,14 @@ func (b *Bot) InviteURL() (string, error) {
 func (b *Bot) ListGuildTextChannels(ctx context.Context) ([]Channel, error) {
 	if b.session == nil {
 		return nil, fmt.Errorf("discord bot is not connected")
+	}
+
+	enabled, err := BotEnabled(ctx, b.db)
+	if err != nil {
+		return nil, err
+	}
+	if !enabled {
+		return nil, fmt.Errorf("discord bot is disabled")
 	}
 
 	guildID, err := EffectiveGuildID(ctx, b.db)

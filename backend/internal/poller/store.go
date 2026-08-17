@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"factorymate/internal/frm"
+	"factorymate/internal/auth"
 )
 
 type appSettings struct {
@@ -140,7 +141,10 @@ func upsertPlayerState(ctx context.Context, db *sql.DB, p frm.Player, lastSeenAt
 			last_seen_at = COALESCE(excluded.last_seen_at, player_state.last_seen_at)`,
 		p.ID, p.Name, p.Online, lastSeenAt,
 	)
-	return err
+	if err != nil {
+		return err
+	}
+	return auth.TryResolvePendingPlayers(ctx, db, p.ID, p.Name)
 }
 
 func insertPlayerSessionEvent(ctx context.Context, db *sql.DB, playerID, playerName, eventType string, onlineCount int, now time.Time) error {

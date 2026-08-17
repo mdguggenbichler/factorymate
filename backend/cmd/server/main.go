@@ -19,6 +19,7 @@ import (
 	"factorymate/internal/frm"
 	"factorymate/internal/notify"
 	"factorymate/internal/poller"
+	"factorymate/internal/registration"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -42,18 +43,24 @@ func main() {
 		log.Fatalf("load elevator phases: %v", err)
 	}
 
-	bot, err := discord.NewBot(database)
+	authSvc := auth.NewService(database)
+	regSvc := registration.NewService(database, authSvc)
+
+	bot, err := discord.NewBot(database, regSvc)
 	if err != nil {
 		log.Fatalf("discord bot: %v", err)
 	}
+
+	notify.SendEnabled = func(ctx context.Context) (bool, error) {
+		return discord.BotEnabled(ctx, database)
+	}
+
 	if err := bot.Start(ctx); err != nil {
 		log.Fatalf("discord bot start: %v", err)
 	}
 
 	go runPoller(ctx, database, phases, bot)
 	go runSlowPoller(ctx, database)
-
-	authSvc := auth.NewService(database)
 	go authSvc.StartCleanupJob(ctx)
 
 	port := os.Getenv("PORT")
@@ -64,7 +71,7 @@ func main() {
 	r := chi.NewRouter()
 	r.Get("/healthz", healthz)
 	r.Route("/api", func(r chi.Router) {
-		api.NewHandler(database, authSvc, bot).Mount(r)
+		api.NewHandler(database, authSvc, bot, regSvc).Mount(r)
 	})
 
 	addr := ":" + port

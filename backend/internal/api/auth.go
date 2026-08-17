@@ -108,7 +108,12 @@ func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
 		writeError(w, r, http.StatusUnauthorized, "unauthenticated")
 		return
 	}
-	writeJSON(w, http.StatusOK, user)
+	me, err := h.auth.GetMeUser(r.Context(), user.ID)
+	if err != nil {
+		writeError(w, r, http.StatusInternalServerError, "internal error")
+		return
+	}
+	writeJSON(w, http.StatusOK, me)
 }
 
 func (h *Handler) ChangePassword(w http.ResponseWriter, r *http.Request) {

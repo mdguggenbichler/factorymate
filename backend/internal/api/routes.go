@@ -75,6 +75,12 @@ func (h *Handler) Mount(r chi.Router) {
 				r.Put("/discord/settings", h.UpdateDiscordSettings)
 				r.Get("/discord/channels", h.ListDiscordChannels)
 				r.Get("/discord/invite-url", h.GetDiscordInviteURL)
+
+				r.Get("/registrations/pending", h.ListPendingRegistrations)
+				r.Post("/registrations/{id}/approve", h.ApproveRegistration)
+				r.Post("/registrations/{id}/reject", h.RejectRegistration)
+				r.Get("/players/unmapped", h.ListUnmappedPlayers)
+				r.Put("/users/{id}/external", h.UpdateUserExternal)
 			})
 		})
 	})

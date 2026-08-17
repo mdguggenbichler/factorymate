@@ -24,13 +24,15 @@ const (
 )
 
 type User struct {
-	ID       int64  `json:"id"`
-	Username string `json:"username"`
-	Role     Role   `json:"role"`
-	PlayerID *string `json:"playerId,omitempty"`
-	PlayerName *string `json:"playerName,omitempty"`
-	Status   string `json:"status,omitempty"`
-	CreatedAt string `json:"createdAt,omitempty"`
+	ID                int64  `json:"id"`
+	Username          string `json:"username"`
+	Role              Role   `json:"role"`
+	PlayerID          *string `json:"playerId,omitempty"`
+	PlayerName        *string `json:"playerName,omitempty"`
+	PendingPlayerName *string `json:"pendingPlayerName,omitempty"`
+	Status            string `json:"status,omitempty"`
+	CreatedAt         string `json:"createdAt,omitempty"`
+	External          ExternalFields `json:"-"`
 }
 
 type Session struct {
