@@ -466,8 +466,10 @@ export type MessageTypesResponse = {
 export type NotificationLogEntry = {
   id: number
   messageTypeKey: string
-  targetId: number
+  targetId: number | null
   targetName: string | null
+  deliveryMode: "channel" | "dm"
+  recipientExternalUserId: string | null
   renderedPreview: string
   success: boolean
   error: string | null

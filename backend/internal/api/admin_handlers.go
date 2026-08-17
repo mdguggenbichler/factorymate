@@ -717,9 +717,10 @@ func (h *Handler) GetNotificationLog(w http.ResponseWriter, r *http.Request) {
 	p := parsePagination(r)
 	typeFilter := strings.TrimSpace(r.URL.Query().Get("type"))
 	targetFilter := strings.TrimSpace(r.URL.Query().Get("target"))
+	deliveryFilter := strings.TrimSpace(r.URL.Query().Get("delivery"))
 
 	where := "WHERE 1=1"
-	args := make([]any, 0, 4)
+	args := make([]any, 0, 5)
 	if typeFilter != "" {
 		where += " AND nl.message_type_key = ?"
 		args = append(args, typeFilter)
@@ -727,6 +728,10 @@ func (h *Handler) GetNotificationLog(w http.ResponseWriter, r *http.Request) {
 	if targetFilter != "" {
 		where += " AND nl.target_id = ?"
 		args = append(args, targetFilter)
+	}
+	if deliveryFilter != "" {
+		where += " AND nl.delivery_mode = ?"
+		args = append(args, deliveryFilter)
 	}
 
 	var total int
@@ -738,7 +743,8 @@ func (h *Handler) GetNotificationLog(w http.ResponseWriter, r *http.Request) {
 
 	query := `
 		SELECT nl.id, nl.message_type_key, nl.target_id, nt.name,
-			nl.rendered_preview, nl.success, nl.error, nl.sent_at
+			nl.rendered_preview, nl.success, nl.error, nl.sent_at,
+			nl.delivery_mode, nl.recipient_external_user_id
 		FROM notification_log nl
 		LEFT JOIN notification_targets nt ON nt.id = nl.target_id
 		` + where + `
@@ -754,25 +760,38 @@ func (h *Handler) GetNotificationLog(w http.ResponseWriter, r *http.Request) {
 
 	items := make([]map[string]any, 0)
 	for rows.Next() {
-		var id, targetID int64
-		var messageTypeKey, preview, sentAt string
+		var id int64
+		var messageTypeKey, preview, sentAt, deliveryMode string
+		var targetID sql.NullInt64
 		var targetName sql.NullString
+		var recipientExternalUserID sql.NullString
 		var success bool
 		var errText sql.NullString
-		if err := rows.Scan(&id, &messageTypeKey, &targetID, &targetName, &preview, &success, &errText, &sentAt); err != nil {
+		if err := rows.Scan(
+			&id, &messageTypeKey, &targetID, &targetName,
+			&preview, &success, &errText, &sentAt,
+			&deliveryMode, &recipientExternalUserID,
+		); err != nil {
 			writeError(w, r, http.StatusInternalServerError, "internal error")
 			return
 		}
-		items = append(items, map[string]any{
-			"id":               id,
-			"messageTypeKey":   messageTypeKey,
-			"targetId":         targetID,
-			"targetName":       nullStringPtr(targetName),
-			"renderedPreview":  preview,
-			"success":          success,
-			"error":            nullStringPtr(errText),
-			"sentAt":           sentAt,
-		})
+		item := map[string]any{
+			"id":              id,
+			"messageTypeKey":  messageTypeKey,
+			"renderedPreview": preview,
+			"success":         success,
+			"error":           nullStringPtr(errText),
+			"sentAt":          sentAt,
+			"deliveryMode":    deliveryMode,
+		}
+		if targetID.Valid {
+			item["targetId"] = targetID.Int64
+		} else {
+			item["targetId"] = nil
+		}
+		item["targetName"] = nullStringPtr(targetName)
+		item["recipientExternalUserId"] = nullStringPtr(recipientExternalUserID)
+		items = append(items, item)
 	}
 	if err := rows.Err(); err != nil {
 		writeError(w, r, http.StatusInternalServerError, "internal error")

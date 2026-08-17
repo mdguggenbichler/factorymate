@@ -612,12 +612,16 @@
       "tableTitle": "Recent notifications ({total})",
       "empty": "No notifications have been sent yet.",
       "deletedTarget": "Deleted target",
+      "deliveryChannel": "Channel",
+      "deliveryDM": "Direct message",
+      "dmRecipient": "Discord user {id}",
       "statusSuccess": "Success",
       "statusFailed": "Failed",
       "columns": {
         "sentAt": "Sent at",
         "messageType": "Message type",
         "target": "Target",
+        "delivery": "Delivery",
         "preview": "Preview",
         "status": "Status"
       }

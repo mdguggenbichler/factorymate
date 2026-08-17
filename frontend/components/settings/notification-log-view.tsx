@@ -51,6 +51,7 @@ export function NotificationLogView({
                 <TableRow>
                   <TableHead>{t("columns.sentAt")}</TableHead>
                   <TableHead>{t("columns.messageType")}</TableHead>
+                  <TableHead>{t("columns.delivery")}</TableHead>
                   <TableHead>{t("columns.target")}</TableHead>
                   <TableHead>{t("columns.preview")}</TableHead>
                   <TableHead>{t("columns.status")}</TableHead>
@@ -64,7 +65,21 @@ export function NotificationLogView({
                       {entry.messageTypeKey}
                     </TableCell>
                     <TableCell>
-                      {entry.targetName ?? t("deletedTarget")}
+                      {entry.deliveryMode === "dm"
+                        ? t("deliveryDM")
+                        : t("deliveryChannel")}
+                    </TableCell>
+                    <TableCell>
+                      {entry.deliveryMode === "dm"
+                        ? entry.recipientExternalUserId
+                          ? t("dmRecipient", {
+                              id: entry.recipientExternalUserId,
+                            })
+                          : "—"
+                        : entry.targetName ??
+                          (entry.targetId != null
+                            ? t("deletedTarget")
+                            : "—")}
                     </TableCell>
                     <TableCell className="max-w-xs truncate text-sm">
                       {entry.renderedPreview}

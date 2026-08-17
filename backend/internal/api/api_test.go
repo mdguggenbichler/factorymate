@@ -800,17 +800,22 @@ func TestAdminEndpoints(t *testing.T) {
 		}
 		var logBody struct {
 			Items []struct {
-				MessageTypeKey  string  `json:"messageTypeKey"`
-				TargetID        int64   `json:"targetId"`
-				TargetName      *string `json:"targetName"`
-				RenderedPreview string  `json:"renderedPreview"`
-				Success         bool    `json:"success"`
+				MessageTypeKey          string  `json:"messageTypeKey"`
+				TargetID                *int64  `json:"targetId"`
+				TargetName              *string `json:"targetName"`
+				DeliveryMode            string  `json:"deliveryMode"`
+				RecipientExternalUserID *string `json:"recipientExternalUserId"`
+				RenderedPreview         string  `json:"renderedPreview"`
+				Success                 bool    `json:"success"`
 			} `json:"items"`
 			Total int `json:"total"`
 		}
 		decodeJSONRecorder(t, logResp, &logBody)
 		if logBody.Total != 1 || logBody.Items[0].MessageTypeKey != "player_joined" || !logBody.Items[0].Success {
 			t.Fatalf("notification log = %+v", logBody)
+		}
+		if logBody.Items[0].DeliveryMode != "channel" {
+			t.Fatalf("deliveryMode = %q, want channel", logBody.Items[0].DeliveryMode)
 		}
 
 		unknownResp := getWithCookie(t, router, "/api/elevator/unknown-log", adminCookie)
@@ -1149,8 +1154,11 @@ func seedAdminAPIFixtures(t *testing.T, ctx context.Context, database *sql.DB) {
 	now := time.Date(2026, 8, 17, 10, 0, 0, 0, time.UTC).Format(time.RFC3339)
 
 	_, err := database.ExecContext(ctx, `
-		INSERT INTO notification_log (message_type_key, target_id, rendered_preview, success, error, sent_at)
-		VALUES ('player_joined', 1, 'Player Guggi joined', 1, NULL, ?)`, now)
+		INSERT INTO notification_log (
+			message_type_key, target_id, rendered_preview, success, error, sent_at,
+			delivery_mode, recipient_external_user_id
+		)
+		VALUES ('player_joined', 1, 'Player Guggi joined', 1, NULL, ?, 'channel', NULL)`, now)
 	if err != nil {
 		t.Fatalf("seed notification log: %v", err)
 	}
