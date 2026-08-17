@@ -6,15 +6,17 @@ type Details struct {
 	GamePort        int    `json:"gamePort"`
 	GamePassword    string `json:"gamePassword,omitempty"`
 	Notes           string `json:"notes,omitempty"`
+	SMMProfileName  string `json:"smmProfileName,omitempty"`
 	UpdatedAt       string `json:"updatedAt,omitempty"`
 	UpdatedByUserID *int64 `json:"updatedByUserId,omitempty"`
 }
 
 // UpdateInput is the mutable subset of connection details.
 type UpdateInput struct {
-	GameHost     *string `json:"gameHost"`
-	GamePort     *int    `json:"gamePort"`
-	GamePassword *string `json:"gamePassword"`
-	Notes        *string `json:"notes"`
-	ClearPassword bool    `json:"clearPassword"`
+	GameHost       *string `json:"gameHost"`
+	GamePort       *int    `json:"gamePort"`
+	GamePassword   *string `json:"gamePassword"`
+	Notes          *string `json:"notes"`
+	SMMProfileName *string `json:"smmProfileName"`
+	ClearPassword  bool    `json:"clearPassword"`
 }

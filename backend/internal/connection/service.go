@@ -14,9 +14,11 @@ import (
 )
 
 const (
-	settingKeyDetails = "connection.details_json"
-	messageTypeKey    = "connection_details_changed"
-	dmRateLimit       = 200 * time.Millisecond
+	settingKeyDetails    = "connection.details_json"
+	settingSMMProfileName = "mods.smm_profile_name"
+	defaultSMMProfileName = "FactoryMate Server"
+	messageTypeKey       = "connection_details_changed"
+	dmRateLimit          = 200 * time.Millisecond
 )
 
 // DirectMessenger delivers outbound DMs (notify.DiscordProvider).
@@ -42,23 +44,29 @@ func NewService(db *sql.DB, dm DirectMessenger) *Service {
 
 // Get returns stored connection details.
 func (s *Service) Get(ctx context.Context) (Details, error) {
+	profileName, err := s.getSMMProfileName(ctx)
+	if err != nil {
+		return Details{}, err
+	}
+
 	var raw string
-	err := s.DB.QueryRowContext(ctx, `
+	err = s.DB.QueryRowContext(ctx, `
 		SELECT value FROM app_setting_kv WHERE key = ?`, settingKeyDetails,
 	).Scan(&raw)
 	if err == sql.ErrNoRows {
-		return Details{}, nil
+		return Details{SMMProfileName: profileName}, nil
 	}
 	if err != nil {
 		return Details{}, fmt.Errorf("get connection details: %w", err)
 	}
 	if strings.TrimSpace(raw) == "" || raw == "{}" {
-		return Details{}, nil
+		return Details{SMMProfileName: profileName}, nil
 	}
 	var d Details
 	if err := json.Unmarshal([]byte(raw), &d); err != nil {
 		return Details{}, fmt.Errorf("parse connection details: %w", err)
 	}
+	d.SMMProfileName = profileName
 	return d, nil
 }
 
@@ -83,7 +91,9 @@ func (s *Service) Set(ctx context.Context, input UpdateInput, updatedByUserID in
 		merged.UpdatedByUserID = &updatedByUserID
 	}
 
-	raw, err := json.Marshal(merged)
+	toSave := merged
+	toSave.SMMProfileName = ""
+	raw, err := json.Marshal(toSave)
 	if err != nil {
 		return Details{}, fmt.Errorf("marshal connection details: %w", err)
 	}
@@ -96,11 +106,52 @@ func (s *Service) Set(ctx context.Context, input UpdateInput, updatedByUserID in
 		return Details{}, fmt.Errorf("save connection details: %w", err)
 	}
 
+	if input.SMMProfileName != nil {
+		if err := s.setSMMProfileName(ctx, *input.SMMProfileName); err != nil {
+			return Details{}, err
+		}
+	}
+
+	profileName, err := s.getSMMProfileName(ctx)
+	if err != nil {
+		return Details{}, err
+	}
+	merged.SMMProfileName = profileName
+
 	if s.SendDM != nil {
 		_ = s.BroadcastChange(ctx, old, merged)
 	}
 
 	return merged, nil
+}
+
+func (s *Service) getSMMProfileName(ctx context.Context) (string, error) {
+	var name string
+	err := s.DB.QueryRowContext(ctx, `
+		SELECT value FROM app_setting_kv WHERE key = ?`, settingSMMProfileName,
+	).Scan(&name)
+	if err == sql.ErrNoRows || strings.TrimSpace(name) == "" {
+		return defaultSMMProfileName, nil
+	}
+	if err != nil {
+		return defaultSMMProfileName, fmt.Errorf("get smm profile name: %w", err)
+	}
+	return strings.TrimSpace(name), nil
+}
+
+func (s *Service) setSMMProfileName(ctx context.Context, name string) error {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		name = defaultSMMProfileName
+	}
+	if _, err := s.DB.ExecContext(ctx, `
+		INSERT INTO app_setting_kv (key, value) VALUES (?, ?)
+		ON CONFLICT(key) DO UPDATE SET value = excluded.value`,
+		settingSMMProfileName, name,
+	); err != nil {
+		return fmt.Errorf("save smm profile name: %w", err)
+	}
+	return nil
 }
 
 func mergeDetails(old Details, input UpdateInput) Details {

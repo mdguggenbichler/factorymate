@@ -154,7 +154,10 @@ func (s *Service) GetMeUser(ctx context.Context, id int64) (MeUser, error) {
 
 func (s *Service) ListUsers(ctx context.Context) ([]User, error) {
 	rows, err := s.db.QueryContext(ctx, `
-		SELECT u.id, u.username, u.role, u.created_at, u.status, u.player_id, p.name
+		SELECT u.id, u.username, u.role, u.created_at, u.status, u.player_id, p.name,
+			u.pending_player_name,
+			u.external_platform, u.external_user_id, u.external_username,
+			u.external_display_name, u.external_linked_at
 		FROM users u
 		LEFT JOIN player_state p ON p.player_id = u.player_id
 		ORDER BY u.username`)
@@ -166,9 +169,14 @@ func (s *Service) ListUsers(ctx context.Context) ([]User, error) {
 	users := make([]User, 0)
 	for rows.Next() {
 		var user User
-		var playerID, playerName sql.NullString
+		var playerID, playerName, pendingName sql.NullString
 		var createdAt, status string
-		if err := rows.Scan(&user.ID, &user.Username, &user.Role, &createdAt, &status, &playerID, &playerName); err != nil {
+		var extPlatform, extUserID, extUsername, extDisplay, extLinked sql.NullString
+		if err := rows.Scan(
+			&user.ID, &user.Username, &user.Role, &createdAt, &status, &playerID, &playerName,
+			&pendingName,
+			&extPlatform, &extUserID, &extUsername, &extDisplay, &extLinked,
+		); err != nil {
 			return nil, fmt.Errorf("scan user: %w", err)
 		}
 		user.Status = status
@@ -181,6 +189,11 @@ func (s *Service) ListUsers(ctx context.Context) ([]User, error) {
 			name := playerName.String
 			user.PlayerName = &name
 		}
+		if pendingName.Valid {
+			name := pendingName.String
+			user.PendingPlayerName = &name
+		}
+		user.External = loadExternalFields(extPlatform, extUserID, extUsername, extDisplay, extLinked)
 		users = append(users, user)
 	}
 	return users, rows.Err()
