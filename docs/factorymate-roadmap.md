@@ -272,16 +272,16 @@ Build order:
 
 **Goal:** Per-user DM routing for game events, notification preference APIs, and M16 Discord admin commands — per `docs/discord-bot-plan.md` §9, §11.2, §12.2, §13.
 
-- [ ] Migration 005: `user_notification_prefs` table; seed `notifications.dm_defaults_json` and `notifications.dm_player_personal_default`
-- [ ] Game-event DM fan-out: dispatcher `SendDirect` for users with category `dm_enabled`
-- [ ] Personal player event DMs: `player_joined` / `player_left` when event player matches linked user and `dm_player_personal=1`
-- [ ] API: `GET/PUT /api/account/notifications`, `GET/PUT /api/settings/notification-defaults` (admin)
-- [ ] Discord admin commands: `/status`, `/players`, `/broadcast`, `/sync-roles`, `/notifications`
-- [ ] Auto-link DM when poller resolves `pending_player_name` → `player_id`
-- [ ] Guild member role change listener (`/sync-roles` mapping)
-- [ ] Optional: `connection_details_changed` message type in `message_defaults.json` + seed
-- [ ] Tests: DM fan-out respects prefs; personal player DM; dispatcher regression
-- [ ] Phase 2 (frontend): Account → Notifications UI + Settings → Notifications → Defaults
+- [x] Migration 005: `user_notification_prefs` table; seed `notifications.dm_defaults_json` and `notifications.dm_player_personal_default`
+- [x] Game-event DM fan-out: dispatcher `SendDirect` for users with category `dm_enabled`
+- [x] Personal player event DMs: `player_joined` / `player_left` when event player matches linked user and `dm_player_personal=1`
+- [x] API: `GET/PUT /api/account/notifications`, `GET/PUT /api/settings/notification-defaults` (admin)
+- [x] Discord admin commands: `/status`, `/players`, `/broadcast`, `/sync-roles`, `/notifications`
+- [x] Auto-link DM when poller resolves `pending_player_name` → `player_id`
+- [x] Guild member role change listener (`/sync-roles` mapping)
+- [x] Optional: `connection_details_changed` message type in `message_defaults.json` + seed
+- [x] Tests: DM fan-out respects prefs; personal player DM; dispatcher regression
+- [x] Phase 2 (frontend): Account → Notifications UI + Settings → Notifications → Defaults
 
 **DoD (backend):** Category DM fan-out and personal player DMs work; preference APIs return/update prefs; M16 slash commands respond; auto-link and role-sync paths covered by tests.
 
