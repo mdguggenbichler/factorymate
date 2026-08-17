@@ -33,7 +33,7 @@
     "trippedCircuits": "Tripped circuits: {circuits}",
     "latestMilestone": "Latest milestone",
     "noMilestone": "No milestones unlocked yet",
-    "milestoneMeta": "Tier {tier} · Unlocked {date}",
+    "milestoneMetaPrefix": "Tier {tier} · Unlocked",
     "elevatorTitle": "Space Elevator",
     "elevatorPhase": "Phase {phase}",
     "elevatorPhaseUnknown": "Phase unknown",

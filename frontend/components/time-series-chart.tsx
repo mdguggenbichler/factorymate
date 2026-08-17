@@ -10,6 +10,7 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from "@/components/ui/chart"
+import { formatDateTime, formatTime } from "@/lib/format"
 
 export type TimeSeriesPoint = {
   timestamp: string
@@ -44,19 +45,8 @@ export function TimeSeriesChart({
           tickMargin={8}
           minTickGap={32}
           tickFormatter={(value) => {
-            const date = new Date(String(value))
-            if (compactTimeAxis) {
-              return date.toLocaleTimeString(undefined, {
-                hour: "2-digit",
-                minute: "2-digit",
-              })
-            }
-            return date.toLocaleDateString(undefined, {
-              month: "short",
-              day: "numeric",
-              hour: "2-digit",
-              minute: "2-digit",
-            })
+            const iso = String(value)
+            return compactTimeAxis ? formatTime(iso) : formatDateTime(iso)
           }}
         />
         <YAxis
@@ -78,9 +68,7 @@ export function TimeSeriesChart({
         <ChartTooltip
           content={
             <ChartTooltipContent
-              labelFormatter={(value) =>
-                new Date(String(value)).toLocaleString()
-              }
+              labelFormatter={(value) => formatDateTime(String(value))}
             />
           }
         />

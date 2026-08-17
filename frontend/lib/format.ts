@@ -1,3 +1,12 @@
+const dateTimeFormatOptions: Intl.DateTimeFormatOptions = {
+  year: "numeric",
+  month: "short",
+  day: "numeric",
+  hour: "2-digit",
+  minute: "2-digit",
+  hour12: false,
+}
+
 export function formatDateTime(
   iso: string | null | undefined,
   locale?: string
@@ -11,19 +20,33 @@ export function formatDateTime(
     return "—"
   }
 
-  return date.toLocaleString(locale, {
-    dateStyle: "medium",
-    timeStyle: "short",
-  })
+  return date.toLocaleString(locale, dateTimeFormatOptions)
 }
 
 export function formatLocalDateTime(
   date: Date,
   locale?: string
 ): string {
-  return date.toLocaleString(locale, {
-    dateStyle: "medium",
-    timeStyle: "short",
+  return date.toLocaleString(locale, dateTimeFormatOptions)
+}
+
+export function formatTime(
+  iso: string | null | undefined,
+  locale?: string
+): string {
+  if (!iso) {
+    return "—"
+  }
+
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) {
+    return "—"
+  }
+
+  return date.toLocaleTimeString(locale, {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
   })
 }
 
