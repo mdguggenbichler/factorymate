@@ -1,8 +1,13 @@
-import { getTranslations } from "next-intl/server"
-
-import { PagePlaceholder } from "@/components/page-placeholder"
+import { NotificationLogView } from "@/components/settings/notification-log-view"
+import { serverApiFetch } from "@/lib/api-server"
+import type { NotificationLogResponse } from "@/lib/api-types"
 
 export default async function NotificationLogPage() {
-  const t = await getTranslations("nav")
-  return <PagePlaceholder title={t("settingsNotificationLog")} />
+  const logData = await serverApiFetch<NotificationLogResponse>(
+    "/notification-log?limit=50"
+  )
+
+  return (
+    <NotificationLogView entries={logData.items} total={logData.total} />
+  )
 }

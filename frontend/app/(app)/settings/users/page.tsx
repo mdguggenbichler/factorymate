@@ -1,8 +1,9 @@
-import { getTranslations } from "next-intl/server"
-
-import { PagePlaceholder } from "@/components/page-placeholder"
+import { UsersView } from "@/components/settings/users-view"
+import { serverApiFetch } from "@/lib/api-server"
+import type { UsersResponse } from "@/lib/api-types"
 
 export default async function SettingsUsersPage() {
-  const t = await getTranslations("nav")
-  return <PagePlaceholder title={t("settingsUsers")} />
+  const usersData = await serverApiFetch<UsersResponse>("/users")
+
+  return <UsersView initialUsers={usersData.users} />
 }

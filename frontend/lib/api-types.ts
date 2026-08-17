@@ -295,3 +295,93 @@ export type ElevatorUnknownLogEntry = {
 export type ElevatorUnknownLogResponse = {
   items: ElevatorUnknownLogEntry[]
 }
+
+export type AppSettings = {
+  serverName: string
+  frmHost: string
+  frmPort: number
+  frmAuthToken: string
+  pollIntervalSeconds: number
+  productionSnapshotIntervalSeconds: number
+  productionSnapshotRetentionDays: number
+}
+
+export type DiscordTargetConfig = {
+  webhook_url: string
+  username_override?: string
+  avatar_url_override?: string
+}
+
+export type NotificationTarget = {
+  id: number
+  name: string
+  providerType: string
+  config: DiscordTargetConfig
+  enabled: boolean
+  createdAt: string
+}
+
+export type NotificationTargetsResponse = {
+  targets: NotificationTarget[]
+}
+
+export type EmbedField = {
+  name: string
+  value: string
+  inline: boolean
+}
+
+export type EmbedTemplate = {
+  title: string
+  description: string
+  color: string
+  fields: EmbedField[]
+}
+
+export type MessageTemplate = {
+  plain?: string
+  embed?: EmbedTemplate
+}
+
+export type MessageType = {
+  key: string
+  label: string
+  category: string
+  enabled: boolean
+  variables: string[]
+  template: MessageTemplate
+  targetIds: number[]
+}
+
+export type MessageTypesResponse = {
+  messageTypes: MessageType[]
+}
+
+export type NotificationLogEntry = {
+  id: number
+  messageTypeKey: string
+  targetId: number
+  targetName: string | null
+  renderedPreview: string
+  success: boolean
+  error: string | null
+  sentAt: string
+}
+
+export type NotificationLogResponse = PaginatedResponse<NotificationLogEntry>
+
+export type AppUser = {
+  id: number
+  username: string
+  role: string
+  createdAt: string
+}
+
+export type UsersResponse = {
+  users: AppUser[]
+}
+
+export type RenderedPreview = {
+  plain?: string
+  embed?: EmbedTemplate
+}

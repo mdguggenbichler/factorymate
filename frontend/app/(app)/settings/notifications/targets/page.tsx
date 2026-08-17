@@ -1,8 +1,20 @@
-import { getTranslations } from "next-intl/server"
-
-import { PagePlaceholder } from "@/components/page-placeholder"
+import { NotificationTargetsView } from "@/components/settings/notification-targets-view"
+import { serverApiFetch } from "@/lib/api-server"
+import type {
+  MessageTypesResponse,
+  NotificationTargetsResponse,
+} from "@/lib/api-types"
 
 export default async function NotificationTargetsPage() {
-  const t = await getTranslations("nav")
-  return <PagePlaceholder title={t("settingsNotificationTargets")} />
+  const [targetsData, messageTypesData] = await Promise.all([
+    serverApiFetch<NotificationTargetsResponse>("/notification-targets"),
+    serverApiFetch<MessageTypesResponse>("/message-types"),
+  ])
+
+  return (
+    <NotificationTargetsView
+      initialTargets={targetsData.targets}
+      messageTypes={messageTypesData.messageTypes}
+    />
+  )
 }
