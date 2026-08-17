@@ -1,0 +1,49 @@
+---
+description: Frontend i18n — no hardcoded UI strings; English MVP via next-intl
+globs: frontend/**
+alwaysApply: false
+---
+
+# Frontend i18n (mandatory)
+
+FactoryMate frontend strings live in locale files, not in components. Spec: `docs/factorymate-spec.md` §8.2.
+
+## Stack
+
+- **next-intl** with App Router
+- **MVP locale:** `en` only — `frontend/messages/en.json`
+- No language switcher in v1
+
+## Rules
+
+1. **Never** put user-facing text directly in JSX/TSX (`"Save"`, `'Players'`, dialog titles, toast messages, `aria-label`, empty states, column headers for UI labels).
+2. Use `useTranslations('namespace')` (client) or `getTranslations('namespace')` (server/RSC).
+3. Add keys to `messages/en.json` in the same PR as the UI — namespace per feature (`nav`, `auth`, `players`, `power`, `settings`, `common`, …).
+4. Dynamic text: `t('key', { name: value })` — not template literals in components for translatable phrases.
+5. **Do translate:** UI chrome, labels, actions, errors shown to users, nav, settings forms.
+6. **Do not translate via i18n:** API/game data (player names, item names, FRM status codes shown as raw data). Discord templates are §5, not frontend i18n.
+
+## Examples
+
+```tsx
+// ❌ BAD
+<Button>Save changes</Button>
+<p>No players online</p>
+
+// ✅ GOOD
+const t = useTranslations('common');
+<Button>{t('save')}</Button>
+<p>{t('players.noneOnline')}</p>
+```
+
+```json
+// messages/en.json
+{
+  "common": { "save": "Save changes", "cancel": "Cancel" },
+  "players": { "noneOnline": "No players online" }
+}
+```
+
+## Verification
+
+Frontend milestone DoD includes §8.2 compliance. Reviewers grep for obvious hardcoded strings in new `frontend/` files (quoted JSX text children, label props) and FAIL if user-facing text is not in `en.json`.

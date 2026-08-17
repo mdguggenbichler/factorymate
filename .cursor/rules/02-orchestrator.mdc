@@ -1,0 +1,48 @@
+---
+description: When and how to use the orchestrator skill and FactoryMate roadmap
+alwaysApply: true
+---
+
+# Orchestrator & roadmap
+
+FactoryMate is built **milestone-by-milestone** from `docs/factorymate-roadmap.md` (M0–M14). Sub-agents implement milestones; a verifier checks them; checkboxes get ticked.
+
+## Use the orchestrator skill when
+
+- The user asks to "orchestrate", "delegate", "run the roadmap", "implement M3", or "develop autonomously"
+- Multi-milestone work should run without the main agent implementing directly
+
+Follow `.agents/skills/orchestrator/SKILL.md`. Do not improvise a different workflow.
+
+## Use the roadmap directly when
+
+- Implementing a single milestone the user already named (e.g. "do M2")
+- Checking dependencies or what's next
+
+Open `docs/factorymate-roadmap.md`, find the milestone, read tasks + DoD. Cross-check `docs/factorymate-spec.md` sections linked in `.agents/project/orchestrator/doc-index.md`.
+
+## Milestone lifecycle
+
+```
+- [ ] not started
+- [x] verified done          ← verifier only, after PASS
+- [!] failed — <reason>      ← verifier only
+```
+
+Orchestrator chat: do not edit checkboxes during execution — **verifier** sets `[x]` / `[!]`.
+
+## Source of truth
+
+| Doc | Role |
+| --- | --- |
+| `docs/factorymate-spec.md` | Schemas, APIs, FRM, UI — implement from here |
+| `docs/factorymate-roadmap.md` | Sequence and DoD only |
+| `docs/frm-docs/` | FRM API reference |
+
+Spec wins on product conflicts. Roadmap does not redefine spec.
+
+## Frontend i18n
+
+All `frontend/` work: follow `docs/factorymate-spec.md` §8.2 and `.cursor/rules/03-i18n.mdc` — next-intl, `messages/en.json`, no hardcoded UI strings.
+
+Conventional commits with milestone ref: `feat(M3): implement fast-poll diff engine`. No external issue tracker in v1.
