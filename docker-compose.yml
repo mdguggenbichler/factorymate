@@ -1,31 +1,61 @@
-# FactoryMate — local development stack
-# M0: service definitions only. Dockerfiles added in M13.
-# Until then: `go run ./cmd/server` + `npm run dev` (see docs/development.md).
+# FactoryMate — production stack (spec §2.4, §9)
+# Joins the existing satisfactory-server Docker network so backend can reach FRM
+# at http://satisfactory-server:8080 (host-mapped :8889 on GuggiRaid).
 
 services:
   backend:
     build:
       context: ./backend
+    restart: unless-stopped
     ports:
-      - "8080:8080"
+      - "${BACKEND_PORT:-8080}:8080"
     environment:
       PORT: "8080"
       DATABASE_PATH: /data/factorymate.db
       SESSION_SECRET: ${SESSION_SECRET:-dev-secret-change-me}
-      FRM_HOST: ${FRM_HOST:-}
+      FRM_HOST: ${FRM_HOST:-satisfactory-server}
       FRM_PORT: ${FRM_PORT:-8080}
     volumes:
       - factorymate-data:/data
+    networks:
+      - satisfactory-server
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
   frontend:
     build:
       context: ./frontend
+    restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "${FRONTEND_PORT:-3000}:3000"
     environment:
       BACKEND_URL: http://backend:8080
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
+    networks:
+      - satisfactory-server
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
 
 volumes:
   factorymate-data:
+
+networks:
+  satisfactory-server:
+    external: true
+    name: ${SATISFACTORY_NETWORK:-satisfactory-server_default}

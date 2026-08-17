@@ -9,6 +9,7 @@ const backendUrl = process.env.BACKEND_URL ?? "http://localhost:8080"
 const frontendRoot = path.dirname(fileURLToPath(import.meta.url))
 
 const nextConfig: NextConfig = {
+  output: "standalone",
   turbopack: {
     root: frontendRoot,
   },
