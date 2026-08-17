@@ -43,9 +43,9 @@
     }
   },
   "player_left": {
-    "plain": "👤 **{PlayerName}** left the server. ({OnlineCount} players online)",
+    "plain": "👤 **{PlayerName}** disconnected from the server. ({OnlineCount} players online)",
     "embed": {
-      "title": "👤 A player left the server",
+      "title": "👤 A player disconnected",
       "description": "",
       "color": "#57F287",
       "fields": [

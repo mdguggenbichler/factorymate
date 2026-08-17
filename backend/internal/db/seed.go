@@ -25,7 +25,7 @@ var messageTypeCatalog = []messageTypeMeta{
 	{Key: "server_online", Label: "Server Online", Category: "server", Variables: []string{"Timestamp", "ServerName", "InGameTime"}},
 	{Key: "server_offline", Label: "Server Offline", Category: "server", Variables: []string{"Timestamp", "ServerName", "InGameTime"}},
 	{Key: "player_joined", Label: "Player Joined", Category: "player", Variables: []string{"Timestamp", "ServerName", "PlayerName", "OnlineCount"}},
-	{Key: "player_left", Label: "Player Left", Category: "player", Variables: []string{"Timestamp", "ServerName", "PlayerName", "OnlineCount"}},
+	{Key: "player_left", Label: "Player Disconnected", Category: "player", Variables: []string{"Timestamp", "ServerName", "PlayerName", "OnlineCount"}},
 	{Key: "fuse_tripped", Label: "Fuse Tripped", Category: "power", Variables: []string{"Timestamp", "ServerName", "CircuitID", "PowerProduction", "PowerConsumed", "PowerCapacity", "BatteryPercent", "BatteryTimeEmpty"}},
 	{Key: "power_restored", Label: "Power Restored", Category: "power", Variables: []string{"Timestamp", "ServerName", "CircuitID", "PowerProduction", "PowerConsumed", "PowerCapacity", "BatteryPercent", "BatteryTimeEmpty"}},
 	{Key: "milestone_unlocked", Label: "Milestone Unlocked", Category: "progression", Variables: []string{"Timestamp", "ServerName", "SchematicName", "TechTier", "RecipeNames"}},
@@ -71,6 +71,8 @@ func seedMessageTypes(ctx context.Context, db *sql.DB) error {
 			INSERT INTO message_types (key, label, category, enabled, default_template_json, variables_json)
 			VALUES (?, ?, ?, 1, ?, ?)
 			ON CONFLICT(key) DO UPDATE SET
+				label = excluded.label,
+				category = excluded.category,
 				default_template_json = excluded.default_template_json,
 				variables_json = excluded.variables_json`,
 			meta.Key, meta.Label, meta.Category, string(templateJSON), string(variablesJSON),

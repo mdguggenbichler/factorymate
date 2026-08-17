@@ -319,6 +319,50 @@ func TestVehicleStuckDebounce(t *testing.T) {
 	}
 }
 
+func TestPlayerLeftEvent(t *testing.T) {
+	t.Chdir("../..")
+
+	ctx := context.Background()
+	database := openTestDB(t)
+	defer database.Close()
+
+	if err := db.Init(ctx, database, db.SeedConfig{}); err != nil {
+		t.Fatalf("init: %v", err)
+	}
+
+	phases, _ := poller.LoadElevatorPhases("data/elevator_phases.json")
+	engine := &poller.Engine{DB: database, ElevatorPhases: phases}
+	now := time.Date(2026, 8, 17, 12, 0, 0, 0, time.UTC)
+
+	join := frm.FastPollResult{
+		Players: []frm.Player{{ID: "p1", Name: "Michael", Online: true}},
+	}
+	if _, err := engine.PollOnce(ctx, join, now); err != nil {
+		t.Fatalf("join baseline: %v", err)
+	}
+
+	leave := frm.FastPollResult{
+		Players: []frm.Player{{ID: "p1", Name: "Michael", Online: false}},
+	}
+	events, err := engine.PollOnce(ctx, leave, now.Add(20*time.Second))
+	if err != nil {
+		t.Fatalf("leave poll: %v", err)
+	}
+	if len(events) != 1 || events[0].MessageTypeKey != "player_left" {
+		t.Fatalf("expected player_left, got %+v", events)
+	}
+	vars := events[0].Variables
+	if vars["PlayerName"] != "Michael" {
+		t.Fatalf("PlayerName = %q", vars["PlayerName"])
+	}
+	if vars["OnlineCount"] != "0" {
+		t.Fatalf("OnlineCount = %q, want 0", vars["OnlineCount"])
+	}
+	if vars["ServerName"] == "" {
+		t.Fatal("ServerName should be set")
+	}
+}
+
 func TestPowerEventVariables(t *testing.T) {
 	t.Chdir("../..")
 

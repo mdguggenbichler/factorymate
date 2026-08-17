@@ -760,7 +760,7 @@ Fixed, seeded set of message types (not user-creatable in v1 — new event types
 | `server_online` | Server Online | server | `{Timestamp}`, `{ServerName}`, `{InGameTime}` |
 | `server_offline` | Server Offline | server | `{Timestamp}`, `{ServerName}`, `{InGameTime}` |
 | `player_joined` | Player Joined | player | `{Timestamp}`, `{ServerName}`, `{PlayerName}`, `{OnlineCount}` |
-| `player_left` | Player Left | player | `{Timestamp}`, `{ServerName}`, `{PlayerName}`, `{OnlineCount}` |
+| `player_left` | Player Disconnected | player | `{Timestamp}`, `{ServerName}`, `{PlayerName}`, `{OnlineCount}` |
 | `fuse_tripped` | Fuse Tripped | power | `{Timestamp}`, `{ServerName}`, `{CircuitID}`, `{PowerProduction}`, `{PowerConsumed}`, `{PowerCapacity}`, `{BatteryPercent}`, `{BatteryTimeEmpty}` |
 | `power_restored` | Power Restored | power | `{Timestamp}`, `{ServerName}`, `{CircuitID}`, `{PowerProduction}`, `{PowerConsumed}`, `{PowerCapacity}`, `{BatteryPercent}`, `{BatteryTimeEmpty}` |
 | `milestone_unlocked` | Milestone Unlocked | progression | `{Timestamp}`, `{ServerName}`, `{SchematicName}`, `{TechTier}`, `{RecipeNames}` (comma-joined) |
@@ -802,7 +802,7 @@ Variable substitution uses a **custom `{VarName}` syntax** (not Go `text/templat
 | Category | Anchor | Message types | Title pattern |
 |---|---|---|---|
 | server | 🌐 | `server_online`, `server_offline` | `🌐 Server is back online` / `🌐 Server went offline` |
-| player | 👤 | `player_joined`, `player_left` | `👤 A player joined the server` / `👤 A player left the server` |
+| player | 👤 | `player_joined`, `player_left` | `👤 A player joined the server` / `👤 A player disconnected` |
 | power | ⚡ | `fuse_tripped`, `power_restored` | Always ⚡ — tripped vs restored differentiated by title wording and color |
 | progression | 🏆 / 💾 / 🚀 / 🔬 | milestone, hard drive, elevator, research | Per-type anchor (milestone 🏆, hard drive 💾, elevator 🚀, research 🔬) |
 | vehicle | 🚂 / ⛽ / 🛑 | train, fuel, stuck | Train 🚂, fuel ⛽, stuck 🛑 |
@@ -813,7 +813,7 @@ Two render paths exist, selected automatically by the target's `provider_type` a
 
 **A. Plain-text render** (used by any future provider that only accepts a message string, e.g. ntfy, Telegram)
 ```
-🟢 **{PlayerName}** has entered the factory. ({OnlineCount} online)
+👤 **{PlayerName}** joined the server. ({OnlineCount} players online)
 ```
 
 **B. Structured embed render** (used when `provider_type == "discord"`)
