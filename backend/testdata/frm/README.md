@@ -20,13 +20,19 @@ Polled endpoints: spec §4.1 (12 endpoints). Do **not** call Write endpoints.
 
 | File | Source | Notes |
 | --- | --- | --- |
+| `getPlayer.json` | Live capture (trimmed) | One player |
 | `getPower.json` | Live capture | Small; safe to commit |
+| `getSchematics.json` | Live capture (trimmed) | One schematic with recipes |
 | `getSpaceElevator.json` | Live capture | Phase/progress shape |
-| `getResourceSink.json` | Live capture | Sink status |
-| `getDoggo.json` | Live capture | Inventory array |
+| `getResearchTrees.json` | Live capture (trimmed) | One tree |
 | `getTrains.json` | Live capture | Empty array `[]` on this save |
+| `getVehicles.json` | Live capture (trimmed) | Two tractors (`FuelInventory`, `Autopilot`) |
+| `getProdStats.json` | Live capture (trimmed) | Three items |
+| `getResourceSink.json` | Live capture | Sink status; `GraphPoints` as numbers |
+| `getFactory.json` | Live capture (trimmed) | One assembler |
 | `getDrone.json` | Live capture | Empty array `[]` on this save |
+| `getDoggo.json` | Live capture | Inventory array |
 
-Large endpoints (`getSchematics`, `getFactory`, `getResearchTrees`, `getPlayer`, `getProdStats`, `getVehicles`) — query live when needed; avoid committing full multi‑KB/MB dumps unless trimmed.
+Large full responses — query live when needed; committed fixtures are trimmed to one or few elements.
 
 Captured: 2026-08-17 from `192.168.178.42:8889`.
