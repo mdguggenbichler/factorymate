@@ -1,0 +1,30 @@
+.git
+.gitignore
+.cursor
+.agents
+
+# Backend artifacts
+backend/server
+backend/data/*.db
+backend/data/*.db-*
+
+# Frontend artifacts
+frontend/node_modules
+frontend/.next
+frontend/out
+
+# Local data and env
+data/
+*.db
+*.db-*
+.env
+.env.*
+
+# Docs and plans (not needed in image)
+docs/
+*.md
+!frontend/README.md
+
+# IDE
+.vscode
+.idea

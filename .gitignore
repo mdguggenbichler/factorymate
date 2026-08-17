@@ -35,5 +35,6 @@ data/
 # Go
 backend/bin/
 backend/tmp/
+backend/server
 *.exe
 *.test

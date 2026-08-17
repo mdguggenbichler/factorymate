@@ -302,10 +302,10 @@ cd frontend && npm run lint && npm run build
 **WRITE:**
 
 ```
-backend/Dockerfile
-frontend/Dockerfile
+Dockerfile
+scripts/docker-entrypoint.sh
+.dockerignore
 docker-compose.yml
-frontend/next.config.ts                 # production rewrite
 docs/development.md
 ```
 

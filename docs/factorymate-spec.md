@@ -101,7 +101,7 @@ It replaces an earlier n8n-based polling workflow with a single self-contained G
 | UI components | shadcn/ui + Tailwind CSS | Copy-paste component model, minimal custom CSS |
 | Charts | Recharts | Pairs natively with shadcn's chart components |
 | Auth | Session-cookie based, password login (bcrypt hashes in SQLite) | No OAuth/SSO in v1 |
-| Deployment | Docker, **two containers** (Go backend + Next.js frontend) | Runs alongside the existing `satisfactory-server` container on the group's host; frontend proxies `/api` to backend in production (see §2.3) |
+| Deployment | Docker, **one container** (Go backend + Next.js frontend) | Runs alongside the existing `satisfactory-server` container on the group's host; Next.js proxies `/api` to the Go process on localhost (see §2.4) |
 
 ### 2.2 Why not shoutrrr
 
@@ -147,14 +147,14 @@ type Provider interface {
 
 ### 2.4 Frontend / backend wiring
 
-v1 uses **two containers** in `docker-compose.yml`:
+v1 uses **one container** in `docker-compose.yml` running two processes:
 
-| Service | Role | Port (default) |
+| Process | Role | Port (default) |
 |---|---|---|
-| `backend` | Go API + poller + SQLite | `8080` (`PORT`) |
-| `frontend` | Next.js App Router | `3000` |
+| Go backend | API + poller + SQLite | `8080` (localhost only inside container) |
+| Next.js | App Router UI | `3000` (exposed to host) |
 
-**Production:** The frontend container runs Next.js and proxies `/api/*` to the backend (Next.js `rewrites` in `next.config` pointing to `http://backend:8080`). Browser calls same-origin `/api/...`; session cookies use `SameSite=Lax` with no cross-origin setup.
+**Production:** Next.js listens on `:3000` and proxies `/api/*` and `/healthz` to the Go backend (`BACKEND_URL=http://127.0.0.1:8080` in `next.config` rewrites). Browser calls same-origin `/api/...`; session cookies use `SameSite=Lax` with no cross-origin setup.
 
 **Local dev:** `frontend` on `:3000`, `backend` on `:8080`; `NEXT_PUBLIC_API_URL=http://localhost:8080` so the dev client can call the API directly (or use the same rewrite pattern).
 

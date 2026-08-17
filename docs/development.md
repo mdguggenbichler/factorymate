@@ -18,9 +18,9 @@ Copy `.env.example` to `.env` at the repo root (or export vars in your shell).
 | `FRM_HOST` / `FRM_PORT` | Initial FRM endpoint; seeded into `app_settings` on first boot. Group live server: `192.168.178.42:8889` (host) or `satisfactory-server:8080` (Docker network) |
 | `FRM_TEST_HOST` / `FRM_TEST_PORT` | Live FRM for integration tests and fixture capture (read-only) — defaults in `.env.example` |
 | `NEXT_PUBLIC_API_URL` | Frontend dev: direct backend URL (`http://localhost:8080`). **Omit in production** — browser uses same-origin `/api` proxy |
-| `BACKEND_URL` | Next.js rewrite target (`http://localhost:8080` local, `http://backend:8080` in compose) |
+| `BACKEND_URL` | Next.js rewrite target (`http://localhost:8080` local; `http://127.0.0.1:8080` inside the Docker container) |
 | `SATISFACTORY_NETWORK` | External Docker network shared with `satisfactory-server` (default `satisfactory-server_default`) |
-| `BACKEND_PORT` / `FRONTEND_PORT` | Host port mappings for compose (defaults `8080` / `3000`) |
+| `FACTORYMATE_PORT` | Host port mapping for the single compose service (default `3000`) |
 
 See `docs/factorymate-spec.md` §9 for the full variable list.
 
@@ -47,21 +47,21 @@ Production-style API proxy: omit `NEXT_PUBLIC_API_URL` and rely on Next.js rewri
 
 ### Docker Compose
 
-Build images:
+Build the single image:
 
 ```bash
 docker compose build
 ```
 
-Run the full stack (requires `SESSION_SECRET` and the external `satisfactory-server` network):
+Run the stack (requires `SESSION_SECRET` and the external `satisfactory-server` network):
 
 ```bash
 export SESSION_SECRET="$(openssl rand -hex 32)"
 docker compose up -d
 ```
 
-- **Backend** — static Go binary, SQLite on volume `factorymate-data`, polls FRM on the shared network.
-- **Frontend** — Next.js standalone; proxies `/api/*` and `/healthz` to `http://backend:8080` via `BACKEND_URL`.
+- **Single container** — Go API + poller on `localhost:8080` (internal), Next.js on `:3000` (exposed). Next.js proxies `/api/*` and `/healthz` to the backend via `BACKEND_URL`.
+- **SQLite** — persisted on volume `factorymate-data`.
 
 ## GuggiRaid production deploy
 
@@ -76,7 +76,7 @@ Manual smoke test per project DoD — not run in CI.
    SESSION_SECRET=<long random string>
    FRM_HOST=satisfactory-server
    FRM_PORT=8080
-   # Optional: FRONTEND_PORT / BACKEND_PORT if defaults conflict
+   # Optional: FACTORYMATE_PORT if 3000 is already in use
    ```
 
 3. **Deploy:**
@@ -89,7 +89,7 @@ Manual smoke test per project DoD — not run in CI.
 4. **First-run setup:** open `http://<host>:3000`, complete admin setup, configure FRM host/port in `/settings/general` if needed, add a Discord notification target, and assign it to a message type (e.g. `player_joined`).
 
 5. **Smoke checks:**
-   - `curl -s http://localhost:8080/healthz` → `{"status":"ok"}`
+   - `curl -s http://localhost:3000/healthz` → `{"status":"ok"}`
    - Dashboard loads with live FRM data
    - `docker compose restart` — SQLite volume persists settings and history
    - Stop FRM / game server briefly → `server_offline` Discord notification; bring FRM back → `server_online` (M3 auto-recover)
