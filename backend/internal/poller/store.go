@@ -361,10 +361,10 @@ type researchNodeStateRow struct {
 	State  string
 }
 
-func loadResearchNodeState(ctx context.Context, db *sql.DB, nodeID string) (researchNodeStateRow, error) {
+func loadResearchNodeState(ctx context.Context, db *sql.DB, treeName, nodeID string) (researchNodeStateRow, error) {
 	var row researchNodeStateRow
 	err := db.QueryRowContext(ctx,
-		`SELECT state FROM research_node_state WHERE node_id = ?`, nodeID,
+		`SELECT state FROM research_node_state WHERE tree_name = ? AND node_id = ?`, treeName, nodeID,
 	).Scan(&row.State)
 	if err == sql.ErrNoRows {
 		return row, nil
@@ -392,12 +392,11 @@ func upsertResearchNodeState(ctx context.Context, db *sql.DB, treeName string, n
 	}
 	_, err = db.ExecContext(ctx, `
 		INSERT INTO research_node_state (
-			node_id, tree_name, name, category, state, tech_tier, cost_json,
+			tree_name, node_id, name, category, state, tech_tier, cost_json,
 			coord_x, coord_y, parents_json, updated_at
 		)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-		ON CONFLICT(node_id) DO UPDATE SET
-			tree_name = excluded.tree_name,
+		ON CONFLICT(tree_name, node_id) DO UPDATE SET
 			name = excluded.name,
 			category = excluded.category,
 			state = excluded.state,
@@ -407,7 +406,7 @@ func upsertResearchNodeState(ctx context.Context, db *sql.DB, treeName string, n
 			coord_y = excluded.coord_y,
 			parents_json = excluded.parents_json,
 			updated_at = excluded.updated_at`,
-		n.ID, treeName, n.Name, n.Category, n.State, n.TechTier, string(costJSON),
+		treeName, n.ID, n.Name, n.Category, n.State, n.TechTier, string(costJSON),
 		coordX, coordY, string(parentsJSON),
 		now.UTC().Format(time.RFC3339),
 	)

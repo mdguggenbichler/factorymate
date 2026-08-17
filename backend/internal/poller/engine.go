@@ -334,7 +334,7 @@ func (e *Engine) processResearch(ctx context.Context, trees []frm.ResearchTree, 
 		seenIDs := make([]string, 0, len(tree.Nodes))
 		for _, node := range tree.Nodes {
 			seenIDs = append(seenIDs, node.ID)
-			prev, err := loadResearchNodeState(ctx, e.DB, node.ID)
+			prev, err := loadResearchNodeState(ctx, e.DB, tree.Name, node.ID)
 			if err != nil {
 				return nil, err
 			}
