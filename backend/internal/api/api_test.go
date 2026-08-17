@@ -764,6 +764,103 @@ func TestAdminEndpoints(t *testing.T) {
 			t.Fatalf("after resolve = %+v", afterBody.Items)
 		}
 	})
+
+	t.Run("message type template test send", func(t *testing.T) {
+		var gotTitle string
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			var payload struct {
+				Embeds []struct {
+					Title string `json:"title"`
+				} `json:"embeds"`
+			}
+			if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+				t.Fatalf("decode webhook: %v", err)
+			}
+			if len(payload.Embeds) != 1 {
+				t.Fatalf("embeds len = %d, want 1", len(payload.Embeds))
+			}
+			gotTitle = payload.Embeds[0].Title
+			w.WriteHeader(http.StatusNoContent)
+		}))
+		defer srv.Close()
+
+		createResp := postJSONWithCookie(t, router, "/api/notification-targets", adminCookie, map[string]any{
+			"name":         "Template Test",
+			"providerType": "discord",
+			"config": map[string]string{
+				"webhook_url": srv.URL,
+			},
+			"enabled": true,
+		})
+		if createResp.StatusCode != http.StatusCreated {
+			t.Fatalf("create target status = %d body=%s", createResp.StatusCode, readBody(t, createResp))
+		}
+		var created struct {
+			ID int64 `json:"id"`
+		}
+		decodeJSON(t, createResp, &created)
+
+		targetsResp := putJSONWithCookie(t, router, "/api/message-types/player_joined/targets", adminCookie, map[string][]int64{
+			"targetIds": {created.ID},
+		})
+		if targetsResp.StatusCode != http.StatusOK {
+			t.Fatalf("put targets status = %d body=%s", targetsResp.StatusCode, readBody(t, targetsResp))
+		}
+
+		testTitle := "Test Send Title"
+		testResp := postJSONWithCookie(t, router, "/api/message-types/player_joined/template/test", adminCookie, map[string]any{
+			"variant": "embed",
+			"template": map[string]any{
+				"embed": map[string]any{
+					"title": testTitle,
+				},
+			},
+		})
+		if testResp.StatusCode != http.StatusNoContent {
+			t.Fatalf("template test status = %d body=%s", testResp.StatusCode, readBody(t, testResp))
+		}
+		if gotTitle != testTitle {
+			t.Fatalf("webhook title = %q, want %q", gotTitle, testTitle)
+		}
+
+		var logCount int
+		if err := database.QueryRowContext(ctx, `
+			SELECT COUNT(*) FROM notification_log
+			WHERE message_type_key = 'player_joined' AND target_id = ? AND success = 1`,
+			created.ID,
+		).Scan(&logCount); err != nil {
+			t.Fatalf("count notification_log: %v", err)
+		}
+		if logCount != 1 {
+			t.Fatalf("notification_log rows = %d, want 1", logCount)
+		}
+
+		clearResp := putJSONWithCookie(t, router, "/api/message-types/player_joined/targets", adminCookie, map[string][]int64{
+			"targetIds": {},
+		})
+		if clearResp.StatusCode != http.StatusOK {
+			t.Fatalf("clear targets status = %d", clearResp.StatusCode)
+		}
+
+		noTargetsResp := postJSONWithCookie(t, router, "/api/message-types/player_joined/template/test", adminCookie, map[string]any{
+			"variant": "embed",
+			"template": map[string]any{
+				"embed": map[string]any{
+					"title": testTitle,
+				},
+			},
+		})
+		if noTargetsResp.StatusCode != http.StatusBadRequest {
+			t.Fatalf("template test no targets status = %d, want 400 body=%s", noTargetsResp.StatusCode, readBody(t, noTargetsResp))
+		}
+		var errBody struct {
+			Error string `json:"error"`
+		}
+		decodeJSON(t, noTargetsResp, &errBody)
+		if errBody.Error != "no targets assigned" {
+			t.Fatalf("error = %q, want no targets assigned", errBody.Error)
+		}
+	})
 }
 
 func setupAdmin(t *testing.T, router http.Handler) *http.Cookie {

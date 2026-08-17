@@ -85,6 +85,7 @@ export function TemplatesView({
   const [preview, setPreview] = useState<RenderedPreview | null>(null)
   const [isSaving, setIsSaving] = useState(false)
   const [isResetting, setIsResetting] = useState(false)
+  const [isTesting, setIsTesting] = useState(false)
   const plainRef = useRef<HTMLTextAreaElement>(null)
   const descriptionRef = useRef<HTMLTextAreaElement>(null)
 
@@ -281,6 +282,32 @@ export function TemplatesView({
       toast.error(tCommon("error"))
     } finally {
       setIsResetting(false)
+    }
+  }
+
+  async function handleTestSend() {
+    if (!selected || !draft) {
+      return
+    }
+
+    setIsTesting(true)
+    try {
+      const body = {
+        variant: editorTab,
+        template: {
+          ...(draft.plain ? { plain: draft.plain } : {}),
+          ...(draft.embed ? { embed: draft.embed } : {}),
+        },
+      }
+      await apiFetch(`/message-types/${selected.key}/template/test`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      })
+      toast.success(t("testSent"))
+    } catch {
+      toast.error(t("testFailed"))
+    } finally {
+      setIsTesting(false)
     }
   }
 
@@ -541,6 +568,15 @@ export function TemplatesView({
                     disabled={isResetting}
                   >
                     {t("resetToDefault")}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={handleTestSend}
+                    disabled={isTesting || targetIds.length === 0}
+                    title={targetIds.length === 0 ? t("testNoTargets") : undefined}
+                  >
+                    {t("testSend")}
                   </Button>
                 </div>
               </CardContent>

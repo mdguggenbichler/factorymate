@@ -51,6 +51,7 @@ func (h *Handler) Mount(r chi.Router) {
 			r.Put("/message-types/{key}/template", h.UpdateMessageTypeTemplate)
 			r.Post("/message-types/{key}/template/reset", h.ResetMessageTypeTemplate)
 			r.Post("/message-types/{key}/template/preview", h.PreviewMessageTypeTemplate)
+			r.Post("/message-types/{key}/template/test", h.TestMessageTypeTemplate)
 			r.Put("/message-types/{key}/targets", h.UpdateMessageTypeTargets)
 
 			r.Get("/notification-log", h.GetNotificationLog)

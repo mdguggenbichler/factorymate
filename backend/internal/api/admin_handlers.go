@@ -620,6 +620,52 @@ func (h *Handler) PreviewMessageTypeTemplate(w http.ResponseWriter, r *http.Requ
 	writeJSON(w, http.StatusOK, renderedToAPI(rendered))
 }
 
+func (h *Handler) TestMessageTypeTemplate(w http.ResponseWriter, r *http.Request) {
+	key := chi.URLParam(r, "key")
+
+	var req templatePreviewRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, r, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	var defaultJSON string
+	err := h.db.QueryRowContext(r.Context(),
+		`SELECT default_template_json FROM message_types WHERE key = ?`, key,
+	).Scan(&defaultJSON)
+	if err == sql.ErrNoRows {
+		writeError(w, r, http.StatusNotFound, "not found")
+		return
+	}
+	if err != nil {
+		writeError(w, r, http.StatusInternalServerError, "internal error")
+		return
+	}
+
+	var defaults template.Template
+	if err := json.Unmarshal([]byte(defaultJSON), &defaults); err != nil {
+		writeError(w, r, http.StatusInternalServerError, "internal error")
+		return
+	}
+
+	effective := template.MergeTemplates(defaults, &req.Template)
+	if err := template.ValidateMessageType(key, effective); err != nil {
+		validationError(w, r, err)
+		return
+	}
+
+	rendered := template.Render(effective, template.SampleVariables(key))
+	if err := h.dispatcher.SendRenderedTest(r.Context(), key, rendered); err != nil {
+		if errors.Is(err, notify.ErrNoTargets) {
+			writeError(w, r, http.StatusBadRequest, "no targets assigned")
+			return
+		}
+		writeError(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
 func (h *Handler) UpdateMessageTypeTargets(w http.ResponseWriter, r *http.Request) {
 	key := chi.URLParam(r, "key")
 	var req targetIDsRequest

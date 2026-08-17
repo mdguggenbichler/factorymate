@@ -374,6 +374,10 @@
       "templateSaved": "Template saved.",
       "templateReset": "Template reset to default.",
       "targetsSaved": "Target assignment updated.",
+      "testSend": "Send test",
+      "testSent": "Test notification sent.",
+      "testFailed": "Test notification failed.",
+      "testNoTargets": "Assign at least one target to send a test.",
       "columns": {
         "label": "Message type",
         "category": "Category",

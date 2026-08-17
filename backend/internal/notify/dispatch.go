@@ -4,12 +4,16 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
 
 	"factorymate/internal/template"
 )
+
+// ErrNoTargets is returned when a test send has no assigned enabled targets.
+var ErrNoTargets = errors.New("no targets assigned")
 
 // Dispatcher routes detected poller events to notification providers (spec §5.3).
 type Dispatcher struct {
@@ -52,9 +56,29 @@ func (d *Dispatcher) HandleEvent(ctx context.Context, messageTypeKey string, var
 
 	rendered := template.Render(tmpl, vars)
 	for _, target := range targets {
-		d.dispatchToTarget(ctx, messageTypeKey, target, rendered)
+		_ = d.dispatchToTarget(ctx, messageTypeKey, target, rendered)
 	}
 	return nil
+}
+
+// SendRenderedTest sends a pre-rendered message to all assigned enabled targets.
+// Unlike HandleEvent, it does not check message_types.enabled.
+func (d *Dispatcher) SendRenderedTest(ctx context.Context, messageTypeKey string, rendered template.RenderedMessage) error {
+	targets, err := d.loadTargets(ctx, messageTypeKey)
+	if err != nil {
+		return err
+	}
+	if len(targets) == 0 {
+		return ErrNoTargets
+	}
+
+	var firstErr error
+	for _, target := range targets {
+		if err := d.dispatchToTarget(ctx, messageTypeKey, target, rendered); err != nil && firstErr == nil {
+			firstErr = err
+		}
+	}
+	return firstErr
 }
 
 func (d *Dispatcher) loadMessageType(ctx context.Context, key string) (bool, string, error) {
@@ -116,18 +140,20 @@ func (d *Dispatcher) loadEffectiveTemplate(ctx context.Context, key, defaultJSON
 	return defaults, nil
 }
 
-func (d *Dispatcher) dispatchToTarget(ctx context.Context, messageTypeKey string, target NotificationTarget, rendered template.RenderedMessage) {
+func (d *Dispatcher) dispatchToTarget(ctx context.Context, messageTypeKey string, target NotificationTarget, rendered template.RenderedMessage) error {
 	msg := providerMessage(target.ProviderType, rendered)
 	preview := renderedPreview(target.ProviderType, rendered)
 
 	provider, ok := d.Providers[target.ProviderType]
 	if !ok {
-		d.recordLog(ctx, messageTypeKey, target.ID, preview, false, fmt.Errorf("unknown provider type %q", target.ProviderType))
-		return
+		err := fmt.Errorf("unknown provider type %q", target.ProviderType)
+		d.recordLog(ctx, messageTypeKey, target.ID, preview, false, err)
+		return err
 	}
 
 	sendErr := provider.Send(ctx, target, msg)
 	d.recordLog(ctx, messageTypeKey, target.ID, preview, sendErr == nil, sendErr)
+	return sendErr
 }
 
 func providerMessage(providerType string, rendered template.RenderedMessage) RenderedMessage {
