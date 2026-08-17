@@ -560,9 +560,9 @@ Two separate cadences: the **fast poll** drives notification/event detection (§
 | `GET /getFactory` | Every producer-type building (Assembler, Foundry, Smelter, Constructor, Manufacturer, Blender, Packager, Refinery, Converter, Encoder, Particle Accelerator) → `factory_machine_state`, "Detailed Prod" table. `getFactory` is a single aggregated endpoint covering all of these — not one call per building type. Derive `building_type` from `ClassName` using the mapping table below. |
 | `GET /getDrone` | All drones → `drone_state` |
 | `GET /getDoggo` | All Lizard Doggos → `doggo_state`, storing the `Inventory[]` array as-is — each item already has a display `Name` (e.g. "SAM"), so no separate "found SAM" flag or ClassName matching is needed |
-| `GET /getModList` | Server mod manifest → `mods_cache` (dashboard `/mods`, SMM profile export, Discord `/mods`) |
+| `GET /getModList` | Server mod manifest (dashboard `/mods`, SMM profile export, Discord `/mods`) |
 
-**`getModList` notes:** Returns game build, SML version, and per-mod metadata (`Name`, `Version`, `RemoteVersionRange`, `CreatedBy`, docs URL, `RequiredOnRemote`). Polled on admin refresh and cached in SQLite; not part of the recurring slow-poll loop unless refreshed explicitly.
+**`getModList` notes:** Returns game build, SML version, and per-mod metadata (`Name`, `Version`, `RemoteVersionRange`, `CreatedBy`, docs URL, `RequiredOnRemote`). Fetched on demand via `frm.Client.GetModList()` and cached in memory (15-minute TTL, shared by API + Discord); admin `POST /api/mods/refresh` busts the cache. Not part of the recurring slow-poll loop.
 
 **`getFactory` `building_type` mapping:** `factory_machine_state.building_type` is derived from each machine's `ClassName`. FRM's per-type endpoints (`getAssembler`, `getFoundry`, `getSmelter`, `getConstructor`, `getManufacturer`, `getBlender`, `getPackager`, `getRefinery`, `getConverter`, `getEncoder`, `getParticle`) have **no separate `.adoc` files** in `docs/frm-docs` — they all xref to `getFactory.adoc`, whose example response contains only a Constructor. ClassNames below are only those that appear as a `"ClassName"` field in vendored docs; Mk2/Mk3 (and any other) variants are listed only when found. Do not invent missing ClassNames.
 

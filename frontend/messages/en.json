@@ -141,6 +141,7 @@
     "refreshed": "Mod list refreshed.",
     "requiredYes": "Required",
     "requiredNo": "Optional",
+    "requiredTooltip": "Mod-author flag only. Do not rely on this for join planning — install every mod on the server at matching versions.",
     "disclaimerTitle": "Install mods before joining",
     "disclaimerDescription": "This list shows every mod on the server. RequiredOnRemote is not always reliable — use Download SMM profile to sync Satisfactory Mod Manager before connecting.",
     "frmUnreachableTitle": "FRM unreachable",

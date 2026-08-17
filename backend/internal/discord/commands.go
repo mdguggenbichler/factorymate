@@ -218,49 +218,31 @@ func (b *Bot) registerSlashCommands(ctx context.Context) error {
 			Description: "View or update your DM notification preferences",
 			Options: []*discordgo.ApplicationCommandOption{
 				{
-					Type:        discordgo.ApplicationCommandOptionSubCommand,
-					Name:        "view",
-					Description: "Show current DM preferences",
-				},
-				{
-					Type:        discordgo.ApplicationCommandOptionSubCommand,
-					Name:        "category",
-					Description: "Enable or disable a DM category",
-					Options: []*discordgo.ApplicationCommandOption{
-						{
-							Type:        discordgo.ApplicationCommandOptionString,
-							Name:        "name",
-							Description: "Category name",
-							Required:    true,
-							Choices: categoryChoices(),
-						},
-						{
-							Type:        discordgo.ApplicationCommandOptionString,
-							Name:        "enabled",
-							Description: "on or off",
-							Required:    true,
-							Choices: []*discordgo.ApplicationCommandOptionChoice{
-								{Name: "on", Value: "on"},
-								{Name: "off", Value: "off"},
-							},
-						},
+					Type:        discordgo.ApplicationCommandOptionString,
+					Name:        "action",
+					Description: "view (default), category, or personal",
+					Required:    false,
+					Choices: []*discordgo.ApplicationCommandOptionChoice{
+						{Name: "view", Value: "view"},
+						{Name: "category", Value: "category"},
+						{Name: "personal", Value: "personal"},
 					},
 				},
 				{
-					Type:        discordgo.ApplicationCommandOptionSubCommand,
-					Name:        "personal",
-					Description: "Toggle personal player join/leave DMs",
-					Options: []*discordgo.ApplicationCommandOption{
-						{
-							Type:        discordgo.ApplicationCommandOptionString,
-							Name:        "enabled",
-							Description: "on or off",
-							Required:    true,
-							Choices: []*discordgo.ApplicationCommandOptionChoice{
-								{Name: "on", Value: "on"},
-								{Name: "off", Value: "off"},
-							},
-						},
+					Type:        discordgo.ApplicationCommandOptionString,
+					Name:        "name",
+					Description: "Category name (with action:category)",
+					Required:    false,
+					Choices:     categoryChoices(),
+				},
+				{
+					Type:        discordgo.ApplicationCommandOptionString,
+					Name:        "enabled",
+					Description: "on or off (with action:category or action:personal)",
+					Required:    false,
+					Choices: []*discordgo.ApplicationCommandOptionChoice{
+						{Name: "on", Value: "on"},
+						{Name: "off", Value: "off"},
 					},
 				},
 			},

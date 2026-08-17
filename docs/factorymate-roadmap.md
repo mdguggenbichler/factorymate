@@ -268,7 +268,7 @@ Build order:
 
 ---
 
-## M16 — Notifications polish & admin commands (Phase 1 backend)
+## M16 — Notifications polish & admin commands
 
 **Goal:** Per-user DM routing for game events, notification preference APIs, and M16 Discord admin commands — per `docs/discord-bot-plan.md` §9, §11.2, §12.2, §13.
 

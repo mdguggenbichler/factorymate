@@ -11,6 +11,8 @@ import (
 	"factorymate/internal/db"
 	"factorymate/internal/discord"
 	"factorymate/internal/registration"
+
+	"github.com/bwmarrin/discordgo"
 )
 
 func TestApprovalButtonCustomIDs(t *testing.T) {
@@ -70,6 +72,55 @@ func TestCanRunCommandRoleMapping(t *testing.T) {
 	adminUser := &auth.User{Role: auth.RoleAdmin}
 	if !discord.CanRunAdminCommand(perms, discord.LinkStateActiveLinked, adminUser) {
 		t.Fatal("FM admin should bypass Discord admin role requirement")
+	}
+}
+
+func TestCanRunCommand_PendingApprovalBlocked(t *testing.T) {
+	t.Chdir("../..")
+	ctx := context.Background()
+	database := openTestDB(t)
+	defer database.Close()
+	if err := db.Init(ctx, database, db.SeedConfig{}); err != nil {
+		t.Fatalf("init db: %v", err)
+	}
+
+	mappings := map[string]any{
+		"role_mappings": []map[string]any{
+			{
+				"discord_role_id": "role-viewer",
+				"fm_role":         "viewer",
+				"bot_commands":    []string{"register", "player", "connection", "mods"},
+			},
+		},
+		"allow_self_register": true,
+	}
+	raw, _ := json.Marshal(mappings)
+	if _, err := database.ExecContext(ctx, `
+		INSERT INTO app_setting_kv (key, value) VALUES ('discord.role_mappings_json', ?)
+		ON CONFLICT(key) DO UPDATE SET value = excluded.value`, string(raw)); err != nil {
+		t.Fatalf("seed mappings: %v", err)
+	}
+
+	perms, err := discord.ResolveMemberPermissions(ctx, database, []string{"role-viewer"})
+	if err != nil {
+		t.Fatalf("resolve perms: %v", err)
+	}
+
+	for _, group := range []string{
+		discord.CommandGroupPlayer,
+		discord.CommandGroupConnection,
+		discord.CommandGroupMods,
+	} {
+		if discord.CanRunCommand(perms, group, discord.LinkStatePendingApproval) {
+			t.Fatalf("pending approval user should not run %q commands", group)
+		}
+	}
+}
+
+func TestParseNotificationsOptionsDefaultsToView(t *testing.T) {
+	action, category, enabled := discord.ParseNotificationsOptionsForTest(discordgo.ApplicationCommandInteractionData{})
+	if action != "view" || category != "" || enabled != "" {
+		t.Fatalf("defaults = (%q, %q, %q), want view, empty, empty", action, category, enabled)
 	}
 }
 

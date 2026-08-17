@@ -15,7 +15,7 @@ import (
 
 const ficsitAPIBase = "https://api.ficsit.app"
 
-var lockfileTargets = []string{"Windows", "LinuxServer", "WindowsServer"}
+var profileRequiredTargets = []string{"Windows", "LinuxServer"}
 
 // FicsitResolver resolves mod version metadata from ficsit.app.
 type FicsitResolver interface {
@@ -88,6 +88,15 @@ type SMMProfileMetadata struct {
 
 // GenerateSMMProfile builds a .smmprofile from live mod list + ficsit.app lockfile resolution.
 func (s *Service) GenerateSMMProfile(ctx context.Context) ([]byte, string, error) {
+	s.mu.Lock()
+	if s.cache != nil && len(s.cache.smmProfile) > 0 && s.Now().Sub(s.cache.at) < s.CacheTTL {
+		data := append([]byte(nil), s.cache.smmProfile...)
+		filename := s.cache.smmFilename
+		s.mu.Unlock()
+		return data, filename, nil
+	}
+	s.mu.Unlock()
+
 	rawMods, err := s.RawMods(ctx)
 	if err != nil {
 		return nil, "", err
@@ -106,7 +115,15 @@ func (s *Service) GenerateSMMProfile(ctx context.Context) ([]byte, string, error
 	if err != nil {
 		return nil, "", fmt.Errorf("marshal smm profile: %w", err)
 	}
-	filename := sanitizeFilename(profileName) + ".smmprofile"
+	filename := "factorymate-server.smmprofile"
+
+	s.mu.Lock()
+	if s.cache != nil {
+		s.cache.smmProfile = append([]byte(nil), raw...)
+		s.cache.smmFilename = filename
+	}
+	s.mu.Unlock()
+
 	return raw, filename, nil
 }
 
@@ -166,7 +183,7 @@ func buildSMMProfile(ctx context.Context, client FicsitResolver, rawMods []frm.M
 	return SMMProfile{
 		Profile: SMMProfileSection{
 			Name:            profileName,
-			RequiredTargets: append([]string(nil), lockfileTargets...),
+			RequiredTargets: append([]string(nil), profileRequiredTargets...),
 			Mods:            profileMods,
 		},
 		Lockfile: SMMProfileLockfile{
@@ -187,27 +204,6 @@ func parseGameBuildInt(version string) int {
 		n = n*10 + int(c-'0')
 	}
 	return n
-}
-
-func sanitizeFilename(name string) string {
-	name = strings.TrimSpace(name)
-	if name == "" {
-		return "factorymate-server"
-	}
-	var b strings.Builder
-	for _, r := range name {
-		switch {
-		case r >= 'a' && r <= 'z', r >= 'A' && r <= 'Z', r >= '0' && r <= '9', r == '-', r == '_':
-			b.WriteRune(r)
-		case r == ' ':
-			b.WriteRune('-')
-		}
-	}
-	out := b.String()
-	if out == "" {
-		return "factorymate-server"
-	}
-	return out
 }
 
 // HTTPFicsitClient calls the public ficsit.app GraphQL API.

@@ -122,7 +122,7 @@ func TestSMMProfileMatchesFixtureStructure(t *testing.T) {
 	if err != nil {
 		t.Fatalf("generate profile: %v", err)
 	}
-	if filename != "FactoryMate-Server.smmprofile" {
+	if filename != "factorymate-server.smmprofile" {
 		t.Fatalf("filename = %q", filename)
 	}
 
@@ -133,6 +133,11 @@ func TestSMMProfileMatchesFixtureStructure(t *testing.T) {
 
 	gotProfile, _ := got["profile"].(map[string]any)
 	expProfile, _ := expected["profile"].(map[string]any)
+	gotRequired, _ := gotProfile["required_targets"].([]any)
+	expRequired, _ := expProfile["required_targets"].([]any)
+	if len(gotRequired) != len(expRequired) {
+		t.Fatalf("required_targets = %v, want %v", gotRequired, expRequired)
+	}
 	gotMods, _ := gotProfile["mods"].(map[string]any)
 	expMods, _ := expProfile["mods"].(map[string]any)
 	if len(gotMods) != len(expMods) {

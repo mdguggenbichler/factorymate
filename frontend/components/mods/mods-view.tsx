@@ -291,9 +291,16 @@ export function ModsView({ initialData, isAdmin }: ModsViewProps) {
                       {mod.smrName}
                     </TableCell>
                     <TableCell>
-                      <Badge variant={mod.requiredOnRemote ? "default" : "secondary"}>
-                        {mod.requiredOnRemote ? t("requiredYes") : t("requiredNo")}
-                      </Badge>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Badge variant={mod.requiredOnRemote ? "default" : "secondary"}>
+                            {mod.requiredOnRemote ? t("requiredYes") : t("requiredNo")}
+                          </Badge>
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-xs">
+                          {t("requiredTooltip")}
+                        </TooltipContent>
+                      </Tooltip>
                     </TableCell>
                   </TableRow>
                 ))}

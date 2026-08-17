@@ -27,7 +27,9 @@ curl -sS "http://192.168.178.42:8889/getPower" -o backend/testdata/frm/getPower.
 
 Committed fixtures live in `backend/testdata/frm/` (see README there). Large responses — query live rather than committing full dumps.
 
-## Discord webhook testing (M4, M6)
+## Discord webhook testing (legacy — pre-M15)
+
+> **M15+:** Game-event notifications use the Discord **bot** (`channel_id` + `SendDirect`), not incoming webhooks. Use the mock-session pattern in [Discord bot testing (M15)](#discord-bot-testing-m15) below for dispatch and provider tests. This section documents the old webhook approach for historical context only.
 
 Discord incoming webhooks are a single `POST` with a JSON body (`content` and/or `embeds`). You do **not** need Discord to verify payload shape.
 
@@ -81,7 +83,7 @@ The Discord bot runs inside the Go backend process. CI does **not** require a li
 | Area | Approach |
 | --- | --- |
 | `DiscordProvider.Send` / `SendDirect` | Mock `discordgo.Session`; assert channel/user IDs and embed payload |
-| Slash command handlers | JSON interaction fixtures under `backend/internal/discord/` |
+| Slash command handlers | Permission logic + service integration in `interactions_test.go`; optional JSON interaction fixtures for full handler replay |
 | Registration / approval | Extend `auth` / `registration` tests; `pending_approval` blocks login |
 | Pending player auto-link | Poller test: upsert `player_state` → assert `player_id` set |
 | Connection broadcast | Assert `SendDirect` called for all active linked users |

@@ -146,22 +146,48 @@ func (b *Bot) handleSyncRolesCommand(ctx context.Context, s *discordgo.Session, 
 
 func (b *Bot) handleNotificationsCommand(ctx context.Context, s *discordgo.Session, i *discordgo.InteractionCreate, externalID string, userID int64, data discordgo.ApplicationCommandInteractionData) {
 	svc := notifications.NewService(b.db)
-	if len(data.Options) == 0 {
-		b.showNotificationPrefs(ctx, s, i, externalID, svc, userID)
-		return
-	}
+	action, category, enabled := parseNotificationsOptions(data)
 
-	sub := data.Options[0]
-	switch sub.Name {
+	switch action {
 	case "view":
 		b.showNotificationPrefs(ctx, s, i, externalID, svc, userID)
 	case "category":
-		b.setNotificationCategory(ctx, s, i, externalID, svc, userID, sub)
+		if category == "" || enabled == "" {
+			respondEphemeral(s, i, "Usage: `/notifications action:category name:<category> enabled:<on|off>`")
+			return
+		}
+		b.setNotificationCategory(ctx, s, i, externalID, svc, userID, category, enabled)
 	case "personal":
-		b.setNotificationPersonal(ctx, s, i, externalID, svc, userID, sub)
+		if enabled == "" {
+			respondEphemeral(s, i, "Usage: `/notifications action:personal enabled:<on|off>`")
+			return
+		}
+		b.setNotificationPersonal(ctx, s, i, externalID, svc, userID, enabled)
 	default:
-		respondEphemeral(s, i, "Unknown subcommand.")
+		respondEphemeral(s, i, "Unknown action.")
 	}
+}
+
+func parseNotificationsOptions(data discordgo.ApplicationCommandInteractionData) (action, category, enabled string) {
+	action = "view"
+	for _, opt := range data.Options {
+		switch opt.Name {
+		case "action":
+			if v := strings.TrimSpace(opt.StringValue()); v != "" {
+				action = v
+			}
+		case "name":
+			category = opt.StringValue()
+		case "enabled":
+			enabled = opt.StringValue()
+		}
+	}
+	return action, category, enabled
+}
+
+// ParseNotificationsOptionsForTest exposes notification option parsing for tests.
+func ParseNotificationsOptionsForTest(data discordgo.ApplicationCommandInteractionData) (string, string, string) {
+	return parseNotificationsOptions(data)
 }
 
 func (b *Bot) showNotificationPrefs(ctx context.Context, s *discordgo.Session, i *discordgo.InteractionCreate, externalID string, svc *notifications.Service, userID int64) {
@@ -185,21 +211,12 @@ func (b *Bot) showNotificationPrefs(ctx context.Context, s *discordgo.Session, i
 		personal = "on"
 	}
 	lines = append(lines, "", fmt.Sprintf("Personal player events: **%s**", personal))
-	lines = append(lines, "", "Use `/notifications category <name> <on|off>` or `/notifications personal <on|off>` to change settings.")
+	lines = append(lines, "", "Use `/notifications action:category name:<category> enabled:<on|off>` or `/notifications action:personal enabled:<on|off>` to change settings.")
 	respondEphemeral(s, i, strings.Join(lines, "\n"))
 	_ = LogBotCommand(ctx, b.db, externalID, "notifications", true, "view")
 }
 
-func (b *Bot) setNotificationCategory(ctx context.Context, s *discordgo.Session, i *discordgo.InteractionCreate, externalID string, svc *notifications.Service, userID int64, sub *discordgo.ApplicationCommandInteractionDataOption) {
-	var category, enabled string
-	for _, opt := range sub.Options {
-		switch opt.Name {
-		case "name":
-			category = opt.StringValue()
-		case "enabled":
-			enabled = opt.StringValue()
-		}
-	}
+func (b *Bot) setNotificationCategory(ctx context.Context, s *discordgo.Session, i *discordgo.InteractionCreate, externalID string, svc *notifications.Service, userID int64, category, enabled string) {
 	if !isValidCategory(category) {
 		respondEphemeral(s, i, "Unknown category.")
 		_ = LogBotCommand(ctx, b.db, externalID, "notifications category", false, category)
@@ -222,13 +239,7 @@ func (b *Bot) setNotificationCategory(ctx context.Context, s *discordgo.Session,
 	_ = LogBotCommand(ctx, b.db, externalID, "notifications category", true, category+":"+enabled)
 }
 
-func (b *Bot) setNotificationPersonal(ctx context.Context, s *discordgo.Session, i *discordgo.InteractionCreate, externalID string, svc *notifications.Service, userID int64, sub *discordgo.ApplicationCommandInteractionDataOption) {
-	enabled := ""
-	for _, opt := range sub.Options {
-		if opt.Name == "enabled" {
-			enabled = opt.StringValue()
-		}
-	}
+func (b *Bot) setNotificationPersonal(ctx context.Context, s *discordgo.Session, i *discordgo.InteractionCreate, externalID string, svc *notifications.Service, userID int64, enabled string) {
 	prefs, err := svc.GetUserPrefs(ctx, userID)
 	if err != nil {
 		respondEphemeral(s, i, "Could not update preferences.")

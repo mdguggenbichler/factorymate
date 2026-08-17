@@ -33,9 +33,11 @@ type Service struct {
 }
 
 type cachedList struct {
-	response ListResponse
-	rawMods  []frm.Mod
-	at       time.Time
+	response    ListResponse
+	rawMods     []frm.Mod
+	smmProfile  []byte
+	smmFilename string
+	at          time.Time
 }
 
 // NewService constructs a mod list service.
