@@ -64,7 +64,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { apiFetch } from "@/lib/api"
+import { discordDefaultAvatarUrl } from "@/lib/discord-avatar"
 import type {
   AppUser,
   Invite,
@@ -78,12 +80,20 @@ type UserFormState = {
   password: string
   role: "admin" | "viewer"
   playerId: string
+  externalPlatform: string
+  externalUserId: string
+  externalUsername: string
+  externalDisplayName: string
 }
 
 const emptyForm: UserFormState = {
   password: "",
   role: "viewer",
   playerId: "",
+  externalPlatform: "",
+  externalUserId: "",
+  externalUsername: "",
+  externalDisplayName: "",
 }
 
 type RosterRow =
@@ -134,6 +144,7 @@ export function UsersView({
     useState<PendingRegistration | null>(null)
   const [rejectComment, setRejectComment] = useState("")
   const [advancedOpen, setAdvancedOpen] = useState(false)
+  const [unlinkUser, setUnlinkUser] = useState<AppUser | null>(null)
 
   const roster = useMemo<RosterRow[]>(() => {
     const inviteRows: RosterRow[] = invites.map((invite) => ({
@@ -169,6 +180,10 @@ export function UsersView({
       password: "",
       role: user.role as "admin" | "viewer",
       playerId: user.playerId ?? "",
+      externalPlatform: user.externalPlatform ?? "",
+      externalUserId: user.externalUserId ?? "",
+      externalUsername: user.externalUsername ?? "",
+      externalDisplayName: user.externalDisplayName ?? "",
     })
     setEditDialogOpen(true)
     void loadPlayers()
@@ -223,10 +238,29 @@ export function UsersView({
       if (form.password) {
         body.password = form.password
       }
-      const updated = await apiFetch<AppUser>(`/users/${editingUser.id}`, {
+      let updated = await apiFetch<AppUser>(`/users/${editingUser.id}`, {
         method: "PUT",
         body: JSON.stringify(body),
       })
+
+      const externalChanged =
+        form.externalPlatform !== (editingUser.externalPlatform ?? "") ||
+        form.externalUserId !== (editingUser.externalUserId ?? "") ||
+        form.externalUsername !== (editingUser.externalUsername ?? "") ||
+        form.externalDisplayName !== (editingUser.externalDisplayName ?? "")
+
+      if (externalChanged) {
+        updated = await apiFetch<AppUser>(`/users/${editingUser.id}/external`, {
+          method: "PUT",
+          body: JSON.stringify({
+            externalPlatform: form.externalPlatform.trim() || null,
+            externalUserId: form.externalUserId.trim() || null,
+            externalUsername: form.externalUsername.trim() || null,
+            externalDisplayName: form.externalDisplayName.trim() || null,
+          }),
+        })
+        toast.success(t("externalUpdated"))
+      }
       setUsers((current) =>
         current.map((user) =>
           user.id === editingUser.id ? { ...user, ...updated } : user
@@ -378,17 +412,65 @@ export function UsersView({
     }
   }
 
-  function externalLabel(user: AppUser): string {
-    if (user.externalDisplayName) {
-      return user.externalDisplayName
+  async function handleUnlinkDiscord() {
+    if (!unlinkUser) {
+      return
     }
-    if (user.externalUsername) {
-      return user.externalUsername
+
+    try {
+      const updated = await apiFetch<AppUser>(`/users/${unlinkUser.id}/external`, {
+        method: "PUT",
+        body: JSON.stringify({ unlink: true }),
+      })
+      setUsers((current) =>
+        current.map((user) =>
+          user.id === unlinkUser.id ? { ...user, ...updated } : user
+        )
+      )
+      if (editingUser?.id === unlinkUser.id) {
+        setForm((current) => ({
+          ...current,
+          externalPlatform: "",
+          externalUserId: "",
+          externalUsername: "",
+          externalDisplayName: "",
+        }))
+      }
+      toast.success(t("discordUnlinked"))
+    } catch {
+      toast.error(tCommon("error"))
+    } finally {
+      setUnlinkUser(null)
     }
-    if (user.externalPlatform && user.externalUserId) {
-      return `${user.externalPlatform}:${user.externalUserId}`
+  }
+
+  function renderDiscordIdentity(user: AppUser) {
+    if (!user.externalUserId) {
+      return "—"
     }
-    return "—"
+    const label =
+      user.externalDisplayName ||
+      user.externalUsername ||
+      user.externalUserId
+    const handle = user.externalUsername ? `@${user.externalUsername}` : null
+
+    return (
+      <div className="flex items-center gap-2">
+        <Avatar size="sm">
+          <AvatarImage
+            src={discordDefaultAvatarUrl(user.externalUserId)}
+            alt=""
+          />
+          <AvatarFallback>{label.charAt(0).toUpperCase()}</AvatarFallback>
+        </Avatar>
+        <div className="min-w-0">
+          <p className="truncate font-medium">{label}</p>
+          {handle ? (
+            <p className="truncate text-xs text-muted-foreground">{handle}</p>
+          ) : null}
+        </div>
+      </div>
+    )
   }
 
   function stateLabel(status: string) {
@@ -677,7 +759,7 @@ export function UsersView({
                 return (
                   <TableRow key={`user-${user.id}`}>
                     <TableCell className="font-medium">{user.username}</TableCell>
-                    <TableCell>{externalLabel(user)}</TableCell>
+                    <TableCell>{renderDiscordIdentity(user)}</TableCell>
                     <TableCell>{user.registrationSource ?? "—"}</TableCell>
                     <TableCell>
                       {user.externalLinkedAt
@@ -879,6 +961,84 @@ export function UsersView({
                   </SelectContent>
                 </Select>
               </Field>
+              <div className="mt-4 space-y-3 rounded-lg border p-4">
+                <div>
+                  <p className="text-sm font-medium">{t("externalTitle")}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {t("externalDescription")}
+                  </p>
+                </div>
+                <Field>
+                  <FieldLabel htmlFor="external-platform">
+                    {t("fields.externalPlatform")}
+                  </FieldLabel>
+                  <Input
+                    id="external-platform"
+                    value={form.externalPlatform}
+                    onChange={(event) =>
+                      setForm((current) => ({
+                        ...current,
+                        externalPlatform: event.target.value,
+                      }))
+                    }
+                    placeholder="discord"
+                  />
+                </Field>
+                <Field>
+                  <FieldLabel htmlFor="external-user-id">
+                    {t("fields.externalUserId")}
+                  </FieldLabel>
+                  <Input
+                    id="external-user-id"
+                    value={form.externalUserId}
+                    onChange={(event) =>
+                      setForm((current) => ({
+                        ...current,
+                        externalUserId: event.target.value,
+                      }))
+                    }
+                  />
+                </Field>
+                <Field>
+                  <FieldLabel htmlFor="external-username">
+                    {t("fields.externalUsername")}
+                  </FieldLabel>
+                  <Input
+                    id="external-username"
+                    value={form.externalUsername}
+                    onChange={(event) =>
+                      setForm((current) => ({
+                        ...current,
+                        externalUsername: event.target.value,
+                      }))
+                    }
+                  />
+                </Field>
+                <Field>
+                  <FieldLabel htmlFor="external-display-name">
+                    {t("fields.externalDisplayName")}
+                  </FieldLabel>
+                  <Input
+                    id="external-display-name"
+                    value={form.externalDisplayName}
+                    onChange={(event) =>
+                      setForm((current) => ({
+                        ...current,
+                        externalDisplayName: event.target.value,
+                      }))
+                    }
+                  />
+                </Field>
+                {editingUser?.externalUserId ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setUnlinkUser(editingUser)}
+                  >
+                    {t("unlinkDiscord")}
+                  </Button>
+                ) : null}
+              </div>
             </FieldGroup>
             <DialogFooter className="mt-4">
               <Button
@@ -895,6 +1055,28 @@ export function UsersView({
           </form>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog
+        open={unlinkUser != null}
+        onOpenChange={(open) => !open && setUnlinkUser(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("unlinkDiscordTitle")}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("unlinkDiscordDescription", {
+                username: unlinkUser?.username ?? "",
+              })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{tCommon("cancel")}</AlertDialogCancel>
+            <AlertDialogAction onClick={() => void handleUnlinkDiscord()}>
+              {t("unlinkDiscordConfirm")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog
         open={deleteUser != null}

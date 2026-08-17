@@ -58,6 +58,7 @@ import {
 import { apiFetch } from "@/lib/api"
 import type {
   DiscordChannel,
+  DiscordTargetConfig,
   MessageType,
   NotificationTarget,
 } from "@/lib/api-types"
@@ -65,12 +66,14 @@ import type {
 type TargetFormState = {
   name: string
   channelId: string
+  threadId: string
   enabled: boolean
 }
 
 const emptyForm: TargetFormState = {
   name: "",
   channelId: "",
+  threadId: "",
   enabled: true,
 }
 
@@ -145,6 +148,7 @@ export function NotificationTargetsView({
     setForm({
       name: target.name,
       channelId: target.config.channel_id ?? "",
+      threadId: target.config.thread_id ?? "",
       enabled: target.enabled,
     })
     setDialogOpen(true)
@@ -166,12 +170,17 @@ export function NotificationTargetsView({
     event.preventDefault()
     setIsSubmitting(true)
 
+    const config: DiscordTargetConfig = {
+      channel_id: form.channelId,
+    }
+    if (form.threadId.trim()) {
+      config.thread_id = form.threadId.trim()
+    }
+
     const body = {
       name: form.name,
       providerType: "discord",
-      config: {
-        channel_id: form.channelId,
-      },
+      config,
       enabled: form.enabled,
     }
 
@@ -410,6 +419,22 @@ export function NotificationTargetsView({
                     </SelectGroup>
                   </SelectContent>
                 </Select>
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="target-thread">
+                  {t("fields.threadId")}
+                </FieldLabel>
+                <Input
+                  id="target-thread"
+                  value={form.threadId}
+                  onChange={(event) =>
+                    setForm((current) => ({
+                      ...current,
+                      threadId: event.target.value,
+                    }))
+                  }
+                  placeholder={t("fields.threadIdPlaceholder")}
+                />
               </Field>
               <Field className="flex items-center gap-3">
                 <Switch

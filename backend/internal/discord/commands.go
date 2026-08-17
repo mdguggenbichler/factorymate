@@ -94,11 +94,27 @@ func (b *Bot) registerSlashCommands(ctx context.Context) error {
 					Type:        discordgo.ApplicationCommandOptionSubCommand,
 					Name:        "list",
 					Description: "Show full mod list (ephemeral)",
+					Options: []*discordgo.ApplicationCommandOption{
+						{
+							Type:        discordgo.ApplicationCommandOptionBoolean,
+							Name:        "delivery",
+							Description: "Send to your DMs instead of ephemeral reply",
+							Required:    false,
+						},
+					},
 				},
 				{
 					Type:        discordgo.ApplicationCommandOptionSubCommand,
 					Name:        "export",
 					Description: "Download SMM profile file",
+					Options: []*discordgo.ApplicationCommandOption{
+						{
+							Type:        discordgo.ApplicationCommandOptionBoolean,
+							Name:        "delivery",
+							Description: "Send to your DMs instead of ephemeral reply",
+							Required:    false,
+						},
+					},
 				},
 			},
 		},

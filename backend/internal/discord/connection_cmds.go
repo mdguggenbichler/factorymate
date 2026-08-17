@@ -5,15 +5,16 @@ import (
 	"fmt"
 	"strings"
 
+	"factorymate/internal/auth"
 	"factorymate/internal/connection"
 	"factorymate/internal/registration"
 
 	"github.com/bwmarrin/discordgo"
 )
 
-func (b *Bot) handleConnectionCommand(ctx context.Context, s *discordgo.Session, i *discordgo.InteractionCreate, data discordgo.ApplicationCommandInteractionData, externalID string, perms memberPermissions, state LinkState) {
+func (b *Bot) handleConnectionCommand(ctx context.Context, s *discordgo.Session, i *discordgo.InteractionCreate, data discordgo.ApplicationCommandInteractionData, externalID string, perms memberPermissions, state LinkState, fmUser *auth.User) {
 	if len(data.Options) > 0 && data.Options[0].Name == "set" {
-		if !CanRunCommand(perms, CommandGroupAdmin, state) {
+		if !CanRunAdminCommand(perms, state, fmUser) {
 			b.logAndDeny(ctx, s, i, externalID, "connection set", "forbidden")
 			return
 		}

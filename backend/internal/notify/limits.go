@@ -5,6 +5,7 @@ const (
 	discordTitleMaxLen       = 256
 	discordDescriptionMaxLen = 4096
 	discordFooterMaxLen      = 2048
+	discordContentMaxLen     = 2000
 	discordMaxFields         = 25
 	discordFieldNameMaxLen   = 256
 	discordFieldValueMaxLen  = 1024

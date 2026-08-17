@@ -137,7 +137,7 @@ func buildDiscordMessageSend(msg RenderedMessage) (*discordgo.MessageSend, error
 	}
 
 	if msg.Plain != "" {
-		send.Content = msg.Plain
+		send.Content = truncate(msg.Plain, discordContentMaxLen)
 	}
 
 	if send.Content == "" && len(send.Embeds) == 0 {

@@ -16,12 +16,12 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
-func (b *Bot) handleRegistrationsCommand(ctx context.Context, s *discordgo.Session, i *discordgo.InteractionCreate, data discordgo.ApplicationCommandInteractionData, externalID string, perms memberPermissions, state LinkState) {
+func (b *Bot) handleRegistrationsCommand(ctx context.Context, s *discordgo.Session, i *discordgo.InteractionCreate, data discordgo.ApplicationCommandInteractionData, externalID string, perms memberPermissions, state LinkState, fmUser *auth.User) {
 	if len(data.Options) == 0 {
 		respondEphemeral(s, i, "Unknown subcommand.")
 		return
 	}
-	if !CanRunCommand(perms, CommandGroupAdmin, state) {
+	if !CanRunAdminCommand(perms, state, fmUser) {
 		b.logAndDeny(ctx, s, i, externalID, "registrations", "forbidden")
 		return
 	}
@@ -168,8 +168,8 @@ func (b *Bot) handleRegistrationsReject(ctx context.Context, s *discordgo.Sessio
 	_ = LogBotCommand(ctx, b.db, externalID, "registrations reject", true, strconv.FormatInt(userID, 10))
 }
 
-func (b *Bot) handleUnlinkCommand(ctx context.Context, s *discordgo.Session, i *discordgo.InteractionCreate, data discordgo.ApplicationCommandInteractionData, externalID string, perms memberPermissions, state LinkState) {
-	if !CanRunCommand(perms, CommandGroupAdmin, state) {
+func (b *Bot) handleUnlinkCommand(ctx context.Context, s *discordgo.Session, i *discordgo.InteractionCreate, data discordgo.ApplicationCommandInteractionData, externalID string, perms memberPermissions, state LinkState, fmCaller *auth.User) {
+	if !CanRunAdminCommand(perms, state, fmCaller) {
 		b.logAndDeny(ctx, s, i, externalID, "unlink", "forbidden")
 		return
 	}
@@ -203,8 +203,8 @@ func (b *Bot) handleUnlinkCommand(ctx context.Context, s *discordgo.Session, i *
 	_ = LogBotCommand(ctx, b.db, externalID, "unlink", true, updated.Username)
 }
 
-func (b *Bot) handlePasswordResetCommand(ctx context.Context, s *discordgo.Session, i *discordgo.InteractionCreate, data discordgo.ApplicationCommandInteractionData, externalID string, perms memberPermissions, state LinkState) {
-	if !CanRunCommand(perms, CommandGroupAdmin, state) {
+func (b *Bot) handlePasswordResetCommand(ctx context.Context, s *discordgo.Session, i *discordgo.InteractionCreate, data discordgo.ApplicationCommandInteractionData, externalID string, perms memberPermissions, state LinkState, fmCaller *auth.User) {
+	if !CanRunAdminCommand(perms, state, fmCaller) {
 		b.logAndDeny(ctx, s, i, externalID, "password-reset", "forbidden")
 		return
 	}

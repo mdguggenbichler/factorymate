@@ -135,7 +135,13 @@ func loadPlayerState(ctx context.Context, db *sql.DB, playerID string) (playerSt
 }
 
 func upsertPlayerState(ctx context.Context, db *sql.DB, p frm.Player, lastSeenAt *string, now time.Time) error {
-	_, err := db.ExecContext(ctx, `
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	_, err = tx.ExecContext(ctx, `
 		INSERT INTO player_state (player_id, name, online, last_seen_at)
 		VALUES (?, ?, ?, ?)
 		ON CONFLICT(player_id) DO UPDATE SET
@@ -147,8 +153,11 @@ func upsertPlayerState(ctx context.Context, db *sql.DB, p frm.Player, lastSeenAt
 	if err != nil {
 		return err
 	}
-	links, err := auth.TryResolvePendingPlayers(ctx, db, p.ID, p.Name)
+	links, err := auth.TryResolvePendingPlayers(ctx, tx, p.ID, p.Name)
 	if err != nil {
+		return err
+	}
+	if err := tx.Commit(); err != nil {
 		return err
 	}
 	if len(links) > 0 && OnPlayersAutoLinked != nil {

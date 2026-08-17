@@ -109,6 +109,11 @@ export function AppSidebar({
       url: "/mods",
       icon: <PackageIcon />,
     },
+    {
+      title: t("connection"),
+      url: "/connection",
+      icon: <LinkIcon />,
+    },
   ]
 
   const settingsItems: NavItem[] = [
@@ -204,6 +209,7 @@ export function usePageTitle(): string {
     "/vehicles": t("vehicles"),
     "/elevator": t("elevator"),
     "/mods": t("mods"),
+    "/connection": t("connection"),
     "/account": t("account"),
     "/account/notifications": t("accountNotifications"),
     "/settings/general": t("settingsGeneral"),

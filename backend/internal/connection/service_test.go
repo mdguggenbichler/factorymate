@@ -95,6 +95,22 @@ func TestSetBroadcastsToActiveLinkedUsers(t *testing.T) {
 		t.Fatalf("DM user ids = %v, want [discord-1]", mock.DMUserIDs)
 	}
 
+	if len(mock.ChannelCalls) == 0 {
+		t.Fatal("expected DM channel send")
+	}
+	dmMsg := mock.ChannelCalls[len(mock.ChannelCalls)-1].Message
+	dmBody := dmMsg.Content
+	if dmMsg.Embeds != nil && len(dmMsg.Embeds) > 0 {
+		for _, f := range dmMsg.Embeds[0].Fields {
+			if f.Name == "Password" {
+				dmBody += f.Value
+			}
+		}
+	}
+	if !strings.Contains(dmBody, "secretpass") {
+		t.Fatalf("DM body should include password for user, got content=%q", dmMsg.Content)
+	}
+
 	var preview string
 	err = database.QueryRowContext(ctx, `
 		SELECT rendered_preview FROM notification_log

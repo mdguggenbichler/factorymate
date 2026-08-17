@@ -28,19 +28,22 @@ type ResolvedPlayerLink struct {
 	PlayerName     string
 }
 
-// TryResolvePendingPlayers links users whose pending_player_name matches a server player.
-func TryResolvePendingPlayers(ctx context.Context, db *sql.DB, playerID, playerName string) ([]ResolvedPlayerLink, error) {
+// TryResolvePendingPlayers links the first pending user whose pending_player_name matches
+// a server player (§7.2 — first match wins when multiple users claim the same name).
+func TryResolvePendingPlayers(ctx context.Context, q DBTX, playerID, playerName string) ([]ResolvedPlayerLink, error) {
 	playerID = strings.TrimSpace(playerID)
 	playerName = strings.TrimSpace(playerName)
 	if playerID == "" || playerName == "" {
 		return nil, nil
 	}
 
-	rows, err := db.QueryContext(ctx, `
+	rows, err := q.QueryContext(ctx, `
 		SELECT id, external_user_id FROM users
 		WHERE pending_player_name IS NOT NULL
 			AND player_id IS NULL
-			AND LOWER(pending_player_name) = LOWER(?)`, playerName,
+			AND LOWER(pending_player_name) = LOWER(?)
+		ORDER BY id ASC
+		LIMIT 1`, playerName,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("query pending users: %w", err)
@@ -67,7 +70,7 @@ func TryResolvePendingPlayers(ctx context.Context, db *sql.DB, playerID, playerN
 	}
 
 	var owner int64
-	err = db.QueryRowContext(ctx, `SELECT id FROM users WHERE player_id = ?`, playerID).Scan(&owner)
+	err = q.QueryRowContext(ctx, `SELECT id FROM users WHERE player_id = ?`, playerID).Scan(&owner)
 	if err == nil {
 		return nil, nil
 	}
@@ -75,9 +78,9 @@ func TryResolvePendingPlayers(ctx context.Context, db *sql.DB, playerID, playerN
 		return nil, fmt.Errorf("check player owner: %w", err)
 	}
 
-	linked := make([]ResolvedPlayerLink, 0)
+	linked := make([]ResolvedPlayerLink, 0, 1)
 	for _, user := range pending {
-		res, err := db.ExecContext(ctx, `UPDATE users SET player_id = ? WHERE id = ? AND player_id IS NULL`, playerID, user.id)
+		res, err := q.ExecContext(ctx, `UPDATE users SET player_id = ? WHERE id = ? AND player_id IS NULL`, playerID, user.id)
 		if err != nil {
 			return nil, fmt.Errorf("auto-link player: %w", err)
 		}

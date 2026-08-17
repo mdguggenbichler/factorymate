@@ -129,6 +129,14 @@ func ResolveMemberPermissions(ctx context.Context, db *sql.DB, memberRoleIDs []s
 	return perms, nil
 }
 
+// CanRunAdminCommand allows Discord admin role mapping or linked FM admin (§6.3, §10.2).
+func CanRunAdminCommand(perms memberPermissions, state LinkState, fmUser *auth.User) bool {
+	if fmUser != nil && fmUser.Role == auth.RoleAdmin {
+		return true
+	}
+	return CanRunCommand(perms, CommandGroupAdmin, state)
+}
+
 // CanRunCommand applies §10.2 access rules.
 func CanRunCommand(perms memberPermissions, group string, state LinkState) bool {
 	if group == "" {

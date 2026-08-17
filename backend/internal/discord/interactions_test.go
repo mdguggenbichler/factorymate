@@ -66,6 +66,11 @@ func TestCanRunCommandRoleMapping(t *testing.T) {
 	if discord.CanRunCommand(perms, discord.CommandGroupAdmin, discord.LinkStateUnregistered) {
 		t.Fatal("viewer should not run admin commands")
 	}
+
+	adminUser := &auth.User{Role: auth.RoleAdmin}
+	if !discord.CanRunAdminCommand(perms, discord.LinkStateActiveLinked, adminUser) {
+		t.Fatal("FM admin should bypass Discord admin role requirement")
+	}
 }
 
 func TestApproveRegistrationViaService(t *testing.T) {

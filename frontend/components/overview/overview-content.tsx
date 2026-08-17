@@ -11,13 +11,15 @@ import {
 } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { formatDateTime, formatPercent } from "@/lib/format"
-import type { StatusResponse } from "@/lib/api-types"
+import { ConnectionJoinCard } from "@/components/connection/connection-details-view"
+import type { ConnectionDetails, StatusResponse } from "@/lib/api-types"
 
 type OverviewContentProps = {
   status: StatusResponse
+  connection: ConnectionDetails
 }
 
-export async function OverviewContent({ status }: OverviewContentProps) {
+export async function OverviewContent({ status, connection }: OverviewContentProps) {
   const t = await getTranslations("home")
 
   return (
@@ -95,6 +97,8 @@ export async function OverviewContent({ status }: OverviewContentProps) {
             </CardContent>
           ) : null}
         </Card>
+
+        <ConnectionJoinCard details={connection} />
       </div>
 
       <Card>

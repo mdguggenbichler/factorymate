@@ -79,7 +79,7 @@ func (b *Bot) handleApplicationCommand(ctx context.Context, s *discordgo.Session
 		return
 	case "register":
 		if len(data.Options) > 0 && data.Options[0].Name == "user" {
-			if !CanRunCommand(perms, CommandGroupAdmin, state) {
+			if !CanRunAdminCommand(perms, state, user) {
 				b.logAndDeny(ctx, s, i, externalID, "register user", "forbidden")
 				return
 			}
@@ -122,7 +122,7 @@ func (b *Bot) handleApplicationCommand(ctx context.Context, s *discordgo.Session
 		}
 		b.handleSetPlayer(ctx, s, i, externalID, user.ID, name)
 	case "connection":
-		b.handleConnectionCommand(ctx, s, i, data, externalID, perms, state)
+		b.handleConnectionCommand(ctx, s, i, data, externalID, perms, state, user)
 	case "mods":
 		b.handleModsCommand(ctx, s, i, data, externalID, perms, state)
 	case "registration":
@@ -130,7 +130,7 @@ func (b *Bot) handleApplicationCommand(ctx context.Context, s *discordgo.Session
 			respondEphemeral(s, i, "Unknown subcommand.")
 			return
 		}
-		if !CanRunCommand(perms, CommandGroupAdmin, state) {
+		if !CanRunAdminCommand(perms, state, user) {
 			b.logAndDeny(ctx, s, i, externalID, "registration auto-approve", "forbidden")
 			return
 		}
@@ -153,11 +153,11 @@ func (b *Bot) handleApplicationCommand(ctx context.Context, s *discordgo.Session
 		respondEphemeral(s, i, msg)
 		_ = LogBotCommand(ctx, b.db, externalID, "registration auto-approve", true, enabled)
 	case "registrations":
-		b.handleRegistrationsCommand(ctx, s, i, data, externalID, perms, state)
+		b.handleRegistrationsCommand(ctx, s, i, data, externalID, perms, state, user)
 	case "unlink":
-		b.handleUnlinkCommand(ctx, s, i, data, externalID, perms, state)
+		b.handleUnlinkCommand(ctx, s, i, data, externalID, perms, state, user)
 	case "password-reset":
-		b.handlePasswordResetCommand(ctx, s, i, data, externalID, perms, state)
+		b.handlePasswordResetCommand(ctx, s, i, data, externalID, perms, state, user)
 	case "status":
 		if !CanRunCommand(perms, CommandGroupPlayer, state) {
 			b.logAndDeny(ctx, s, i, externalID, "status", "forbidden")
@@ -171,7 +171,7 @@ func (b *Bot) handleApplicationCommand(ctx context.Context, s *discordgo.Session
 		}
 		b.handlePlayersCommand(ctx, s, i, externalID)
 	case "broadcast":
-		if !CanRunCommand(perms, CommandGroupAdmin, state) {
+		if !CanRunAdminCommand(perms, state, user) {
 			b.logAndDeny(ctx, s, i, externalID, "broadcast", "forbidden")
 			return
 		}
@@ -183,7 +183,7 @@ func (b *Bot) handleApplicationCommand(ctx context.Context, s *discordgo.Session
 		}
 		b.handleBroadcastCommand(ctx, s, i, externalID, message)
 	case "sync-roles":
-		if !CanRunCommand(perms, CommandGroupAdmin, state) {
+		if !CanRunAdminCommand(perms, state, user) {
 			b.logAndDeny(ctx, s, i, externalID, "sync-roles", "forbidden")
 			return
 		}

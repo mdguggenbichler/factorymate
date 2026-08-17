@@ -183,17 +183,33 @@ func (s *Service) BroadcastChange(ctx context.Context, old, new Details) error {
 		return nil
 	}
 
-	msg := FormatChangeDM(new, old)
-	preview := RedactForLog(msg.Plain)
+	msg := s.renderChangeMessage(ctx, old, new)
+	preview := dmLogPreview(msg)
 
 	for i, extID := range recipients {
-		sendErr := s.SendDM.SendDirect(ctx, registration.PlatformDiscord, extID, msg)
+		sendErr := s.sendDirectWithRetry(ctx, extID, msg)
 		s.recordDMLog(ctx, extID, preview, sendErr == nil, sendErr)
 		if i < len(recipients)-1 {
 			time.Sleep(dmRateLimit)
 		}
 	}
 	return nil
+}
+
+const maxDMRetries = 3
+
+func (s *Service) sendDirectWithRetry(ctx context.Context, externalUserID string, msg notify.RenderedMessage) error {
+	var lastErr error
+	for attempt := 0; attempt < maxDMRetries; attempt++ {
+		lastErr = s.SendDM.SendDirect(ctx, registration.PlatformDiscord, externalUserID, msg)
+		if lastErr == nil {
+			return nil
+		}
+		if attempt < maxDMRetries-1 {
+			time.Sleep(dmRateLimit * time.Duration(attempt+1))
+		}
+	}
+	return lastErr
 }
 
 // SendToUser delivers current connection details to one external user.
@@ -207,14 +223,31 @@ func (s *Service) SendToUser(ctx context.Context, externalUserID string) error {
 	}
 	msg := FormatDetailsDM(details)
 	sendErr := s.SendDM.SendDirect(ctx, registration.PlatformDiscord, externalUserID, msg)
-	s.recordDMLog(ctx, externalUserID, RedactForLog(msg.Plain), sendErr == nil, sendErr)
+	s.recordDMLog(ctx, externalUserID, dmLogPreview(msg), sendErr == nil, sendErr)
 	return sendErr
+}
+
+func dmLogPreview(msg notify.RenderedMessage) string {
+	if strings.TrimSpace(msg.Plain) != "" {
+		return RedactForLog(msg.Plain)
+	}
+	if msg.Embed != nil {
+		var parts []string
+		if msg.Embed.Title != "" {
+			parts = append(parts, msg.Embed.Title)
+		}
+		if msg.Embed.Description != "" {
+			parts = append(parts, msg.Embed.Description)
+		}
+		return RedactForLog(strings.Join(parts, " — "))
+	}
+	return ""
 }
 
 func (s *Service) listActiveLinkedUsers(ctx context.Context) ([]string, error) {
 	rows, err := s.DB.QueryContext(ctx, `
 		SELECT external_user_id FROM users
-		WHERE status = ? AND external_user_id IS NOT NULL`,
+		WHERE status = ? AND external_platform = 'discord' AND external_user_id IS NOT NULL`,
 		auth.StatusActive,
 	)
 	if err != nil {

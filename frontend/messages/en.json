@@ -37,7 +37,24 @@
     "upgradeReady": "Upgrade ready",
     "phaseProgress": "Phase progress",
     "powerAlertTitle": "Fuse trips detected",
-    "powerAlertDescription": "One or more power circuits have tripped. Check the Power page for details."
+    "powerAlertDescription": "One or more power circuits have tripped. Check the Power page for details.",
+    "joinTitle": "How to join",
+    "joinPasswordHint": "A join password is required — see Connection for details.",
+    "joinViewDetails": "View connection details"
+  },
+  "connection": {
+    "title": "Connection",
+    "description": "Host, port, and password for joining the Satisfactory game server.",
+    "joinTitle": "Join the server",
+    "joinDescription": "Use these details in Satisfactory multiplayer — install matching mods from the Mods page.",
+    "notConfigured": "Connection details have not been configured yet. Ask an admin to set them in Settings → Connection.",
+    "lastUpdated": "Last updated {date}",
+    "fields": {
+      "gameHost": "Game host",
+      "gamePort": "Game port",
+      "gamePassword": "Game password",
+      "notes": "Notes"
+    }
   },
   "nav": {
     "overview": "Overview",
@@ -52,6 +69,7 @@
     "vehicles": "Vehicles",
     "elevator": "Space Elevator",
     "mods": "Mods",
+    "connection": "Connection",
     "settings": "Settings",
     "settingsGeneral": "General",
     "settingsDiscord": "Discord",
@@ -129,13 +147,19 @@
     "frmUnreachableDescription": "FactoryMate could not reach the FRM server. Mod data may be stale until the connection is restored.",
     "searchPlaceholder": "Search mods by name",
     "searchEmpty": "No mods match your search.",
+    "sortLabel": "Sort by",
+    "sortName": "Name",
+    "sortVersion": "Version",
     "docsLink": "Docs",
+    "supportLink": "Support",
     "columns": {
       "name": "Mod",
       "version": "Version",
       "remoteVersionRange": "Remote version",
       "createdBy": "Author",
+      "description": "Description",
       "docs": "Docs",
+      "support": "Support",
       "smrName": "SMR name",
       "required": "Required on remote"
     }
@@ -458,6 +482,8 @@
         "name": "Name",
         "channel": "Discord channel",
         "channelPlaceholder": "Select a channel",
+        "threadId": "Thread ID (optional)",
+        "threadIdPlaceholder": "Post into a forum thread",
         "enabled": "Enabled"
       }
     },
@@ -677,8 +703,20 @@
       "fields": {
         "role": "Role",
         "player": "Game player",
-        "noPlayer": "None"
-      }
+        "noPlayer": "None",
+        "externalPlatform": "Platform",
+        "externalUserId": "External user ID",
+        "externalUsername": "External username",
+        "externalDisplayName": "Display name"
+      },
+      "externalTitle": "Discord identity",
+      "externalDescription": "Override or unlink the external chat account linked to this user.",
+      "unlinkDiscord": "Unlink Discord",
+      "unlinkDiscordTitle": "Unlink Discord?",
+      "unlinkDiscordDescription": "Remove the Discord link from {username}. They can link again with /link.",
+      "unlinkDiscordConfirm": "Unlink",
+      "discordUnlinked": "Discord identity unlinked.",
+      "externalUpdated": "External identity updated."
     }
   }
 }
