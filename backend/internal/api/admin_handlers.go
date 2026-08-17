@@ -296,43 +296,54 @@ func (h *Handler) ListMessageTypes(w http.ResponseWriter, r *http.Request) {
 		writeError(w, r, http.StatusInternalServerError, "internal error")
 		return
 	}
-	defer rows.Close()
 
-	types := make([]map[string]any, 0)
+	type messageTypeRow struct {
+		key, label, category, defaultJSON, variablesJSON string
+		enabled                                          bool
+	}
+	rawRows := make([]messageTypeRow, 0)
 	for rows.Next() {
-		var key, label, category, defaultJSON, variablesJSON string
-		var enabled bool
-		if err := rows.Scan(&key, &label, &category, &enabled, &defaultJSON, &variablesJSON); err != nil {
+		var row messageTypeRow
+		if err := rows.Scan(&row.key, &row.label, &row.category, &row.enabled, &row.defaultJSON, &row.variablesJSON); err != nil {
+			rows.Close()
 			writeError(w, r, http.StatusInternalServerError, "internal error")
 			return
 		}
+		rawRows = append(rawRows, row)
+	}
+	if err := rows.Close(); err != nil {
+		writeError(w, r, http.StatusInternalServerError, "internal error")
+		return
+	}
+	if err := rows.Err(); err != nil {
+		writeError(w, r, http.StatusInternalServerError, "internal error")
+		return
+	}
 
-		effective, err := h.loadEffectiveTemplate(r.Context(), key, defaultJSON)
+	types := make([]map[string]any, 0, len(rawRows))
+	for _, row := range rawRows {
+		effective, err := h.loadEffectiveTemplate(r.Context(), row.key, row.defaultJSON)
 		if err != nil {
 			writeError(w, r, http.StatusInternalServerError, "internal error")
 			return
 		}
-		targetIDs, err := h.loadMessageTypeTargetIDs(r.Context(), key)
+		targetIDs, err := h.loadMessageTypeTargetIDs(r.Context(), row.key)
 		if err != nil {
 			writeError(w, r, http.StatusInternalServerError, "internal error")
 			return
 		}
 		var variables []string
-		_ = parseJSONColumn(variablesJSON, &variables)
+		_ = parseJSONColumn(row.variablesJSON, &variables)
 
 		types = append(types, map[string]any{
-			"key":       key,
-			"label":     label,
-			"category":  category,
-			"enabled":   enabled,
+			"key":       row.key,
+			"label":     row.label,
+			"category":  row.category,
+			"enabled":   row.enabled,
 			"variables": variables,
 			"template":  effective,
 			"targetIds": targetIDs,
 		})
-	}
-	if err := rows.Err(); err != nil {
-		writeError(w, r, http.StatusInternalServerError, "internal error")
-		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"messageTypes": types})
 }
