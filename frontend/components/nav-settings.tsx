@@ -6,24 +6,28 @@ import { usePathname } from "next/navigation"
 import {
   SidebarGroup,
   SidebarGroupContent,
+  SidebarGroupLabel,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
 
-export function NavMain({
+export function NavSettings({
+  label,
   items,
 }: {
+  label: string
   items: {
     title: string
     url: string
-    icon?: React.ReactNode
+    icon: React.ReactNode
   }[]
 }) {
   const pathname = usePathname()
 
   return (
     <SidebarGroup>
+      <SidebarGroupLabel>{label}</SidebarGroupLabel>
       <SidebarGroupContent>
         <SidebarMenu>
           {items.map((item) => (

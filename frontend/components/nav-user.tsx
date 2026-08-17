@@ -1,9 +1,14 @@
 "use client"
 
+import Link from "next/link"
+import { useRouter } from "next/navigation"
+import { useTranslations } from "next-intl"
+
+import type { User } from "@/lib/auth-types"
+import { logout } from "@/lib/auth-client"
 import {
   Avatar,
   AvatarFallback,
-  AvatarImage,
 } from "@/components/ui/avatar"
 import {
   DropdownMenu,
@@ -20,18 +25,30 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar"
-import { EllipsisVerticalIcon, CircleUserRoundIcon, CreditCardIcon, BellIcon, LogOutIcon } from "lucide-react"
+import { CircleUserRoundIcon, EllipsisVerticalIcon, LogOutIcon } from "lucide-react"
 
-export function NavUser({
-  user,
-}: {
-  user: {
-    name: string
-    email: string
-    avatar: string
-  }
-}) {
+function initials(username: string): string {
+  return username.slice(0, 2).toUpperCase()
+}
+
+export function NavUser({ user }: { user: User }) {
+  const t = useTranslations("nav")
+  const tAuth = useTranslations("auth")
+  const router = useRouter()
   const { isMobile } = useSidebar()
+
+  async function handleLogout() {
+    try {
+      await logout()
+    } finally {
+      router.push("/login")
+      router.refresh()
+    }
+  }
+
+  const roleLabel =
+    user.role === "admin" ? tAuth("roleAdmin") : tAuth("roleViewer")
+
   return (
     <SidebarMenu>
       <SidebarMenuItem>
@@ -41,14 +58,15 @@ export function NavUser({
               <SidebarMenuButton size="lg" className="aria-expanded:bg-muted" />
             }
           >
-            <Avatar className="size-8 rounded-lg grayscale">
-              <AvatarImage src={user.avatar} alt={user.name} />
-              <AvatarFallback className="rounded-lg">CN</AvatarFallback>
+            <Avatar className="size-8 rounded-lg">
+              <AvatarFallback className="rounded-lg">
+                {initials(user.username)}
+              </AvatarFallback>
             </Avatar>
             <div className="grid flex-1 text-left text-sm leading-tight">
-              <span className="truncate font-medium">{user.name}</span>
-              <span className="truncate text-xs text-foreground/70">
-                {user.email}
+              <span className="truncate font-medium">{user.username}</span>
+              <span className="truncate text-xs text-muted-foreground">
+                {roleLabel}
               </span>
             </div>
             <EllipsisVerticalIcon className="ml-auto size-4" />
@@ -62,14 +80,15 @@ export function NavUser({
             <DropdownMenuGroup>
               <DropdownMenuLabel className="p-0 font-normal">
                 <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
-                  <Avatar className="size-8">
-                    <AvatarImage src={user.avatar} alt={user.name} />
-                    <AvatarFallback className="rounded-lg">CN</AvatarFallback>
+                  <Avatar className="size-8 rounded-lg">
+                    <AvatarFallback className="rounded-lg">
+                      {initials(user.username)}
+                    </AvatarFallback>
                   </Avatar>
                   <div className="grid flex-1 text-left text-sm leading-tight">
-                    <span className="truncate font-medium">{user.name}</span>
+                    <span className="truncate font-medium">{user.username}</span>
                     <span className="truncate text-xs text-muted-foreground">
-                      {user.email}
+                      {roleLabel}
                     </span>
                   </div>
                 </div>
@@ -77,27 +96,15 @@ export function NavUser({
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem>
-                <CircleUserRoundIcon
-                />
-                Account
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <CreditCardIcon
-                />
-                Billing
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <BellIcon
-                />
-                Notifications
+              <DropdownMenuItem render={<Link href="/account" />}>
+                <CircleUserRoundIcon />
+                {t("account")}
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>
-              <LogOutIcon
-              />
-              Log out
+            <DropdownMenuItem onClick={handleLogout}>
+              <LogOutIcon />
+              {t("logout")}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

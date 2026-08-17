@@ -1,10 +1,12 @@
 "use client"
 
-import * as React from "react"
+import Link from "next/link"
+import { usePathname } from "next/navigation"
+import { useTranslations } from "next-intl"
 
-import { NavDocuments } from "@/components/nav-documents"
+import type { User } from "@/lib/auth-types"
 import { NavMain } from "@/components/nav-main"
-import { NavSecondary } from "@/components/nav-secondary"
+import { NavSettings } from "@/components/nav-settings"
 import { NavUser } from "@/components/nav-user"
 import {
   Sidebar,
@@ -15,190 +17,176 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
-import { LayoutDashboardIcon, ListIcon, ChartBarIcon, FolderIcon, UsersIcon, CameraIcon, FileTextIcon, Settings2Icon, CircleHelpIcon, SearchIcon, DatabaseIcon, FileChartColumnIcon, FileIcon, CommandIcon } from "lucide-react"
+import {
+  ActivityIcon,
+  BotIcon,
+  DogIcon,
+  FactoryIcon,
+  FlaskConicalIcon,
+  GaugeIcon,
+  LayoutDashboardIcon,
+  RocketIcon,
+  Settings2Icon,
+  TrainFrontIcon,
+  UsersIcon,
+  ZapIcon,
+} from "lucide-react"
 
-const data = {
-  user: {
-    name: "shadcn",
-    email: "m@example.com",
-    avatar: "/avatars/shadcn.jpg",
-  },
-  navMain: [
-    {
-      title: "Dashboard",
-      url: "#",
-      icon: (
-        <LayoutDashboardIcon
-        />
-      ),
-    },
-    {
-      title: "Lifecycle",
-      url: "#",
-      icon: (
-        <ListIcon
-        />
-      ),
-    },
-    {
-      title: "Analytics",
-      url: "#",
-      icon: (
-        <ChartBarIcon
-        />
-      ),
-    },
-    {
-      title: "Projects",
-      url: "#",
-      icon: (
-        <FolderIcon
-        />
-      ),
-    },
-    {
-      title: "Team",
-      url: "#",
-      icon: (
-        <UsersIcon
-        />
-      ),
-    },
-  ],
-  navClouds: [
-    {
-      title: "Capture",
-      icon: (
-        <CameraIcon
-        />
-      ),
-      isActive: true,
-      url: "#",
-      items: [
-        {
-          title: "Active Proposals",
-          url: "#",
-        },
-        {
-          title: "Archived",
-          url: "#",
-        },
-      ],
-    },
-    {
-      title: "Proposal",
-      icon: (
-        <FileTextIcon
-        />
-      ),
-      url: "#",
-      items: [
-        {
-          title: "Active Proposals",
-          url: "#",
-        },
-        {
-          title: "Archived",
-          url: "#",
-        },
-      ],
-    },
-    {
-      title: "Prompts",
-      icon: (
-        <FileTextIcon
-        />
-      ),
-      url: "#",
-      items: [
-        {
-          title: "Active Proposals",
-          url: "#",
-        },
-        {
-          title: "Archived",
-          url: "#",
-        },
-      ],
-    },
-  ],
-  navSecondary: [
-    {
-      title: "Settings",
-      url: "#",
-      icon: (
-        <Settings2Icon
-        />
-      ),
-    },
-    {
-      title: "Get Help",
-      url: "#",
-      icon: (
-        <CircleHelpIcon
-        />
-      ),
-    },
-    {
-      title: "Search",
-      url: "#",
-      icon: (
-        <SearchIcon
-        />
-      ),
-    },
-  ],
-  documents: [
-    {
-      name: "Data Library",
-      url: "#",
-      icon: (
-        <DatabaseIcon
-        />
-      ),
-    },
-    {
-      name: "Reports",
-      url: "#",
-      icon: (
-        <FileChartColumnIcon
-        />
-      ),
-    },
-    {
-      name: "Word Assistant",
-      url: "#",
-      icon: (
-        <FileIcon
-        />
-      ),
-    },
-  ],
+type NavItem = {
+  title: string
+  url: string
+  icon: React.ReactNode
 }
-export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+
+export function AppSidebar({
+  user,
+  ...props
+}: React.ComponentProps<typeof Sidebar> & { user: User }) {
+  const t = useTranslations("nav")
+  const tCommon = useTranslations("common")
+
+  const viewerItems: NavItem[] = [
+    {
+      title: t("overview"),
+      url: "/",
+      icon: <LayoutDashboardIcon />,
+    },
+    {
+      title: t("players"),
+      url: "/players",
+      icon: <UsersIcon />,
+    },
+    {
+      title: t("production"),
+      url: "/production",
+      icon: <FactoryIcon />,
+    },
+    {
+      title: t("power"),
+      url: "/power",
+      icon: <ZapIcon />,
+    },
+    {
+      title: t("resourceSink"),
+      url: "/resource-sink",
+      icon: <ActivityIcon />,
+    },
+    {
+      title: t("drones"),
+      url: "/drones",
+      icon: <BotIcon />,
+    },
+    {
+      title: t("doggos"),
+      url: "/doggos",
+      icon: <DogIcon />,
+    },
+    {
+      title: t("milestones"),
+      url: "/milestones",
+      icon: <GaugeIcon />,
+    },
+    {
+      title: t("research"),
+      url: "/research",
+      icon: <FlaskConicalIcon />,
+    },
+    {
+      title: t("vehicles"),
+      url: "/vehicles",
+      icon: <TrainFrontIcon />,
+    },
+    {
+      title: t("elevator"),
+      url: "/elevator",
+      icon: <RocketIcon />,
+    },
+  ]
+
+  const settingsItems: NavItem[] = [
+    {
+      title: t("settingsGeneral"),
+      url: "/settings/general",
+      icon: <Settings2Icon />,
+    },
+    {
+      title: t("settingsNotificationTargets"),
+      url: "/settings/notifications/targets",
+      icon: <Settings2Icon />,
+    },
+    {
+      title: t("settingsNotificationTemplates"),
+      url: "/settings/notifications/templates",
+      icon: <Settings2Icon />,
+    },
+    {
+      title: t("settingsNotificationLog"),
+      url: "/settings/notifications/log",
+      icon: <Settings2Icon />,
+    },
+    {
+      title: t("settingsUsers"),
+      url: "/settings/users",
+      icon: <UsersIcon />,
+    },
+  ]
+
   return (
-    <Sidebar collapsible="offcanvas" {...props}>
+    <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton
+              size="lg"
+              render={<Link href="/" />}
               className="data-[slot=sidebar-menu-button]:p-1.5!"
-              render={<a href="#" />}
             >
-              <CommandIcon className="size-5!" />
-              <span className="text-base font-semibold">Acme Inc.</span>
+              <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+                <FactoryIcon className="size-4" />
+              </div>
+              <div className="grid flex-1 text-left text-sm leading-tight">
+                <span className="truncate font-semibold">{tCommon("appName")}</span>
+              </div>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={data.navMain} />
-        <NavDocuments items={data.documents} />
-        <NavSecondary items={data.navSecondary} className="mt-auto" />
+        <NavMain items={viewerItems} />
+        {user.role === "admin" ? (
+          <NavSettings label={t("settings")} items={settingsItems} />
+        ) : null}
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={data.user} />
+        <NavUser user={user} />
       </SidebarFooter>
     </Sidebar>
   )
+}
+
+export function usePageTitle(): string {
+  const pathname = usePathname()
+  const t = useTranslations("nav")
+
+  const titles: Record<string, string> = {
+    "/": t("overview"),
+    "/players": t("players"),
+    "/production": t("production"),
+    "/power": t("power"),
+    "/resource-sink": t("resourceSink"),
+    "/drones": t("drones"),
+    "/doggos": t("doggos"),
+    "/milestones": t("milestones"),
+    "/research": t("research"),
+    "/vehicles": t("vehicles"),
+    "/elevator": t("elevator"),
+    "/account": t("account"),
+    "/settings/general": t("settingsGeneral"),
+    "/settings/notifications/targets": t("settingsNotificationTargets"),
+    "/settings/notifications/templates": t("settingsNotificationTemplates"),
+    "/settings/notifications/log": t("settingsNotificationLog"),
+    "/settings/users": t("settingsUsers"),
+  }
+
+  return titles[pathname] ?? t("overview")
 }
