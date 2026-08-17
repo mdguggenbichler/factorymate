@@ -119,7 +119,12 @@ func (f *settingsSlowFetcher) GetSlow(ctx context.Context) frm.SlowPollResult {
 
 func runPoller(ctx context.Context, database *sql.DB, phases *poller.ElevatorPhases, bot *discord.Bot) {
 	fetcher := &settingsFetcher{db: database}
-	provider := notify.NewDiscordProvider(bot.Session())
+	provider := notify.NewDiscordProviderWithSessionFn(func() notify.DiscordSession {
+		if bot == nil {
+			return nil
+		}
+		return bot.Session()
+	})
 	dispatcher := notify.NewDispatcher(database, map[string]notify.Provider{
 		"discord": provider,
 	})

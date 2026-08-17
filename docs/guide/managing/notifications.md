@@ -88,7 +88,8 @@ Rows referencing deleted targets show "Deleted target" rather than failing.
 | Symptom | Things to check |
 | --- | --- |
 | No channel posts | Message type enabled? Target assigned? Bot online and in channel? |
-| Test send fails | Bot permissions in target channel; guild ID correct |
+| Test send fails | Check **Settings → Notifications → Log** for the API error. Common fix: on **private channels**, grant the bot role **View Channel**, **Send Messages**, and **Embed Links** on that channel (and its parent category) — invite-time permissions are not enough. |
+| Error `50001` / Missing Access | Bot cannot see the channel. Add explicit channel permissions for the bot role; re-pick the channel in the target editor (channels the bot cannot see are omitted from the picker). |
 | Duplicate messages | Usually indicates two enabled assignments or poller restart edge — check log |
 | Embeds look wrong | Edit template or reset to default |
 

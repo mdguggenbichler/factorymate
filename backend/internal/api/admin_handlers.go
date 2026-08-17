@@ -130,6 +130,10 @@ func (h *Handler) CreateNotificationTarget(w http.ResponseWriter, r *http.Reques
 		writeError(w, r, http.StatusInternalServerError, "internal error")
 		return
 	}
+	if err := h.validateDiscordTargetChannel(r.Context(), string(configJSON)); err != nil {
+		writeError(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
 
 	now := timeNowRFC3339()
 	res, err := h.db.ExecContext(r.Context(), `
@@ -207,6 +211,10 @@ func (h *Handler) UpdateNotificationTarget(w http.ResponseWriter, r *http.Reques
 		writeError(w, r, http.StatusInternalServerError, "internal error")
 		return
 	}
+	if err := h.validateDiscordTargetChannel(r.Context(), string(newConfigJSON)); err != nil {
+		writeError(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
 
 	_, err = h.db.ExecContext(r.Context(), `
 		UPDATE notification_targets SET name = ?, provider_type = ?, config_json = ?, enabled = ?
@@ -274,14 +282,12 @@ func (h *Handler) TestNotificationTarget(w http.ResponseWriter, r *http.Request)
 		ConfigJSON:   configJSON,
 		Enabled:      enabled,
 	}
-	msg := notify.SampleRenderedMessage()
-	provider, ok := h.dispatcher.Providers[providerType]
-	if !ok {
-		writeError(w, r, http.StatusBadRequest, "unsupported provider type")
+	if err := h.validateDiscordTargetChannel(r.Context(), configJSON); err != nil {
+		writeError(w, r, http.StatusBadRequest, err.Error())
 		return
 	}
-	if err := provider.Send(r.Context(), target, msg); err != nil {
-		writeError(w, r, http.StatusBadRequest, err.Error())
+	if err := h.dispatcher.DeliverToTarget(r.Context(), "target_test", target, notify.SampleTemplateRenderedMessage()); err != nil {
+		writeError(w, r, http.StatusBadRequest, notify.FormatDiscordSendError(err))
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -659,7 +665,7 @@ func (h *Handler) TestMessageTypeTemplate(w http.ResponseWriter, r *http.Request
 			writeError(w, r, http.StatusBadRequest, "no targets assigned")
 			return
 		}
-		writeError(w, r, http.StatusBadRequest, err.Error())
+		writeError(w, r, http.StatusBadRequest, notify.FormatDiscordSendError(err))
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)

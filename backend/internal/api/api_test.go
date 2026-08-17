@@ -811,11 +811,25 @@ func TestAdminEndpoints(t *testing.T) {
 			Total int `json:"total"`
 		}
 		decodeJSONRecorder(t, logResp, &logBody)
-		if logBody.Total != 1 || logBody.Items[0].MessageTypeKey != "player_joined" || !logBody.Items[0].Success {
-			t.Fatalf("notification log = %+v", logBody)
+		if logBody.Total != 2 {
+			t.Fatalf("notification log total = %d, want 2: %+v", logBody.Total, logBody)
 		}
-		if logBody.Items[0].DeliveryMode != "channel" {
-			t.Fatalf("deliveryMode = %q, want channel", logBody.Items[0].DeliveryMode)
+		var playerJoinedOK, targetTestOK bool
+		for _, item := range logBody.Items {
+			if item.DeliveryMode != "channel" {
+				t.Fatalf("deliveryMode = %q, want channel", item.DeliveryMode)
+			}
+			switch item.MessageTypeKey {
+			case "player_joined":
+				playerJoinedOK = item.Success
+			case "target_test":
+				targetTestOK = item.Success
+			default:
+				t.Fatalf("unexpected message type in log: %q", item.MessageTypeKey)
+			}
+		}
+		if !playerJoinedOK || !targetTestOK {
+			t.Fatalf("notification log = %+v", logBody)
 		}
 
 		unknownResp := getWithCookie(t, router, "/api/elevator/unknown-log", adminCookie)

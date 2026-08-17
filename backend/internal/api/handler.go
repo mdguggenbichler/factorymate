@@ -24,20 +24,20 @@ type Handler struct {
 }
 
 func NewHandler(db *sql.DB, authSvc *auth.Service, bot *discord.Bot, regSvc *registration.Service, connSvc *connection.Service, modsSvc *mods.Service) *Handler {
-	var session notify.DiscordSession
-	if bot != nil {
-		session = bot.Session()
-	}
-	return newHandler(db, authSvc, bot, regSvc, connSvc, modsSvc, session)
+	return newHandlerWithProvider(db, authSvc, bot, regSvc, connSvc, modsSvc, notify.NewDiscordProviderWithSessionFn(func() notify.DiscordSession {
+		if bot == nil {
+			return nil
+		}
+		return bot.Session()
+	}))
 }
 
 // NewHandlerWithDiscordSession is for tests that need a mock Discord session without a live bot.
 func NewHandlerWithDiscordSession(db *sql.DB, authSvc *auth.Service, regSvc *registration.Service, connSvc *connection.Service, modsSvc *mods.Service, session notify.DiscordSession) *Handler {
-	return newHandler(db, authSvc, nil, regSvc, connSvc, modsSvc, session)
+	return newHandlerWithProvider(db, authSvc, nil, regSvc, connSvc, modsSvc, notify.NewDiscordProvider(session))
 }
 
-func newHandler(db *sql.DB, authSvc *auth.Service, bot *discord.Bot, regSvc *registration.Service, connSvc *connection.Service, modsSvc *mods.Service, session notify.DiscordSession) *Handler {
-	provider := notify.NewDiscordProvider(session)
+func newHandlerWithProvider(db *sql.DB, authSvc *auth.Service, bot *discord.Bot, regSvc *registration.Service, connSvc *connection.Service, modsSvc *mods.Service, provider notify.Provider) *Handler {
 	return &Handler{
 		db:            db,
 		auth:          authSvc,

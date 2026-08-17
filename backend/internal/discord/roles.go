@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"log"
 	"strings"
 
 	"factorymate/internal/auth"
@@ -76,6 +77,7 @@ func SyncAllLinkedRoles(ctx context.Context, db *sql.DB, session *discordgo.Sess
 		}
 		member, err := session.GuildMember(guildID, externalUserID, discordgo.WithContext(ctx))
 		if err != nil {
+			log.Printf("discord bot: sync roles: guild member %s: %v", externalUserID, err)
 			continue
 		}
 		changed, _, err := SyncMemberRole(ctx, db, member.Roles, externalUserID)

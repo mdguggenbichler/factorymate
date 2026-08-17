@@ -23,23 +23,32 @@ func (b *Bot) registerSlashCommands(ctx context.Context) error {
 		return nil
 	}
 
-	commands := []*discordgo.ApplicationCommand{
+	commands := slashCommands()
+	if err := ValidateApplicationCommands(commands); err != nil {
+		return fmt.Errorf("validate slash commands: %w", err)
+	}
+
+	if _, err := b.session.ApplicationCommandBulkOverwrite(b.session.State.User.ID, guildID, commands, discordgo.WithContext(ctx)); err != nil {
+		return fmt.Errorf("register slash commands: %w", err)
+	}
+	return nil
+}
+
+func slashCommands() []*discordgo.ApplicationCommand {
+	return []*discordgo.ApplicationCommand{
 		{
 			Name:        "register",
 			Description: "Create your FactoryMate dashboard account",
+		},
+		{
+			Name:        "register-user",
+			Description: "Invite a Discord user to complete registration (admin)",
 			Options: []*discordgo.ApplicationCommandOption{
 				{
-					Type:        discordgo.ApplicationCommandOptionSubCommand,
+					Type:        discordgo.ApplicationCommandOptionUser,
 					Name:        "user",
-					Description: "Invite a Discord user to complete registration (admin)",
-					Options: []*discordgo.ApplicationCommandOption{
-						{
-							Type:        discordgo.ApplicationCommandOptionUser,
-							Name:        "user",
-							Description: "Discord user to invite",
-							Required:    true,
-						},
-					},
+					Description: "Discord user to invite",
+					Required:    true,
 				},
 			},
 		},
@@ -68,10 +77,17 @@ func (b *Bot) registerSlashCommands(ctx context.Context) error {
 			Description: "Get or set game join connection details",
 			Options: []*discordgo.ApplicationCommandOption{
 				{
-					Type:        discordgo.ApplicationCommandOptionBoolean,
-					Name:        "public",
-					Description: "Show join details in this channel instead of DM",
-					Required:    false,
+					Type:        discordgo.ApplicationCommandOptionSubCommand,
+					Name:        "get",
+					Description: "Get join details (DM by default)",
+					Options: []*discordgo.ApplicationCommandOption{
+						{
+							Type:        discordgo.ApplicationCommandOptionBoolean,
+							Name:        "public",
+							Description: "Show join details in this channel instead of DM",
+							Required:    false,
+						},
+					},
 				},
 				{
 					Type:        discordgo.ApplicationCommandOptionSubCommand,
@@ -248,11 +264,6 @@ func (b *Bot) registerSlashCommands(ctx context.Context) error {
 			},
 		},
 	}
-
-	if _, err := b.session.ApplicationCommandBulkOverwrite(b.session.State.User.ID, guildID, commands, discordgo.WithContext(ctx)); err != nil {
-		return fmt.Errorf("register slash commands: %w", err)
-	}
-	return nil
 }
 
 func categoryChoices() []*discordgo.ApplicationCommandOptionChoice {

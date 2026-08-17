@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"strings"
 	"time"
 
@@ -56,7 +57,9 @@ func (d *Dispatcher) HandleEvent(ctx context.Context, messageTypeKey string, var
 
 	rendered := template.Render(tmpl, d.mergeSystemVariables(ctx, vars))
 	for _, target := range targets {
-		_ = d.dispatchToTarget(ctx, messageTypeKey, target, rendered)
+		if err := d.dispatchToTarget(ctx, messageTypeKey, target, rendered); err != nil {
+			log.Printf("notify: dispatch %q to target %d failed: %v", messageTypeKey, target.ID, err)
+		}
 	}
 
 	if err := d.dispatchCategoryDMs(ctx, messageTypeKey, category, rendered); err != nil {
@@ -113,6 +116,37 @@ func (d *Dispatcher) SendRenderedTest(ctx context.Context, messageTypeKey string
 		}
 	}
 	return firstErr
+}
+
+// SampleTemplateRenderedMessage converts the notify sample embed for dispatcher tests.
+func SampleTemplateRenderedMessage() template.RenderedMessage {
+	sample := SampleRenderedMessage()
+	if sample.Embed == nil {
+		return template.RenderedMessage{Plain: sample.Plain}
+	}
+	fields := make([]template.DiscordEmbedField, 0, len(sample.Embed.Fields))
+	for _, field := range sample.Embed.Fields {
+		fields = append(fields, template.DiscordEmbedField{
+			Name:   field.Name,
+			Value:  field.Value,
+			Inline: field.Inline,
+		})
+	}
+	return template.RenderedMessage{
+		Embed: &template.DiscordEmbed{
+			Title:       sample.Embed.Title,
+			Description: sample.Embed.Description,
+			Color:       sample.Embed.Color,
+			Footer:      sample.Embed.Footer,
+			Timestamp:   sample.Embed.Timestamp,
+			Fields:      fields,
+		},
+	}
+}
+
+// DeliverToTarget sends a rendered message to one target and records notification_log.
+func (d *Dispatcher) DeliverToTarget(ctx context.Context, messageTypeKey string, target NotificationTarget, rendered template.RenderedMessage) error {
+	return d.dispatchToTarget(ctx, messageTypeKey, target, rendered)
 }
 
 func (d *Dispatcher) loadMessageType(ctx context.Context, key string) (bool, string, string, error) {

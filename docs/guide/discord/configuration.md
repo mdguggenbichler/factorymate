@@ -56,7 +56,11 @@ Map Discord roles to FactoryMate permissions:
 | FactoryMate permission | Controls |
 | --- | --- |
 | Register | Who can run `/register` |
-| Admin commands | `/connection set`, `/registration auto-approve`, etc. |
+| Admin commands | `/connection set`, `/register-user`, `/registration auto-approve`, etc. |
+
+### Notification channels
+
+For **private channels**, grant the bot role **View Channel**, **Send Messages**, and **Embed Links** on each notification target channel (and its parent category). OAuth invite permissions apply server-wide only — they do not automatically open private channels.
 
 Until UI mappings exist, `DISCORD_ADMIN_ROLE_IDS` can grant admin command access.
 

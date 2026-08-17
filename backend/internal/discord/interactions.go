@@ -78,14 +78,6 @@ func (b *Bot) handleApplicationCommand(ctx context.Context, s *discordgo.Session
 		b.handleWhoami(ctx, s, i, externalID, user, state)
 		return
 	case "register":
-		if len(data.Options) > 0 && data.Options[0].Name == "user" {
-			if !CanRunAdminCommand(perms, state, user) {
-				b.logAndDeny(ctx, s, i, externalID, "register user", "forbidden")
-				return
-			}
-			b.handleRegisterUser(ctx, s, i, data.Options[0])
-			return
-		}
 		if !CanRunCommand(perms, CommandGroupRegister, state) {
 			b.logAndDeny(ctx, s, i, externalID, "register", "forbidden")
 			return
@@ -97,6 +89,22 @@ func (b *Bot) handleApplicationCommand(ctx context.Context, s *discordgo.Session
 		}
 		showRegisterModal(s, i, modalRegister, "FactoryMate registration")
 		_ = LogBotCommand(ctx, b.db, externalID, "register", true, "modal opened")
+	case "register-user":
+		if !CanRunAdminCommand(perms, state, user) {
+			b.logAndDeny(ctx, s, i, externalID, "register-user", "forbidden")
+			return
+		}
+		var target *discordgo.User
+		for _, opt := range data.Options {
+			if opt.Name == "user" {
+				target = opt.UserValue(s)
+			}
+		}
+		if target == nil {
+			respondEphemeral(s, i, "Could not resolve target user.")
+			return
+		}
+		b.handleRegisterUser(ctx, s, i, target)
 	case "link":
 		if state != LinkStateUnregistered {
 			respondEphemeral(s, i, "Your Discord is already linked. Use /whoami to check your status.")
@@ -230,8 +238,7 @@ func (b *Bot) handleWhoami(ctx context.Context, s *discordgo.Session, i *discord
 	_ = LogBotCommand(ctx, b.db, externalID, "whoami", true, "")
 }
 
-func (b *Bot) handleRegisterUser(ctx context.Context, s *discordgo.Session, i *discordgo.InteractionCreate, sub *discordgo.ApplicationCommandInteractionDataOption) {
-	target := sub.Options[0].UserValue(s)
+func (b *Bot) handleRegisterUser(ctx context.Context, s *discordgo.Session, i *discordgo.InteractionCreate, target *discordgo.User) {
 	if target == nil {
 		respondEphemeral(s, i, "Could not resolve target user.")
 		return
@@ -254,7 +261,7 @@ func (b *Bot) handleRegisterUser(ctx context.Context, s *discordgo.Session, i *d
 	dmChannel, err := s.UserChannelCreate(target.ID)
 	if err != nil {
 		respondEphemeral(s, i, "Could not DM the user. They may have DMs disabled.")
-		_ = LogBotCommand(ctx, b.db, interactionUserID(i), "register user", false, "dm failed")
+		_ = LogBotCommand(ctx, b.db, interactionUserID(i), "register-user", false, "dm failed")
 		return
 	}
 
@@ -274,12 +281,12 @@ func (b *Bot) handleRegisterUser(ctx context.Context, s *discordgo.Session, i *d
 	})
 	if err != nil {
 		respondEphemeral(s, i, "Could not send invitation DM.")
-		_ = LogBotCommand(ctx, b.db, interactionUserID(i), "register user", false, "dm send failed")
+		_ = LogBotCommand(ctx, b.db, interactionUserID(i), "register-user", false, "dm send failed")
 		return
 	}
 
 	respondEphemeral(s, i, fmt.Sprintf("Invitation sent to <@%s>.", target.ID))
-	_ = LogBotCommand(ctx, b.db, interactionUserID(i), "register user", true, target.ID)
+	_ = LogBotCommand(ctx, b.db, interactionUserID(i), "register-user", true, target.ID)
 }
 
 func (b *Bot) handleSetPlayer(ctx context.Context, s *discordgo.Session, i *discordgo.InteractionCreate, externalID string, userID int64, name string) {

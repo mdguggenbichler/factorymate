@@ -20,14 +20,14 @@ FactoryMate registers slash commands in your Discord guild when the bot starts. 
 | `/register` | Member with register permission; not already linked | Self-serve account; prompts for in-game name and dashboard password |
 | `/link` | Discord user not yet linked; has existing FM account | Attach Discord to an existing web account |
 | `/set-player <name>` | Active registered user | Update in-game player mapping |
-| `/connection` | Active registered user | DM current game join details |
+| `/connection get` | Active registered user | DM current game join details |
 | `/mods` | Active registered user | `list` (default): mod table; `export`: SMM profile download |
 
 ## Admin commands
 
 | Command | Permission | Description |
 | --- | --- | --- |
-| `/register user` | Admin | DM target user to complete registration (always auto-approved) |
+| `/register-user` | Admin | DM target user to complete registration (always auto-approved) |
 | `/connection set` | Admin | Set join host/port/password; DMs all active linked players |
 | `/registration auto-approve` | Admin | Toggle auto-approve (`on` / `off`) |
 | `/registrations list` | Admin | Pending approval queue |
@@ -54,7 +54,7 @@ Username is derived from the Discord display name with automatic deduplication (
 
 ## Connection details
 
-- **`/connection`** — sends join details (host, port, optional password) via DM.
+- **`/connection get`** — sends join details (host, port, optional password) via DM. Add `public:true` to show ephemeral join details in the current channel instead.
 - **`/connection set`** (admin) — updates join details and broadcasts a DM to all active linked players.
 
 Configure default join details in **Settings → Connection** on the web dashboard.

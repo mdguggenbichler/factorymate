@@ -13,7 +13,14 @@ import (
 )
 
 func (b *Bot) handleConnectionCommand(ctx context.Context, s *discordgo.Session, i *discordgo.InteractionCreate, data discordgo.ApplicationCommandInteractionData, externalID string, perms memberPermissions, state LinkState, fmUser *auth.User) {
-	if len(data.Options) > 0 && data.Options[0].Name == "set" {
+	if len(data.Options) == 0 {
+		respondEphemeral(s, i, "Use /connection get or /connection set.")
+		return
+	}
+
+	sub := data.Options[0]
+	switch sub.Name {
+	case "set":
 		if !CanRunAdminCommand(perms, state, fmUser) {
 			b.logAndDeny(ctx, s, i, externalID, "connection set", "forbidden")
 			return
@@ -23,41 +30,44 @@ func (b *Bot) handleConnectionCommand(ctx context.Context, s *discordgo.Session,
 			respondEphemeral(s, i, "Something went wrong.")
 			return
 		}
-		b.handleConnectionSet(ctx, s, i, externalID, adminUser.ID, data.Options[0])
-		return
-	}
-
-	if !CanRunCommand(perms, CommandGroupConnection, state) {
-		b.logAndDeny(ctx, s, i, externalID, "connection", "forbidden")
-		return
-	}
-
-	public := false
-	for _, opt := range data.Options {
-		if opt.Name == "public" {
-			public = opt.BoolValue()
+		b.handleConnectionSet(ctx, s, i, externalID, adminUser.ID, sub)
+	case "get":
+		if !CanRunCommand(perms, CommandGroupConnection, state) {
+			b.logAndDeny(ctx, s, i, externalID, "connection get", "forbidden")
+			return
 		}
+		public := false
+		for _, opt := range sub.Options {
+			if opt.Name == "public" {
+				public = opt.BoolValue()
+			}
+		}
+		b.handleConnectionGet(ctx, s, i, externalID, public)
+	default:
+		respondEphemeral(s, i, "Unknown subcommand.")
 	}
+}
 
+func (b *Bot) handleConnectionGet(ctx context.Context, s *discordgo.Session, i *discordgo.InteractionCreate, externalID string, public bool) {
 	if public {
 		details, err := b.connection.Get(ctx)
 		if err != nil || strings.TrimSpace(details.GameHost) == "" {
 			respondEphemeral(s, i, "Connection details are not configured yet.")
-			_ = LogBotCommand(ctx, b.db, externalID, "connection", false, "not configured")
+			_ = LogBotCommand(ctx, b.db, externalID, "connection get", false, "not configured")
 			return
 		}
 		respondEphemeral(s, i, connection.FormatDetailsDM(details).Plain)
-		_ = LogBotCommand(ctx, b.db, externalID, "connection", true, "ephemeral")
+		_ = LogBotCommand(ctx, b.db, externalID, "connection get", true, "ephemeral")
 		return
 	}
 
 	if err := b.connection.SendToUser(ctx, externalID); err != nil {
 		respondEphemeral(s, i, "Could not send connection details DM. Check that DMs are enabled.")
-		_ = LogBotCommand(ctx, b.db, externalID, "connection", false, err.Error())
+		_ = LogBotCommand(ctx, b.db, externalID, "connection get", false, err.Error())
 		return
 	}
 	respondEphemeral(s, i, "Connection details sent to your DMs.")
-	_ = LogBotCommand(ctx, b.db, externalID, "connection", true, "dm")
+	_ = LogBotCommand(ctx, b.db, externalID, "connection get", true, "dm")
 }
 
 func (b *Bot) handleConnectionSet(ctx context.Context, s *discordgo.Session, i *discordgo.InteractionCreate, externalID string, adminID int64, sub *discordgo.ApplicationCommandInteractionDataOption) {

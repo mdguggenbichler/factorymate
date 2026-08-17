@@ -27,18 +27,42 @@ type DiscordSession interface {
 
 // DiscordProvider posts rendered messages via a live discordgo session (§5.1).
 type DiscordProvider struct {
-	session DiscordSession
+	session   DiscordSession
+	sessionFn func() DiscordSession
+}
+
+// NewDiscordProvider constructs a Discord bot provider with a fixed session (tests).
+func NewDiscordProvider(session DiscordSession) *DiscordProvider {
+	return &DiscordProvider{session: session}
+}
+
+// NewDiscordProviderWithSessionFn constructs a provider that resolves the session on each send.
+func NewDiscordProviderWithSessionFn(sessionFn func() DiscordSession) *DiscordProvider {
+	return &DiscordProvider{sessionFn: sessionFn}
+}
+
+func (p *DiscordProvider) liveSession() DiscordSession {
+	if p.sessionFn != nil {
+		return p.sessionFn()
+	}
+	return p.session
 }
 
 // SendEnabled, when set, gates outbound Discord sends on the bot kill switch.
 var SendEnabled func(ctx context.Context) (bool, error)
 
-// NewDiscordProvider constructs a Discord bot provider. session may be nil when the bot is offline.
-func NewDiscordProvider(session DiscordSession) *DiscordProvider {
-	return &DiscordProvider{session: session}
+// FormatDiscordSendError maps common Discord API failures to actionable messages.
+func FormatDiscordSendError(err error) string {
+	if err == nil {
+		return ""
+	}
+	msg := err.Error()
+	if strings.Contains(msg, "50001") || strings.Contains(msg, "Missing Access") {
+		return "Bot cannot see this channel. Allow View Channel, Send Messages, and Embed Links for the bot role on this channel (and its parent category)."
+	}
+	return msg
 }
 
-// Type returns the provider identifier.
 func (p *DiscordProvider) Type() string {
 	return discordProviderType
 }
@@ -51,7 +75,7 @@ func (p *DiscordProvider) Send(ctx context.Context, target NotificationTarget, m
 	if target.ProviderType != discordProviderType {
 		return fmt.Errorf("discord provider cannot send to target type %q", target.ProviderType)
 	}
-	if p.session == nil {
+	if p.liveSession() == nil {
 		return fmt.Errorf("discord bot is not connected")
 	}
 
@@ -72,7 +96,7 @@ func (p *DiscordProvider) Send(ctx context.Context, target NotificationTarget, m
 		return err
 	}
 
-	_, err = p.session.ChannelMessageSendComplex(channelID, send, discordgo.WithContext(ctx))
+	_, err = p.liveSession().ChannelMessageSendComplex(channelID, send, discordgo.WithContext(ctx))
 	if err != nil {
 		return fmt.Errorf("discord channel send: %w", err)
 	}
@@ -90,11 +114,11 @@ func (p *DiscordProvider) SendDirect(ctx context.Context, platform, externalUser
 	if strings.TrimSpace(externalUserID) == "" {
 		return fmt.Errorf("external user id is required")
 	}
-	if p.session == nil {
+	if p.liveSession() == nil {
 		return fmt.Errorf("discord bot is not connected")
 	}
 
-	channel, err := p.session.UserChannelCreate(externalUserID, discordgo.WithContext(ctx))
+	channel, err := p.liveSession().UserChannelCreate(externalUserID, discordgo.WithContext(ctx))
 	if err != nil {
 		return fmt.Errorf("discord create dm channel: %w", err)
 	}
@@ -104,7 +128,7 @@ func (p *DiscordProvider) SendDirect(ctx context.Context, platform, externalUser
 		return err
 	}
 
-	_, err = p.session.ChannelMessageSendComplex(channel.ID, send, discordgo.WithContext(ctx))
+	_, err = p.liveSession().ChannelMessageSendComplex(channel.ID, send, discordgo.WithContext(ctx))
 	if err != nil {
 		return fmt.Errorf("discord dm send: %w", err)
 	}

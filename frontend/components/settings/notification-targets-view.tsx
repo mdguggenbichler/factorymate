@@ -55,7 +55,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { apiFetch } from "@/lib/api"
+import { apiFetch, ApiError } from "@/lib/api"
 import type {
   DiscordChannel,
   DiscordTargetConfig,
@@ -225,8 +225,8 @@ export function NotificationTargetsView({
         method: "POST",
       })
       toast.success(t("testSent"))
-    } catch {
-      toast.error(t("testFailed"))
+    } catch (error) {
+      toast.error(error instanceof ApiError ? error.message : t("testFailed"))
     } finally {
       setTestingId(null)
     }
