@@ -54,11 +54,43 @@ function expandBounds(
   }
 }
 
+function manhattanDistance(ax: number, ay: number, bx: number, by: number): number {
+  return Math.abs(ax - bx) + Math.abs(ay - by)
+}
+
+/** Resolve FRM parent coords to actual node grid cells (handles orphan junction coords). */
+export function resolveParentCoords(
+  parent: { x: number; y: number },
+  child: { x: number; y: number },
+  coordMap: Map<string, ResearchNode>
+): { x: number; y: number }[] {
+  if (coordMap.has(coordKey(parent.x, parent.y))) {
+    return [{ x: parent.x, y: parent.y }]
+  }
+
+  const matches: { x: number; y: number }[] = []
+  for (const n of coordMap.values()) {
+    if (!n.coordinates) {
+      continue
+    }
+    const { x, y } = n.coordinates
+    if (x === child.x && y === child.y) {
+      continue
+    }
+    if (manhattanDistance(parent.x, parent.y, x, y) === 1) {
+      matches.push({ x, y })
+    }
+  }
+  return matches
+}
+
 export function computeBounds(nodes: ResearchNode[]): ResearchBounds | null {
   const positioned = nodes.filter((node) => node.coordinates !== null)
   if (positioned.length === 0) {
     return null
   }
+
+  const coordMap = buildCoordMap(nodes)
 
   let bounds: ResearchBounds = {
     minX: positioned[0].coordinates!.x,
@@ -72,7 +104,10 @@ export function computeBounds(nodes: ResearchNode[]): ResearchBounds | null {
     bounds = expandBounds(bounds, x, y)
 
     for (const parent of node.parents) {
-      if (isValidCoord(parent.x, parent.y)) {
+      if (
+        isValidCoord(parent.x, parent.y) &&
+        coordMap.has(coordKey(parent.x, parent.y))
+      ) {
         bounds = expandBounds(bounds, parent.x, parent.y)
       }
     }
@@ -111,6 +146,7 @@ export function computeEdges(
   cellWidth: number,
   cellHeight: number
 ): ResearchEdge[] {
+  const coordMap = buildCoordMap(nodes)
   const edges: ResearchEdge[] = []
   const seen = new Set<string>()
 
@@ -131,20 +167,34 @@ export function computeEdges(
         continue
       }
 
-      const edgeKey = `${coordKey(parent.x, parent.y)}->${coordKey(node.coordinates.x, node.coordinates.y)}`
-      if (seen.has(edgeKey)) {
-        continue
-      }
-      seen.add(edgeKey)
+      const resolvedParents = resolveParentCoords(
+        parent,
+        node.coordinates,
+        coordMap
+      )
 
-      const parentCenter = cellCenter(parent.x, parent.y, bounds, cellWidth, cellHeight)
-      edges.push({
-        key: edgeKey,
-        x1: parentCenter.x,
-        y1: parentCenter.y,
-        x2: childCenter.x,
-        y2: childCenter.y,
-      })
+      for (const resolved of resolvedParents) {
+        const edgeKey = `${coordKey(resolved.x, resolved.y)}->${coordKey(node.coordinates.x, node.coordinates.y)}`
+        if (seen.has(edgeKey)) {
+          continue
+        }
+        seen.add(edgeKey)
+
+        const parentCenter = cellCenter(
+          resolved.x,
+          resolved.y,
+          bounds,
+          cellWidth,
+          cellHeight
+        )
+        edges.push({
+          key: edgeKey,
+          x1: parentCenter.x,
+          y1: parentCenter.y,
+          x2: childCenter.x,
+          y2: childCenter.y,
+        })
+      }
     }
   }
 
