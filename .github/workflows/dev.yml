@@ -1,0 +1,30 @@
+name: Dev
+
+on:
+  push:
+    branches:
+      - dev
+
+concurrency:
+  group: dev-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  ci:
+    uses: ./.github/workflows/_ci.yml
+    permissions:
+      contents: read
+
+  container-image:
+    name: Nightly container image
+    needs: ci
+    permissions:
+      contents: read
+      packages: write
+    uses: ./.github/workflows/_container-image.yml
+    with:
+      tags: nightly,${{ github.sha }}

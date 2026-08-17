@@ -63,6 +63,27 @@ docker compose up -d
 - **Single container** — Go API + poller on `localhost:8080` (internal), Next.js on `:3000` (exposed). Next.js proxies `/api/*` and `/healthz` to the backend via `BACKEND_URL`.
 - **SQLite** — persisted on volume `factorymate-data`.
 
+## CI/CD and container images
+
+GitHub Actions uses branch/PR entry workflows with reusable `_*.yml` workflows — see [`.github/workflows/README.md`](../.github/workflows/README.md).
+
+| Branch / event | What runs |
+| --- | --- |
+| Pull request | CI only (`_ci.yml`) — backend, frontend, Docker smoke build |
+| `push` → `dev` | CI + push `ghcr.io/mdguggenbichler/factorymate:nightly` and `:{sha7}` |
+| `push` → `main` | CI + draft release when root `VERSION` semver-increases and `v{VERSION}` tag is missing |
+| Release published (`v*`) | Push `ghcr.io/mdguggenbichler/factorymate:{version}` and `:latest` |
+
+**Release flow:** bump [`VERSION`](../VERSION) on `main` (e.g. `0.1.0`) → merge → workflow creates draft release `v0.1.0` → review and publish → stable images land on GHCR.
+
+**Pull nightly image:**
+
+```bash
+docker pull ghcr.io/mdguggenbichler/factorymate:nightly
+```
+
+Ensure **Settings → Actions → General → Workflow permissions** allows read/write for releases and packages.
+
 ## GuggiRaid production deploy
 
 Manual smoke test per project DoD — not run in CI.
