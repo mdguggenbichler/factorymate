@@ -87,7 +87,7 @@ type ResearchNode struct {
 	State       string               `json:"State"`
 	TechTier    int                  `json:"TechTier"`
 	Cost        []Item               `json:"Cost"`
-	Coordinates ResearchCoordinate   `json:"Coordinates"`
+	Coordinates *ResearchCoordinate `json:"Coordinates"`
 	Parents     []ResearchCoordinate `json:"Parents"`
 }
 

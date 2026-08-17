@@ -37,11 +37,10 @@ type Invite struct {
 }
 
 var (
-	ErrInviteNotFound      = errors.New("invite not found")
-	ErrInviteNotPending    = errors.New("invite is not pending")
-	ErrInviteExpired       = errors.New("invite expired")
-	ErrDuplicateUsername   = errors.New("username already exists")
-	ErrLastAdmin           = errors.New("cannot remove the last admin")
+	ErrInviteNotFound    = errors.New("invite not found")
+	ErrInviteNotPending  = errors.New("invite is not pending")
+	ErrInviteExpired     = errors.New("invite expired")
+	ErrDuplicateUsername = errors.New("username already exists")
 )
 
 func (s *Service) CreateInvite(ctx context.Context, createdBy int64, role Role, ttl time.Duration) (Invite, error) {
@@ -172,7 +171,7 @@ func (s *Service) AcceptInvite(ctx context.Context, token, username, password st
 
 	hash, err := HashPassword(password)
 	if err != nil {
-		return User{}, fmt.Errorf("hash password: %w", err)
+		return User{}, err
 	}
 
 	now := time.Now().UTC().Format(time.RFC3339)
@@ -209,7 +208,7 @@ func (s *Service) AcceptInvite(ctx context.Context, token, username, password st
 		return User{}, fmt.Errorf("commit tx: %w", err)
 	}
 
-	return User{ID: userID, Username: username, Role: inv.Role}, nil
+	return s.GetUserByID(ctx, userID)
 }
 
 func (s *Service) AdminCount(ctx context.Context) (int, error) {

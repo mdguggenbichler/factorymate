@@ -360,6 +360,11 @@ func upsertResearchNodeState(ctx context.Context, db *sql.DB, treeName string, n
 	if err != nil {
 		return err
 	}
+	var coordX, coordY sql.NullInt64
+	if n.Coordinates != nil {
+		coordX = sql.NullInt64{Int64: int64(n.Coordinates.X), Valid: true}
+		coordY = sql.NullInt64{Int64: int64(n.Coordinates.Y), Valid: true}
+	}
 	_, err = db.ExecContext(ctx, `
 		INSERT INTO research_node_state (
 			node_id, tree_name, name, category, state, tech_tier, cost_json,
@@ -378,7 +383,7 @@ func upsertResearchNodeState(ctx context.Context, db *sql.DB, treeName string, n
 			parents_json = excluded.parents_json,
 			updated_at = excluded.updated_at`,
 		n.ID, treeName, n.Name, n.Category, n.State, n.TechTier, string(costJSON),
-		n.Coordinates.X, n.Coordinates.Y, string(parentsJSON),
+		coordX, coordY, string(parentsJSON),
 		now.UTC().Format(time.RFC3339),
 	)
 	return err

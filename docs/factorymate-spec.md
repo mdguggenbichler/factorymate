@@ -867,6 +867,7 @@ All 13 message types: see `backend/data/message_defaults.json`. M1 seed reads th
 ## 6. Authentication & Authorization
 
 - Username + password login, session cookie (HTTP-only, secure, SameSite=Lax), backed by the **`sessions` table in SQLite** (§3) — sessions survive process restarts; expired rows cleaned up periodically.
+- New passwords (setup, invite accept, admin reset, self-service change) require at least **8 characters**.
 - **Session cookie:** name `factorymate_session`; value = opaque session ID (matches `sessions.id`). **Max age:** 30 days (`expires_at = now + 30d` on login). **Flags:** `HttpOnly`, `Secure` when request is HTTPS (omit in local HTTP dev), `SameSite=Lax`, `Path=/`. **Cleanup:** background job every hour deletes rows where `expires_at < now()` and invalidates matching cookies on next request.
 - Passwords hashed with bcrypt.
 - Two roles:

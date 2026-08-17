@@ -50,6 +50,7 @@ func TestFirstPollBaselineNoEvents(t *testing.T) {
 	assertCircuitBaseline(t, ctx, database, 1, true)
 	assertSchematicBaseline(t, ctx, database, "milestone-1", true)
 	assertResearchBaseline(t, ctx, database, "node-1", "Purchased", 4, 0, "[]")
+	assertResearchCoordsNull(t, ctx, database, "node-2")
 	assertElevatorPhase(t, ctx, database, "elevator-1", 2)
 }
 
@@ -466,8 +467,11 @@ func firstObservationFixture(t *testing.T) frm.FastPollResult {
 			Name: "Test Tree",
 			Nodes: []frm.ResearchNode{{
 				ID: "node-1", Name: "Test Node", State: "Purchased", TechTier: 2,
-				Coordinates: frm.ResearchCoordinate{X: 4, Y: 0},
+				Coordinates: &frm.ResearchCoordinate{X: 4, Y: 0},
 				Parents:     []frm.ResearchCoordinate{},
+			}, {
+				ID: "node-2", Name: "No Layout Node", State: "Available", TechTier: 1,
+				Parents: []frm.ResearchCoordinate{},
 			}},
 		}},
 		Trains: []frm.Train{{
@@ -540,6 +544,19 @@ func assertSchematicBaseline(t *testing.T, ctx context.Context, database *sql.DB
 	}
 	if purchased != wantPurchased {
 		t.Fatalf("schematic %s purchased = %v, want %v", id, purchased, wantPurchased)
+	}
+}
+
+func assertResearchCoordsNull(t *testing.T, ctx context.Context, database *sql.DB, id string) {
+	t.Helper()
+	var coordX, coordY sql.NullInt64
+	if err := database.QueryRowContext(ctx,
+		`SELECT coord_x, coord_y FROM research_node_state WHERE node_id = ?`, id,
+	).Scan(&coordX, &coordY); err != nil {
+		t.Fatalf("research_node_state: %v", err)
+	}
+	if coordX.Valid || coordY.Valid {
+		t.Fatalf("node %s coords = (%v,%v), want NULL", id, coordX, coordY)
 	}
 }
 

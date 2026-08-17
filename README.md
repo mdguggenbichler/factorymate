@@ -53,10 +53,26 @@ FRM_PORT=8080                         # FRM port inside the game container (ofte
 # FACTORYMATE_PORT=3000             # optional host port override
 ```
 
-**FRM connectivity:** FactoryMate must reach FRM over HTTP. Common setups:
+**FRM connectivity:** FactoryMate must reach FRM over HTTP. The default compose file uses an isolated `factorymate` network — pick one of these options:
 
-- **Same Docker host** — Put FactoryMate on the same Docker network as your game server and set `FRM_HOST` to the game container’s service name (e.g. `satisfactory-server`).
-- **FRM on host LAN** — Set `FRM_HOST` to the server’s IP (e.g. `192.168.1.50`) and `FRM_PORT` to the mapped port.
+- **Option A — LAN / host IP** — Set `FRM_HOST` to the server’s IP (e.g. `192.168.1.50`) and `FRM_PORT` to the host-mapped FRM port (e.g. `8889`). Requires FRM to be published on the host.
+- **Option B — shared Docker network (same host)** — Attach FactoryMate to your game stack’s Docker network so `FRM_HOST=satisfactory-server` and `FRM_PORT=8080` work **without** exposing FRM on the host. Create `docker-compose.override.yml`:
+
+```yaml
+services:
+  factorymate:
+    networks:
+      - factorymate
+      - satisfactory-server
+
+networks:
+  factorymate:
+  satisfactory-server:
+    external: true
+    name: ${SATISFACTORY_NETWORK:-satisfactory-server_default}
+```
+
+Find the network name with `docker network ls | grep satisfactory`. If it differs, set `SATISFACTORY_NETWORK` in `.env`.
 
 ### 3. Start the stack
 

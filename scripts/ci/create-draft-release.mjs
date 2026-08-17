@@ -66,7 +66,35 @@ export function compareSemver(left, right) {
     return -1;
   }
   if (a.prerelease && b.prerelease) {
-    return a.prerelease.localeCompare(b.prerelease);
+    return comparePrerelease(a.prerelease, b.prerelease);
+  }
+
+  return 0;
+}
+
+function comparePrerelease(left, right) {
+  const aParts = left.split(".");
+  const bParts = right.split(".");
+  const len = Math.max(aParts.length, bParts.length);
+
+  for (let i = 0; i < len; i++) {
+    const aPart = aParts[i] ?? "";
+    const bPart = bParts[i] ?? "";
+    if (aPart === bPart) {
+      continue;
+    }
+
+    const aNum = /^\d+$/.test(aPart) ? Number(aPart) : NaN;
+    const bNum = /^\d+$/.test(bPart) ? Number(bPart) : NaN;
+    if (!Number.isNaN(aNum) && !Number.isNaN(bNum)) {
+      if (aNum !== bNum) {
+        return aNum > bNum ? 1 : -1;
+      }
+      continue;
+    }
+
+    const cmp = aPart.localeCompare(bPart);
+    return cmp > 0 ? 1 : cmp < 0 ? -1 : 0;
   }
 
   return 0;

@@ -123,8 +123,9 @@ export function UsersView({ initialUsers, initialInvites }: UsersViewProps) {
       setPlayers(data.players)
     } catch {
       setPlayers([])
+      toast.error(t("playersLoadFailed"))
     }
-  }, [])
+  }, [t])
 
   function openInvite() {
     setInviteRole("viewer")
@@ -293,6 +294,26 @@ export function UsersView({ initialUsers, initialInvites }: UsersViewProps) {
   function roleLabel(role: string) {
     return role === "admin" ? tAuth("roleAdmin") : tAuth("roleViewer")
   }
+
+  const playerSelectItems = useMemo(() => {
+    const items = [
+      { label: t("fields.noPlayer"), value: "__none__" },
+      ...players.map((player) => ({
+        label: player.name,
+        value: player.id,
+      })),
+    ]
+    if (
+      form.playerId &&
+      !players.some((player) => player.id === form.playerId)
+    ) {
+      items.push({
+        label: editingUser?.playerName ?? form.playerId,
+        value: form.playerId,
+      })
+    }
+    return items
+  }, [editingUser, form.playerId, players, t])
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
@@ -546,25 +567,16 @@ export function UsersView({ initialUsers, initialInvites }: UsersViewProps) {
                       playerId: !value || value === "__none__" ? "" : value,
                     }))
                   }
-                  items={[
-                    { label: t("fields.noPlayer"), value: "__none__" },
-                    ...players.map((player) => ({
-                      label: player.name,
-                      value: player.id,
-                    })),
-                  ]}
+                  items={playerSelectItems}
                 >
                   <SelectTrigger id="user-player" className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectGroup>
-                      <SelectItem value="__none__">
-                        {t("fields.noPlayer")}
-                      </SelectItem>
-                      {players.map((player) => (
-                        <SelectItem key={player.id} value={player.id}>
-                          {player.name}
+                      {playerSelectItems.map((item) => (
+                        <SelectItem key={item.value} value={item.value}>
+                          {item.label}
                         </SelectItem>
                       ))}
                     </SelectGroup>
@@ -638,7 +650,12 @@ export function UsersView({ initialUsers, initialInvites }: UsersViewProps) {
           <AlertDialogHeader>
             <AlertDialogTitle>{t("revokeInviteTitle")}</AlertDialogTitle>
             <AlertDialogDescription>
-              {t("revokeInviteDescription")}
+              {revokeInvite
+                ? t("revokeInviteDescription", {
+                    role: roleLabel(revokeInvite.role),
+                    createdAt: formatDateTime(revokeInvite.createdAt),
+                  })
+                : t("revokeInviteDescriptionFallback")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

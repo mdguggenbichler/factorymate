@@ -84,7 +84,7 @@ func TestParseFixture_getResearchTrees(t *testing.T) {
 	if len(node.Cost) == 0 {
 		t.Fatal("expected node with cost items")
 	}
-	if node.Coordinates.X != 4 || node.Coordinates.Y != 4 {
+	if node.Coordinates == nil || node.Coordinates.X != 4 || node.Coordinates.Y != 4 {
 		t.Fatalf("coordinates = %+v, want (4,4)", node.Coordinates)
 	}
 	if len(node.Parents) != 1 || node.Parents[0].X != 3 || node.Parents[0].Y != 3 {
@@ -194,7 +194,7 @@ func TestGetSessionInfo(t *testing.T) {
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{"SessionName":"GuggiRaid Factory","IsPaused":false}`))
+		_, _ = w.Write([]byte(`{"SessionName":"GuggiRaid Factory","IsPaused":false}`))
 	}))
 	t.Cleanup(srv.Close)
 
@@ -217,7 +217,7 @@ func TestClient_authHeader(t *testing.T) {
 	var gotAuth string
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		gotAuth = r.Header.Get("X-FRM-Authorization")
-		w.Write([]byte("[]"))
+		_, _ = w.Write([]byte("[]"))
 	}))
 	t.Cleanup(srv.Close)
 
@@ -282,11 +282,11 @@ func TestGetFast_partialFailure(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/getPlayer":
-			w.Write([]byte(`[{"ID":"p1","Name":"Alice","Online":true}]`))
+			_, _ = w.Write([]byte(`[{"ID":"p1","Name":"Alice","Online":true}]`))
 		case "/getPower":
 			http.Error(w, "boom", http.StatusInternalServerError)
 		default:
-			w.Write([]byte("[]"))
+			_, _ = w.Write([]byte("[]"))
 		}
 	}))
 	t.Cleanup(srv.Close)

@@ -53,7 +53,7 @@ Build the single image:
 docker compose build
 ```
 
-Run the stack (requires `SESSION_SECRET` and the external `satisfactory-server` network):
+Run the stack (requires `SESSION_SECRET`; external game network is optional):
 
 ```bash
 export SESSION_SECRET="$(openssl rand -hex 32)"
@@ -61,7 +61,29 @@ docker compose up -d
 ```
 
 - **Single container** — Go API + poller on `localhost:8080` (internal), Next.js on `:3000` (exposed). Next.js proxies `/api/*` and `/healthz` to the backend via `BACKEND_URL`.
-- **SQLite** — persisted on volume `factorymate-data`.
+- **SQLite** — persisted in `./data` via bind mount.
+- **FRM reachability** — default compose uses an isolated `factorymate` network. Use host IP + mapped FRM port in `.env`, or add a `docker-compose.override.yml` to join the game stack network (see README §FRM connectivity).
+
+### Shared Docker network (optional)
+
+When FactoryMate and the Satisfactory/FRM container run on the **same Docker host**, you can attach to the game stack’s external network so `FRM_HOST=satisfactory-server` resolves without publishing FRM on the host:
+
+```yaml
+# docker-compose.override.yml
+services:
+  factorymate:
+    networks:
+      - factorymate
+      - satisfactory-server
+
+networks:
+  factorymate:
+  satisfactory-server:
+    external: true
+    name: ${SATISFACTORY_NETWORK:-satisfactory-server_default}
+```
+
+Discover the network: `docker network ls | grep satisfactory`. Set `SATISFACTORY_NETWORK` in `.env` if the name differs.
 
 ## CI/CD and container images
 
@@ -89,7 +111,8 @@ Ensure **Settings → Actions → General → Workflow permissions** allows read
 Manual smoke test per project DoD — not run in CI.
 
 1. **On the host** (alongside the existing `satisfactory-server` container):
-   - Confirm the shared Docker network exists (`docker network ls | grep satisfactory-server`).
+   - **Recommended:** add `docker-compose.override.yml` to join the game stack network (see Shared Docker network above).
+   - Confirm the network exists: `docker network ls | grep satisfactory-server`.
    - If the game stack uses a different network name, set `SATISFACTORY_NETWORK` in `.env`.
 
 2. **Configure `.env`** at the repo root on GuggiRaid:

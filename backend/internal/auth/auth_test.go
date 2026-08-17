@@ -35,7 +35,7 @@ func TestSessionCreateAndLoad(t *testing.T) {
 	}
 
 	svc := auth.NewService(database)
-	user, err := svc.CreateUser(ctx, "admin", "secret", auth.RoleAdmin)
+	user, err := svc.CreateUser(ctx, "admin", "secret123", auth.RoleAdmin)
 	if err != nil {
 		t.Fatalf("create user: %v", err)
 	}

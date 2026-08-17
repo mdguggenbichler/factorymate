@@ -20,7 +20,7 @@ func TestInviteLifecycle(t *testing.T) {
 	}
 
 	svc := auth.NewService(database)
-	admin, err := svc.CreateUser(ctx, "admin", "secret", auth.RoleAdmin)
+	admin, err := svc.CreateUser(ctx, "admin", "secret123", auth.RoleAdmin)
 	if err != nil {
 		t.Fatalf("create admin: %v", err)
 	}
@@ -41,7 +41,7 @@ func TestInviteLifecycle(t *testing.T) {
 		t.Fatalf("role = %q", loaded.Role)
 	}
 
-	user, err := svc.AcceptInvite(ctx, inv.Token, "bob", "bobpass")
+	user, err := svc.AcceptInvite(ctx, inv.Token, "bob", "bobpass12")
 	if err != nil {
 		t.Fatalf("accept invite: %v", err)
 	}
@@ -74,7 +74,7 @@ func TestInviteRevokeAndExpire(t *testing.T) {
 	}
 
 	svc := auth.NewService(database)
-	admin, err := svc.CreateUser(ctx, "admin", "secret", auth.RoleAdmin)
+	admin, err := svc.CreateUser(ctx, "admin", "secret123", auth.RoleAdmin)
 	if err != nil {
 		t.Fatalf("create admin: %v", err)
 	}
@@ -119,7 +119,7 @@ func TestLastAdminGuard(t *testing.T) {
 	}
 
 	svc := auth.NewService(database)
-	admin, err := svc.CreateUser(ctx, "admin", "secret", auth.RoleAdmin)
+	admin, err := svc.CreateUser(ctx, "admin", "secret123", auth.RoleAdmin)
 	if err != nil {
 		t.Fatalf("create admin: %v", err)
 	}

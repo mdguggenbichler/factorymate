@@ -957,48 +957,28 @@ func (h *Handler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 			writeError(w, r, http.StatusBadRequest, "invalid role")
 			return
 		}
-		if err := h.auth.UpdateUserRole(r.Context(), id, *req.Role); err != nil {
-			if errors.Is(err, auth.ErrUserNotFound) {
-				writeError(w, r, http.StatusNotFound, "not found")
-				return
-			}
-			if errors.Is(err, auth.ErrLastAdmin) {
-				writeError(w, r, http.StatusBadRequest, "cannot demote the last admin")
-				return
-			}
-			writeError(w, r, http.StatusInternalServerError, "internal error")
-			return
-		}
-	}
-	if req.PlayerID != nil {
-		if err := h.auth.UpdatePlayerID(r.Context(), id, *req.PlayerID); err != nil {
-			if errors.Is(err, auth.ErrUserNotFound) {
-				writeError(w, r, http.StatusNotFound, "not found")
-				return
-			}
-			if strings.Contains(err.Error(), "player not found") {
-				writeError(w, r, http.StatusBadRequest, "player not found")
-				return
-			}
-			writeError(w, r, http.StatusInternalServerError, "internal error")
-			return
-		}
-	}
-	if req.Password != nil && *req.Password != "" {
-		if err := h.auth.UpdatePassword(r.Context(), id, *req.Password); err != nil {
-			if errors.Is(err, auth.ErrUserNotFound) {
-				writeError(w, r, http.StatusNotFound, "not found")
-				return
-			}
-			writeError(w, r, http.StatusInternalServerError, "internal error")
-			return
-		}
 	}
 
-	user, err := h.auth.GetUserByID(r.Context(), id)
+	user, err := h.auth.UpdateUser(r.Context(), id, auth.UserUpdate{
+		Role:     req.Role,
+		Password: req.Password,
+		PlayerID: req.PlayerID,
+	})
 	if err != nil {
 		if errors.Is(err, auth.ErrUserNotFound) {
 			writeError(w, r, http.StatusNotFound, "not found")
+			return
+		}
+		if errors.Is(err, auth.ErrLastAdmin) {
+			writeError(w, r, http.StatusBadRequest, "cannot demote the last admin")
+			return
+		}
+		if errors.Is(err, auth.ErrWeakPassword) {
+			writeError(w, r, http.StatusBadRequest, err.Error())
+			return
+		}
+		if strings.Contains(err.Error(), "player not found") {
+			writeError(w, r, http.StatusBadRequest, "player not found")
 			return
 		}
 		writeError(w, r, http.StatusInternalServerError, "internal error")

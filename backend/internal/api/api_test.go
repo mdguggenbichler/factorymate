@@ -54,7 +54,7 @@ func TestReadEndpoints(t *testing.T) {
 	router := newTestRouter(handler, svc)
 
 	setupAdmin(t, router)
-	adminCookie := loginCookie(t, router, "admin", "secret")
+	adminCookie := loginCookie(t, router, "admin", "secret123")
 
 	t.Run("GET /api/status", func(t *testing.T) {
 		resp := getWithCookie(t, router, "/api/status", adminCookie)
@@ -464,6 +464,7 @@ func TestReadEndpoints(t *testing.T) {
 		createInviteResp := postJSONWithCookie(t, router, "/api/invites", viewerCookie, map[string]string{
 			"role": "viewer",
 		})
+		defer createInviteResp.Body.Close()
 		if createInviteResp.StatusCode != http.StatusForbidden {
 			t.Fatalf("viewer create invite status = %d, want 403", createInviteResp.StatusCode)
 		}
@@ -524,6 +525,7 @@ func TestAdminEndpoints(t *testing.T) {
 			"frmHost": host,
 			"frmPort": port,
 		})
+		defer testResp.Body.Close()
 		if testResp.StatusCode != http.StatusOK {
 			t.Fatalf("frm test status = %d body=%s", testResp.StatusCode, readBody(t, testResp))
 		}
@@ -747,7 +749,7 @@ func TestAdminEndpoints(t *testing.T) {
 
 		acceptResp := postJSON(t, router, "/api/invites/"+inviteBody.Token+"/accept", map[string]string{
 			"username": "bob",
-			"password": "bobpass",
+			"password": "bobpass12",
 		})
 		if acceptResp.StatusCode != http.StatusCreated {
 			t.Fatalf("accept invite status = %d body=%s", acceptResp.StatusCode, readBody(t, acceptResp))
@@ -952,7 +954,7 @@ func TestAdminEndpoints(t *testing.T) {
 func setupAdmin(t *testing.T, router http.Handler) *http.Cookie {
 	resp := postJSON(t, router, "/api/auth/setup", map[string]string{
 		"username": "admin",
-		"password": "secret",
+		"password": "secret123",
 	})
 	if resp.StatusCode != http.StatusCreated {
 		t.Fatalf("setup status = %d", resp.StatusCode)

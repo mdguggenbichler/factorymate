@@ -42,6 +42,10 @@ func (h *Handler) Setup(w http.ResponseWriter, r *http.Request) {
 
 	user, err := h.auth.CreateUser(r.Context(), req.Username, req.Password, auth.RoleAdmin)
 	if err != nil {
+		if errors.Is(err, auth.ErrWeakPassword) {
+			writeError(w, r, http.StatusBadRequest, err.Error())
+			return
+		}
 		writeError(w, r, http.StatusInternalServerError, "internal error")
 		return
 	}
@@ -123,6 +127,10 @@ func (h *Handler) ChangePassword(w http.ResponseWriter, r *http.Request) {
 	if err := h.auth.UpdatePassword(r.Context(), user.ID, req.Password); err != nil {
 		if errors.Is(err, auth.ErrUserNotFound) {
 			writeError(w, r, http.StatusNotFound, "not found")
+			return
+		}
+		if errors.Is(err, auth.ErrWeakPassword) {
+			writeError(w, r, http.StatusBadRequest, err.Error())
 			return
 		}
 		writeError(w, r, http.StatusInternalServerError, "internal error")
