@@ -90,10 +90,8 @@ func (b *Bot) registerSlashCommands(ctx context.Context) error {
 		},
 	}
 
-	for _, cmd := range commands {
-		if _, err := b.session.ApplicationCommandCreate(b.session.State.User.ID, guildID, cmd, discordgo.WithContext(ctx)); err != nil {
-			return fmt.Errorf("register command %q: %w", cmd.Name, err)
-		}
+	if _, err := b.session.ApplicationCommandBulkOverwrite(b.session.State.User.ID, guildID, commands, discordgo.WithContext(ctx)); err != nil {
+		return fmt.Errorf("register slash commands: %w", err)
 	}
 	return nil
 }
