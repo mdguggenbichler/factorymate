@@ -111,7 +111,7 @@ GitHub Actions uses branch/PR entry workflows with reusable `_*.yml` workflows �
 | Pull request | CI only (`_ci.yml`) — backend, frontend, Docker smoke build |
 | `push` → `dev` | CI + push `ghcr.io/ghotso/factorymate:nightly` and `:{sha7}` |
 | `push` → `main` | CI + draft release when root `VERSION` semver-increases and `v{VERSION}` tag is missing |
-| Release published (`v*`) | Push `ghcr.io/ghotso/factorymate:{version}` and `:latest` |
+| Release published (`v*`) | Push `ghcr.io/ghotso/factorymate:{version}` and `:latest`; deploy user docs to GitHub Pages |
 
 **Release flow:** bump [`VERSION`](../VERSION) on `main` (e.g. `0.1.0`) → merge → workflow creates draft release `v0.1.0` → review and publish → stable images land on GHCR.
 
@@ -161,6 +161,17 @@ Manual smoke test per project DoD — not run in CI.
 - **Migrations:** numbered `.sql` files only — no hand-written DDL outside `internal/db/migrations/`
 - **Frontend i18n:** all user-facing strings in `frontend/messages/en.json` (spec §8.2)
 - **shadcn:** install via MCP/CLI; edit components in-place under `frontend/components/ui/`
+
+## User documentation (MkDocs)
+
+Published at [https://ghotso.github.io/factorymate/](https://ghotso.github.io/factorymate/) on release publish. Local preview:
+
+```bash
+pip install -r docs/requirements-docs.txt
+mkdocs serve
+```
+
+Source: `docs/guide/` + root `mkdocs.yml`.
 
 ## Orchestrator development
 

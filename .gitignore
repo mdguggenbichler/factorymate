@@ -32,6 +32,9 @@ data/
 # Agent session memory (orchestrator — never commit)
 .agents/project/agent-memory/active/
 
+# MkDocs site output
+site/
+
 # Go
 backend/bin/
 backend/tmp/

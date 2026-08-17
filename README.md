@@ -4,17 +4,17 @@
 
 Self-hosted monitoring and Discord notifications for **Satisfactory** dedicated servers using [FicsIt Remote Monitoring (FRM)](https://docs.ficsit.app/ficsitremotemonitoring/latest/index.html).
 
-FactoryMate polls your FRM HTTP API, detects edge-triggered game events (players joining, fuse trips, milestones, trains, and more), sends rich Discord embeds to configurable webhook targets, and provides a small authenticated web dashboard for live factory stats and history.
+FactoryMate polls your FRM HTTP API, detects edge-triggered game events (players joining, fuse trips, milestones, trains, and more), sends rich Discord embeds via a configurable bot, and provides a small authenticated web dashboard for live factory stats and history.
 
 Built for small private groups (originally **CBC | Conveyor Belt Cult**), deployed as a single container alongside your game server.
 
 ## Features
 
 - **Event detection** — Fast-poll diff engine for players, power, schematics, research, trains, vehicles, and server reachability (no duplicate spam; survives restarts).
-- **Discord notifications** — Structured embeds with per-type title emojis, fields, footer, and native timestamps; editable per message type in the UI.
-- **Notification targets** — Configure Discord webhooks once; assign which message types go to which channels.
+- **Discord bot** — Slash commands, channel notifications, and DMs from one bot. No webhook URLs.
+- **Notification targets** — Pick Discord channels in the UI; assign which message types go where.
 - **Dashboard** — Players, power, production (overall + per-machine), Resource Sink, drones, doggos, milestones, M.A.M. research tree, vehicles, Space Elevator.
-- **Invite-based onboarding** — Admins create single-use invite links; users set their own username and password.
+- **Discord registration** — Players run `/register` in Discord; web invites are break-glass recovery only.
 - **Read-only FRM** — FactoryMate never writes to the game; it only polls FRM Read endpoints.
 
 ## Requirements
@@ -91,11 +91,14 @@ docker compose up -d
 1. Open the UI — if no users exist, you’ll see the **one-time admin setup** page.
 2. Create the first **admin** account.
 3. Go to **Settings → General** — confirm FRM host/port; server display name syncs from FRM automatically.
-4. **Settings → Notifications → Targets** — add a Discord webhook URL.
-5. **Settings → Notifications → Templates** — enable message types (e.g. `player_joined`, `player_left`), assign your Discord target, and use **Send test** to verify embeds.
-6. **Settings → Users** — create **invite links** for other group members (viewer or admin role).
+4. Set `DISCORD_BOT_TOKEN` in `.env`, restart, then **Settings → Discord** — invite the bot and configure role mappings.
+5. **Settings → Notifications → Targets** — pick a Discord channel for alerts.
+6. **Settings → Notifications → Templates** — enable message types (e.g. `player_joined`, `player_left`), assign your target, and use **Send test** to verify embeds.
+7. Ask players to run **`/register`** in Discord (primary onboarding).
 
 After that, notifications fire automatically when the poller detects state changes.
+
+Full setup guide: **[https://ghotso.github.io/factorymate/](https://ghotso.github.io/factorymate/)**
 
 ## Getting started (local development)
 
@@ -120,9 +123,10 @@ Full details: [`docs/development.md`](docs/development.md) — env vars, compose
 | What | Where |
 | --- | --- |
 | FRM host/port, poll intervals | **Settings → General** (persisted in SQLite) |
-| Discord webhooks | **Settings → Notifications → Targets** |
+| Discord bot & role mappings | **Settings → Discord** |
+| Discord notification channels | **Settings → Notifications → Targets** |
 | Message templates & assignments | **Settings → Notifications → Templates** |
-| Users & invites | **Settings → Users** |
+| Users & registration | **Settings → Users** (+ `/register` in Discord) |
 | Default embed copy (source of truth) | [`backend/data/message_defaults.json`](backend/data/message_defaults.json) |
 
 Environment variables for Docker and first boot are documented in [`docs/factorymate-spec.md`](docs/factorymate-spec.md) §9 and [`.env.example`](.env.example).
@@ -140,18 +144,17 @@ FactoryMate container
   └─ Next.js UI  — :3000, proxies /api → backend
         │
         ▼
-Discord webhooks (and future notification providers)
+Discord bot (channel posts, DMs, slash commands)
 ```
 
 ## Documentation
 
 | Document | Purpose |
 | --- | --- |
+| **[User guide (GitHub Pages)](https://ghotso.github.io/factorymate/)** | Docker setup, Discord bot, first run, day-to-day management |
+| [`docs/development.md`](docs/development.md) | Contributor dev setup, CI/CD, production deploy |
 | [`docs/factorymate-spec.md`](docs/factorymate-spec.md) | Product contract — APIs, schemas, FRM mapping, UI routes |
-| [`docs/factorymate-roadmap.md`](docs/factorymate-roadmap.md) | Milestone history (M0–M13) |
-| [`docs/development.md`](docs/development.md) | Dev setup, CI/CD, production deploy |
 | [`docs/testing.md`](docs/testing.md) | FRM fixtures, Discord mock testing |
-| [`docs/frm-docs/`](docs/frm-docs/) | Vendored FRM API reference |
 | [`AGENTS.md`](AGENTS.md) | Cursor agent / contributor conventions |
 
 ## Development & CI
