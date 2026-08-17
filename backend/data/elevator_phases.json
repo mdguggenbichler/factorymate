@@ -1,0 +1,47 @@
+{
+  "phases": [
+    {
+      "phase": 1,
+      "name": "Distribution Platform",
+      "class_names": ["Desc_SpaceElevatorPart_1_C"]
+    },
+    {
+      "phase": 2,
+      "name": "Construction Dock",
+      "class_names": [
+        "Desc_SpaceElevatorPart_1_C",
+        "Desc_SpaceElevatorPart_2_C",
+        "Desc_SpaceElevatorPart_3_C"
+      ]
+    },
+    {
+      "phase": 3,
+      "name": "Main Body",
+      "class_names": [
+        "Desc_SpaceElevatorPart_2_C",
+        "Desc_SpaceElevatorPart_4_C",
+        "Desc_SpaceElevatorPart_5_C"
+      ]
+    },
+    {
+      "phase": 4,
+      "name": "Propulsion",
+      "class_names": [
+        "Desc_SpaceElevatorPart_6_C",
+        "Desc_SpaceElevatorPart_7_C",
+        "Desc_SpaceElevatorPart_8_C",
+        "Desc_SpaceElevatorPart_9_C"
+      ]
+    },
+    {
+      "phase": 5,
+      "name": "Assembly",
+      "class_names": [
+        "Desc_SpaceElevatorPart_9_C",
+        "Desc_SpaceElevatorPart_10_C",
+        "Desc_SpaceElevatorPart_11_C",
+        "Desc_SpaceElevatorPart_12_C"
+      ]
+    }
+  ]
+}

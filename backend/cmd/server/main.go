@@ -2,19 +2,25 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"factorymate/internal/db"
+	"factorymate/internal/frm"
+	"factorymate/internal/poller"
 
 	"github.com/go-chi/chi/v5"
 	_ "golang.org/x/crypto/bcrypt"
 )
 
 func main() {
-	ctx := context.Background()
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
 
 	database, err := db.Open(db.DefaultPath())
 	if err != nil {
@@ -25,6 +31,13 @@ func main() {
 	if err := db.Init(ctx, database, db.SeedConfigFromEnv()); err != nil {
 		log.Fatalf("database init: %v", err)
 	}
+
+	phases, err := poller.LoadElevatorPhases(poller.DefaultElevatorPhasesPath())
+	if err != nil {
+		log.Fatalf("load elevator phases: %v", err)
+	}
+
+	go runPoller(ctx, database, phases)
 
 	port := os.Getenv("PORT")
 	if port == "" {
@@ -39,6 +52,24 @@ func main() {
 	if err := http.ListenAndServe(addr, r); err != nil {
 		log.Fatal(err)
 	}
+}
+
+func runPoller(ctx context.Context, database *sql.DB, phases *poller.ElevatorPhases) {
+	fetcher := &settingsFetcher{db: database}
+	p := poller.New(database, fetcher, phases, nil)
+	p.Run(ctx)
+}
+
+type settingsFetcher struct {
+	db *sql.DB
+}
+
+func (f *settingsFetcher) GetFast(ctx context.Context) frm.FastPollResult {
+	client, err := poller.FRMClientFromSettings(ctx, f.db)
+	if err != nil {
+		return frm.FastPollResult{Errors: map[string]error{"config": err}}
+	}
+	return client.GetFast(ctx)
 }
 
 func healthz(w http.ResponseWriter, r *http.Request) {
