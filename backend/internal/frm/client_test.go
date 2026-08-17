@@ -321,3 +321,40 @@ func splitHostPort(addr string) (string, int, error) {
 	}
 	return host, port, nil
 }
+
+func TestParseFixture_getModList(t *testing.T) {
+	var mods []Mod
+	if err := json.Unmarshal(readFixture(t, "getModList.json"), &mods); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if len(mods) != 5 {
+		t.Fatalf("mods count = %d, want 5", len(mods))
+	}
+}
+
+func TestClient_GetModList(t *testing.T) {
+	body := readFixture(t, "getModList.json")
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/getModList" {
+			http.NotFound(w, r)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write(body)
+	}))
+	defer srv.Close()
+
+	host, port, err := splitHostPort(srv.Listener.Addr().String())
+	if err != nil {
+		t.Fatalf("split host port: %v", err)
+	}
+
+	client := NewClient(Config{Host: host, Port: port})
+	mods, err := client.GetModList(context.Background())
+	if err != nil {
+		t.Fatalf("GetModList: %v", err)
+	}
+	if len(mods) != 5 {
+		t.Fatalf("mods count = %d, want 5", len(mods))
+	}
+}

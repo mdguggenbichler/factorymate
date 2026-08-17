@@ -159,6 +159,19 @@ func (v Vehicle) Fuels() []Item {
 	return v.FuelInventory
 }
 
+// Mod is a FRM getModList entry (§8.5).
+type Mod struct {
+	Name               string `json:"Name"`
+	SMRName            string `json:"SMRName"`
+	Version            string `json:"Version"`
+	Description        string `json:"Description"`
+	DocsURL            string `json:"DocsURL"`
+	SupportURL         string `json:"SupportURL"`
+	CreatedBy          string `json:"CreatedBy"`
+	RemoteVersionRange string `json:"RemoteVersionRange"`
+	RequiredOnRemote   bool   `json:"RequiredOnRemote"`
+}
+
 // --- Session info ---
 
 // SessionInfo is the FRM getSessionInfo response (subset used by FactoryMate).

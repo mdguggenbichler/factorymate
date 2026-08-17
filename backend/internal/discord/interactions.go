@@ -121,6 +121,10 @@ func (b *Bot) handleApplicationCommand(ctx context.Context, s *discordgo.Session
 			}
 		}
 		b.handleSetPlayer(ctx, s, i, externalID, user.ID, name)
+	case "connection":
+		b.handleConnectionCommand(ctx, s, i, data, externalID, perms, state)
+	case "mods":
+		b.handleModsCommand(ctx, s, i, data, externalID, perms, state)
 	case "registration":
 		if len(data.Options) == 0 || data.Options[0].Name != "auto-approve" {
 			respondEphemeral(s, i, "Unknown subcommand.")

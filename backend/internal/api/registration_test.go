@@ -8,7 +8,6 @@ import (
 	"strconv"
 	"testing"
 
-	"factorymate/internal/api"
 	"factorymate/internal/auth"
 	"factorymate/internal/db"
 	"factorymate/internal/notify"
@@ -31,7 +30,7 @@ func TestRegistrationAPI(t *testing.T) {
 
 	svc := auth.NewService(database)
 	regSvc := registration.NewService(database, svc)
-	handler := api.NewHandlerWithDiscordSession(database, svc, regSvc, notify.NewMockDiscordSession())
+	handler := newTestHandler(database, svc, regSvc, notify.NewMockDiscordSession())
 	router := newTestRouter(handler, svc)
 	adminCookie := setupAdmin(t, router)
 
@@ -96,7 +95,7 @@ func TestUnmappedPlayersEndpoint(t *testing.T) {
 
 	svc := auth.NewService(database)
 	regSvc := registration.NewService(database, svc)
-	handler := api.NewHandlerWithDiscordSession(database, svc, regSvc, notify.NewMockDiscordSession())
+	handler := newTestHandler(database, svc, regSvc, notify.NewMockDiscordSession())
 	router := newTestRouter(handler, svc)
 	adminCookie := setupAdmin(t, router)
 
@@ -127,7 +126,7 @@ func TestUpdateUserExternalUnlink(t *testing.T) {
 
 	svc := auth.NewService(database)
 	regSvc := registration.NewService(database, svc)
-	handler := api.NewHandlerWithDiscordSession(database, svc, regSvc, notify.NewMockDiscordSession())
+	handler := newTestHandler(database, svc, regSvc, notify.NewMockDiscordSession())
 	router := newTestRouter(handler, svc)
 	adminCookie := setupAdmin(t, router)
 
@@ -177,7 +176,7 @@ func TestPendingApprovalBlocksLoginAPI(t *testing.T) {
 
 	svc := auth.NewService(database)
 	regSvc := registration.NewService(database, svc)
-	router := newTestRouter(api.NewHandlerWithDiscordSession(database, svc, regSvc, notify.NewMockDiscordSession()), svc)
+	router := newTestRouter(newTestHandler(database, svc, regSvc, notify.NewMockDiscordSession()), svc)
 
 	_, err := regSvc.Register(ctx, registration.RegisterParams{
 		Username: "blocked",

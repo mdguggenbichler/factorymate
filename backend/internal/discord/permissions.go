@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"factorymate/internal/auth"
+	"factorymate/internal/connection"
 )
 
 // Command groups used in role_mappings_json bot_commands arrays (§10.2).
@@ -194,7 +195,7 @@ func LogBotCommand(ctx context.Context, db *sql.DB, externalUserID, commandName 
 	_, err := db.ExecContext(ctx, `
 		INSERT INTO bot_command_log (external_platform, external_user_id, command_name, success, detail, created_at)
 		VALUES ('discord', ?, ?, ?, ?, ?)`,
-		externalUserID, commandName, success, detail, time.Now().UTC().Format(time.RFC3339),
+		externalUserID, commandName, success, connection.RedactForLog(detail), time.Now().UTC().Format(time.RFC3339),
 	)
 	if err != nil {
 		return fmt.Errorf("insert bot_command_log: %w", err)

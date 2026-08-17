@@ -14,9 +14,11 @@ import (
 
 	"factorymate/internal/api"
 	"factorymate/internal/auth"
+	"factorymate/internal/connection"
 	"factorymate/internal/db"
 	"factorymate/internal/discord"
 	"factorymate/internal/frm"
+	"factorymate/internal/mods"
 	"factorymate/internal/notify"
 	"factorymate/internal/poller"
 	"factorymate/internal/registration"
@@ -45,8 +47,11 @@ func main() {
 
 	authSvc := auth.NewService(database)
 	regSvc := registration.NewService(database, authSvc)
+	modsSvc := mods.NewService(database, func(ctx context.Context) (*frm.Client, error) {
+		return poller.FRMClientFromSettings(ctx, database)
+	})
 
-	bot, err := discord.NewBot(database, regSvc)
+	bot, err := discord.NewBot(database, regSvc, nil, modsSvc)
 	if err != nil {
 		log.Fatalf("discord bot: %v", err)
 	}
@@ -58,6 +63,9 @@ func main() {
 	if err := bot.Start(ctx); err != nil {
 		log.Fatalf("discord bot start: %v", err)
 	}
+
+	connSvc := connection.NewService(database, bot)
+	bot.SetConnection(connSvc)
 
 	go runPoller(ctx, database, phases, bot)
 	go runSlowPoller(ctx, database)
@@ -71,7 +79,7 @@ func main() {
 	r := chi.NewRouter()
 	r.Get("/healthz", healthz)
 	r.Route("/api", func(r chi.Router) {
-		api.NewHandler(database, authSvc, bot, regSvc).Mount(r)
+		api.NewHandler(database, authSvc, bot, regSvc, connSvc, modsSvc).Mount(r)
 	})
 
 	addr := ":" + port

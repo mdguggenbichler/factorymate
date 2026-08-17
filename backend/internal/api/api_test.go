@@ -14,7 +14,10 @@ import (
 
 	"factorymate/internal/api"
 	"factorymate/internal/auth"
+	"factorymate/internal/connection"
 	"factorymate/internal/db"
+	"factorymate/internal/frm"
+	"factorymate/internal/mods"
 	"factorymate/internal/notify"
 	"factorymate/internal/registration"
 )
@@ -53,7 +56,7 @@ func TestReadEndpoints(t *testing.T) {
 
 	svc := auth.NewService(database)
 	regSvc := registration.NewService(database, svc)
-	handler := api.NewHandlerWithDiscordSession(database, svc, regSvc, notify.NewMockDiscordSession())
+	handler := newTestHandler(database, svc, regSvc, notify.NewMockDiscordSession())
 	router := newTestRouter(handler, svc)
 
 	setupAdmin(t, router)
@@ -487,7 +490,7 @@ func TestAdminEndpoints(t *testing.T) {
 	svc := auth.NewService(database)
 	regSvc := registration.NewService(database, svc)
 	mockDiscord := notify.NewMockDiscordSession()
-	handler := api.NewHandlerWithDiscordSession(database, svc, regSvc, mockDiscord)
+	handler := newTestHandler(database, svc, regSvc, mockDiscord)
 	router := newTestRouter(handler, svc)
 	adminCookie := setupAdmin(t, router)
 	seedAdminAPIFixtures(t, ctx, database)
@@ -1159,6 +1162,18 @@ func seedAdminAPIFixtures(t *testing.T, ctx context.Context, database *sql.DB) {
 	if err != nil {
 		t.Fatalf("seed elevator unknown log: %v", err)
 	}
+}
+
+func newTestHandler(database *sql.DB, svc *auth.Service, regSvc *registration.Service, session notify.DiscordSession) *api.Handler {
+	if session == nil {
+		session = notify.NewMockDiscordSession()
+	}
+	provider := notify.NewDiscordProvider(session)
+	connSvc := connection.NewService(database, provider)
+	modsSvc := mods.NewService(database, func(ctx context.Context) (*frm.Client, error) {
+		return frm.NewClient(frm.Config{Host: "127.0.0.1", Port: 1}), nil
+	})
+	return api.NewHandlerWithDiscordSession(database, svc, regSvc, connSvc, modsSvc, session)
 }
 
 func newMockFRMServer(t *testing.T, responses map[string][]byte) *httptest.Server {

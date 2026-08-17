@@ -33,7 +33,7 @@ func TestAuthFlow(t *testing.T) {
 
 	svc := auth.NewService(database)
 	regSvc := registration.NewService(database, svc)
-	handler := api.NewHandlerWithDiscordSession(database, svc, regSvc, notify.NewMockDiscordSession())
+	handler := newTestHandler(database, svc, regSvc, notify.NewMockDiscordSession())
 	router := newTestRouter(handler, svc)
 
 	t.Run("setup once", func(t *testing.T) {

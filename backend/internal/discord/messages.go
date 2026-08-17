@@ -41,7 +41,7 @@ func formatRegistrationApprovedMessage(username, role, playerLine string) string
 }
 
 func formatWelcomeApprovedDM(username string) string {
-	return fmt.Sprintf("✅ **Registration approved!**\n\nWelcome to FactoryMate.\nDashboard: %s\nUsername: %s\n\nUse /connection for join details and /mods for the mod list.", PublicURL(), username)
+	return fmt.Sprintf("✅ **Registration approved!**\n\nWelcome to FactoryMate.\nDashboard: %s\nUsername: %s", PublicURL(), username)
 }
 
 func formatRegistrationDeclinedDM(comment string) string {

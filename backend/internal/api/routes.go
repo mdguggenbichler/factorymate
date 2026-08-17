@@ -40,8 +40,15 @@ func (h *Handler) Mount(r chi.Router) {
 			r.Get("/vehicles", h.GetVehicles)
 			r.Get("/elevator", h.GetElevator)
 
+			r.Get("/mods", h.GetMods)
+			r.Get("/mods/smmprofile", h.GetModsSMMProfile)
+			r.Get("/connection-details", h.GetConnectionDetails)
+
 			r.Group(func(r chi.Router) {
 				r.Use(h.auth.RequireAdmin(writeError))
+
+				r.Post("/mods/refresh", h.PostModsRefresh)
+				r.Put("/connection-details", h.PutConnectionDetails)
 
 				r.Get("/elevator/unknown-log", h.GetElevatorUnknownLog)
 				r.Post("/elevator/unknown-log/{id}/resolve", h.ResolveElevatorUnknownLog)

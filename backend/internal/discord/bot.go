@@ -9,6 +9,8 @@ import (
 	"sort"
 	"strings"
 
+	"factorymate/internal/connection"
+	"factorymate/internal/mods"
 	"factorymate/internal/registration"
 
 	"github.com/bwmarrin/discordgo"
@@ -33,12 +35,20 @@ type Bot struct {
 	token        string
 	session      *discordgo.Session
 	registration *registration.Service
+	connection   *connection.Service
+	mods         *mods.Service
 }
 
 // NewBot constructs a bot from env. token may be empty (soft dependency).
-func NewBot(db *sql.DB, regSvc *registration.Service) (*Bot, error) {
+func NewBot(db *sql.DB, regSvc *registration.Service, connSvc *connection.Service, modsSvc *mods.Service) (*Bot, error) {
 	token := strings.TrimSpace(os.Getenv("DISCORD_BOT_TOKEN"))
-	return &Bot{db: db, token: token, registration: regSvc}, nil
+	return &Bot{
+		db:           db,
+		token:        token,
+		registration: regSvc,
+		connection:   connSvc,
+		mods:         modsSvc,
+	}, nil
 }
 
 // Connected reports whether the gateway session is open.

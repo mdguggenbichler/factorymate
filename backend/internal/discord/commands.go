@@ -62,6 +62,39 @@ func (b *Bot) registerSlashCommands(ctx context.Context) error {
 			Description: "Show your FactoryMate link status",
 		},
 		{
+			Name:        "connection",
+			Description: "Get or set game join connection details",
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Type:        discordgo.ApplicationCommandOptionSubCommand,
+					Name:        "set",
+					Description: "Update join details and broadcast to players (admin)",
+					Options: []*discordgo.ApplicationCommandOption{
+						{Type: discordgo.ApplicationCommandOptionString, Name: "host", Description: "Game server host", Required: true},
+						{Type: discordgo.ApplicationCommandOptionInteger, Name: "port", Description: "Game server port", Required: true},
+						{Type: discordgo.ApplicationCommandOptionString, Name: "password", Description: "Client join password", Required: false},
+						{Type: discordgo.ApplicationCommandOptionString, Name: "notes", Description: "Optional notes", Required: false},
+					},
+				},
+			},
+		},
+		{
+			Name:        "mods",
+			Description: "Server mod list and SMM profile export",
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Type:        discordgo.ApplicationCommandOptionSubCommand,
+					Name:        "list",
+					Description: "Show full mod list (ephemeral)",
+				},
+				{
+					Type:        discordgo.ApplicationCommandOptionSubCommand,
+					Name:        "export",
+					Description: "Download SMM profile file",
+				},
+			},
+		},
+		{
 			Name:        "help",
 			Description: "FactoryMate quick start and command list",
 		},
