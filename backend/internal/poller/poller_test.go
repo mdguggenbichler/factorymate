@@ -4,8 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
-	"net/http"
-	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"testing"
@@ -185,14 +183,8 @@ func TestDispatchWiredInPollLoop(t *testing.T) {
 		t.Fatalf("init: %v", err)
 	}
 
-	var webhookCalls int
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		webhookCalls++
-		w.WriteHeader(http.StatusNoContent)
-	}))
-	defer srv.Close()
-
-	cfgJSON, _ := json.Marshal(notify.DiscordConfig{WebhookURL: srv.URL})
+	mock := notify.NewMockDiscordSession()
+	cfgJSON, _ := json.Marshal(notify.DiscordConfig{ChannelID: "channel-1"})
 	res, err := database.ExecContext(ctx, `
 		INSERT INTO notification_targets (name, provider_type, config_json, enabled, created_at)
 		VALUES (?, ?, ?, 1, ?)`,
@@ -209,7 +201,7 @@ func TestDispatchWiredInPollLoop(t *testing.T) {
 
 	phases, _ := poller.LoadElevatorPhases("data/elevator_phases.json")
 	dispatcher := notify.NewDispatcher(database, map[string]notify.Provider{
-		"discord": notify.NewDiscordProvider(),
+		"discord": notify.NewDiscordProvider(mock),
 	})
 
 	fetcher := &sequenceFetcher{
@@ -230,8 +222,8 @@ func TestDispatchWiredInPollLoop(t *testing.T) {
 		t.Fatalf("poll 2: %v", err)
 	}
 
-	if webhookCalls != 1 {
-		t.Fatalf("webhook calls = %d, want 1", webhookCalls)
+	if len(mock.ChannelCalls) != 1 {
+		t.Fatalf("discord sends = %d, want 1", len(mock.ChannelCalls))
 	}
 
 	var logCount int

@@ -152,7 +152,9 @@ func assertTables(t *testing.T, ctx context.Context, database *sql.DB) {
 	t.Helper()
 
 	want := []string{
+		"app_setting_kv",
 		"app_settings",
+		"bot_command_log",
 		"circuit_snapshots",
 		"circuit_state",
 		"doggo_state",
@@ -171,6 +173,7 @@ func assertTables(t *testing.T, ctx context.Context, database *sql.DB) {
 		"power_circuit_events",
 		"prod_stats_state",
 		"production_snapshots",
+		"registration_audit_log",
 		"research_node_state",
 		"resource_sink_snapshots",
 		"resource_sink_state",

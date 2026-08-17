@@ -9,4 +9,5 @@ var (
 	ErrSessionNotFound      = errors.New("session not found")
 	ErrForbidden            = errors.New("forbidden")
 	ErrLastAdmin            = errors.New("cannot remove the last admin")
+	ErrPendingApproval      = errors.New("account pending approval")
 )

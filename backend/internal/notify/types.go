@@ -39,3 +39,9 @@ type Provider interface {
 	Type() string
 	Send(ctx context.Context, target NotificationTarget, msg RenderedMessage) error
 }
+
+// DirectMessageProvider supports outbound DMs (discord-bot-plan Appendix F).
+type DirectMessageProvider interface {
+	Provider
+	SendDirect(ctx context.Context, platform, externalUserID string, msg RenderedMessage) error
+}

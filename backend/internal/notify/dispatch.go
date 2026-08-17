@@ -214,6 +214,7 @@ func formatDispatchTimestamp(t time.Time) string {
 }
 
 func renderedPreview(providerType string, rendered template.RenderedMessage) string {
+	var preview string
 	if providerType == "discord" && rendered.Embed != nil {
 		parts := make([]string, 0, 2)
 		if rendered.Embed.Title != "" {
@@ -222,9 +223,11 @@ func renderedPreview(providerType string, rendered template.RenderedMessage) str
 		if rendered.Embed.Description != "" {
 			parts = append(parts, rendered.Embed.Description)
 		}
-		return strings.Join(parts, " — ")
+		preview = strings.Join(parts, " — ")
+	} else {
+		preview = rendered.Plain
 	}
-	return rendered.Plain
+	return RedactForLog(preview)
 }
 
 func (d *Dispatcher) recordLog(ctx context.Context, messageTypeKey string, targetID int64, preview string, success bool, sendErr error) {

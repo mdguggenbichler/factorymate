@@ -18,9 +18,8 @@ import (
 )
 
 type discordTargetConfig struct {
-	WebhookURL        string `json:"webhook_url"`
-	UsernameOverride  string `json:"username_override,omitempty"`
-	AvatarURLOverride string `json:"avatar_url_override,omitempty"`
+	ChannelID string `json:"channel_id"`
+	ThreadID  string `json:"thread_id,omitempty"`
 }
 
 type notificationTargetRequest struct {
@@ -117,8 +116,8 @@ func (h *Handler) CreateNotificationTarget(w http.ResponseWriter, r *http.Reques
 		writeError(w, r, http.StatusBadRequest, "unsupported provider type")
 		return
 	}
-	if strings.TrimSpace(req.Config.WebhookURL) == "" {
-		writeError(w, r, http.StatusBadRequest, "webhook_url is required")
+	if strings.TrimSpace(req.Config.ChannelID) == "" {
+		writeError(w, r, http.StatusBadRequest, "channel_id is required")
 		return
 	}
 	enabled := true
@@ -197,14 +196,11 @@ func (h *Handler) UpdateNotificationTarget(w http.ResponseWriter, r *http.Reques
 
 	var existing discordTargetConfig
 	_ = json.Unmarshal([]byte(configJSON), &existing)
-	if strings.TrimSpace(req.Config.WebhookURL) != "" {
-		existing.WebhookURL = req.Config.WebhookURL
+	if strings.TrimSpace(req.Config.ChannelID) != "" {
+		existing.ChannelID = req.Config.ChannelID
 	}
-	if req.Config.UsernameOverride != "" {
-		existing.UsernameOverride = req.Config.UsernameOverride
-	}
-	if req.Config.AvatarURLOverride != "" {
-		existing.AvatarURLOverride = req.Config.AvatarURLOverride
+	if req.Config.ThreadID != "" {
+		existing.ThreadID = req.Config.ThreadID
 	}
 	newConfigJSON, err := json.Marshal(existing)
 	if err != nil {

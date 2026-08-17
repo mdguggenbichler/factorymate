@@ -14,6 +14,7 @@ import (
 	"factorymate/internal/api"
 	"factorymate/internal/auth"
 	"factorymate/internal/db"
+	"factorymate/internal/notify"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -30,7 +31,7 @@ func TestAuthFlow(t *testing.T) {
 	}
 
 	svc := auth.NewService(database)
-	handler := api.NewHandler(database, svc)
+	handler := api.NewHandlerWithDiscordSession(database, svc, notify.NewMockDiscordSession())
 	router := newTestRouter(handler, svc)
 
 	t.Run("setup once", func(t *testing.T) {

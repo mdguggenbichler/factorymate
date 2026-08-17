@@ -77,6 +77,10 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 			writeError(w, r, http.StatusUnauthorized, "invalid credentials")
 			return
 		}
+		if errors.Is(err, auth.ErrPendingApproval) {
+			writeError(w, r, http.StatusForbidden, "account pending approval")
+			return
+		}
 		writeError(w, r, http.StatusInternalServerError, "internal error")
 		return
 	}

@@ -15,6 +15,7 @@ import (
 	"factorymate/internal/api"
 	"factorymate/internal/auth"
 	"factorymate/internal/db"
+	"factorymate/internal/notify"
 )
 
 func TestHealthz(t *testing.T) {
@@ -50,7 +51,7 @@ func TestReadEndpoints(t *testing.T) {
 	seedAPIFixtures(t, ctx, database)
 
 	svc := auth.NewService(database)
-	handler := api.NewHandler(database, svc)
+	handler := api.NewHandlerWithDiscordSession(database, svc, notify.NewMockDiscordSession())
 	router := newTestRouter(handler, svc)
 
 	setupAdmin(t, router)
@@ -482,7 +483,8 @@ func TestAdminEndpoints(t *testing.T) {
 	}
 
 	svc := auth.NewService(database)
-	handler := api.NewHandler(database, svc)
+	mockDiscord := notify.NewMockDiscordSession()
+	handler := api.NewHandlerWithDiscordSession(database, svc, mockDiscord)
 	router := newTestRouter(handler, svc)
 	adminCookie := setupAdmin(t, router)
 	seedAdminAPIFixtures(t, ctx, database)
@@ -532,18 +534,11 @@ func TestAdminEndpoints(t *testing.T) {
 	})
 
 	t.Run("notification target CRUD and test send", func(t *testing.T) {
-		var gotWebhook bool
-		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			gotWebhook = true
-			w.WriteHeader(http.StatusNoContent)
-		}))
-		defer srv.Close()
-
 		createResp := postJSONWithCookie(t, router, "/api/notification-targets", adminCookie, map[string]any{
 			"name":         "Main Discord",
 			"providerType": "discord",
 			"config": map[string]string{
-				"webhook_url": srv.URL,
+				"channel_id": "123456789",
 			},
 			"enabled": true,
 		})
@@ -591,8 +586,8 @@ func TestAdminEndpoints(t *testing.T) {
 		if testResp.Code != http.StatusNoContent {
 			t.Fatalf("test send status = %d body=%s", testResp.Code, testResp.Body.String())
 		}
-		if !gotWebhook {
-			t.Fatal("expected webhook to be called")
+		if len(mockDiscord.ChannelCalls) == 0 {
+			t.Fatal("expected discord send to be called")
 		}
 
 		delReq := httptest.NewRequest(http.MethodDelete, "/api/notification-targets/1", nil)
@@ -605,16 +600,11 @@ func TestAdminEndpoints(t *testing.T) {
 	})
 
 	t.Run("message types list template reset targets and validation", func(t *testing.T) {
-		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.WriteHeader(http.StatusNoContent)
-		}))
-		defer srv.Close()
-
 		createResp := postJSONWithCookie(t, router, "/api/notification-targets", adminCookie, map[string]any{
 			"name":         "Alerts",
 			"providerType": "discord",
 			"config": map[string]string{
-				"webhook_url": srv.URL,
+				"channel_id": "987654321",
 			},
 			"enabled": true,
 		})
@@ -854,29 +844,13 @@ func TestAdminEndpoints(t *testing.T) {
 	})
 
 	t.Run("message type template test send", func(t *testing.T) {
-		var gotTitle string
-		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			var payload struct {
-				Embeds []struct {
-					Title string `json:"title"`
-				} `json:"embeds"`
-			}
-			if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
-				t.Fatalf("decode webhook: %v", err)
-			}
-			if len(payload.Embeds) != 1 {
-				t.Fatalf("embeds len = %d, want 1", len(payload.Embeds))
-			}
-			gotTitle = payload.Embeds[0].Title
-			w.WriteHeader(http.StatusNoContent)
-		}))
-		defer srv.Close()
+		beforeCalls := len(mockDiscord.ChannelCalls)
 
 		createResp := postJSONWithCookie(t, router, "/api/notification-targets", adminCookie, map[string]any{
 			"name":         "Template Test",
 			"providerType": "discord",
 			"config": map[string]string{
-				"webhook_url": srv.URL,
+				"channel_id": "template-channel",
 			},
 			"enabled": true,
 		})
@@ -907,8 +881,12 @@ func TestAdminEndpoints(t *testing.T) {
 		if testResp.StatusCode != http.StatusNoContent {
 			t.Fatalf("template test status = %d body=%s", testResp.StatusCode, readBody(t, testResp))
 		}
+		if len(mockDiscord.ChannelCalls) <= beforeCalls {
+			t.Fatal("expected discord send for template test")
+		}
+		gotTitle := mockDiscord.ChannelCalls[len(mockDiscord.ChannelCalls)-1].Message.Embeds[0].Title
 		if gotTitle != testTitle {
-			t.Fatalf("webhook title = %q, want %q", gotTitle, testTitle)
+			t.Fatalf("embed title = %q, want %q", gotTitle, testTitle)
 		}
 
 		var logCount int

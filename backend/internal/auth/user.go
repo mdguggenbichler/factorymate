@@ -46,11 +46,11 @@ func (s *Service) CreateUser(ctx context.Context, username, password string, rol
 
 func (s *Service) Authenticate(ctx context.Context, username, password string) (User, error) {
 	var user User
-	var hash string
+	var hash, status string
 	err := s.db.QueryRowContext(ctx, `
-		SELECT id, username, password_hash, role FROM users WHERE username = ?`,
+		SELECT id, username, password_hash, role, status FROM users WHERE username = ?`,
 		username,
-	).Scan(&user.ID, &user.Username, &hash, &user.Role)
+	).Scan(&user.ID, &user.Username, &hash, &user.Role, &status)
 	if err == sql.ErrNoRows {
 		return User{}, ErrInvalidCredentials
 	}
@@ -60,26 +60,30 @@ func (s *Service) Authenticate(ctx context.Context, username, password string) (
 	if !CheckPassword(hash, password) {
 		return User{}, ErrInvalidCredentials
 	}
+	user.Status = status
+	if user.Status == StatusPendingApproval {
+		return User{}, ErrPendingApproval
+	}
 	return user, nil
 }
 
 func (s *Service) GetUserByID(ctx context.Context, id int64) (User, error) {
 	var user User
 	var playerID, playerName sql.NullString
-	var createdAt string
+	var createdAt, status string
 	err := s.db.QueryRowContext(ctx, `
-		SELECT u.id, u.username, u.role, u.created_at, u.player_id, p.name
+		SELECT u.id, u.username, u.role, u.created_at, u.status, u.player_id, p.name
 		FROM users u
 		LEFT JOIN player_state p ON p.player_id = u.player_id
 		WHERE u.id = ?`, id,
-	).Scan(&user.ID, &user.Username, &user.Role, &createdAt, &playerID, &playerName)
+	).Scan(&user.ID, &user.Username, &user.Role, &createdAt, &status, &playerID, &playerName)
 	if err == sql.ErrNoRows {
 		return User{}, ErrUserNotFound
 	}
 	if err != nil {
 		return User{}, fmt.Errorf("query user: %w", err)
 	}
-	user.Status = "active"
+	user.Status = status
 	user.CreatedAt = createdAt
 	if playerID.Valid {
 		id := playerID.String
@@ -94,7 +98,7 @@ func (s *Service) GetUserByID(ctx context.Context, id int64) (User, error) {
 
 func (s *Service) ListUsers(ctx context.Context) ([]User, error) {
 	rows, err := s.db.QueryContext(ctx, `
-		SELECT u.id, u.username, u.role, u.created_at, u.player_id, p.name
+		SELECT u.id, u.username, u.role, u.created_at, u.status, u.player_id, p.name
 		FROM users u
 		LEFT JOIN player_state p ON p.player_id = u.player_id
 		ORDER BY u.username`)
@@ -107,11 +111,11 @@ func (s *Service) ListUsers(ctx context.Context) ([]User, error) {
 	for rows.Next() {
 		var user User
 		var playerID, playerName sql.NullString
-		var createdAt string
-		if err := rows.Scan(&user.ID, &user.Username, &user.Role, &createdAt, &playerID, &playerName); err != nil {
+		var createdAt, status string
+		if err := rows.Scan(&user.ID, &user.Username, &user.Role, &createdAt, &status, &playerID, &playerName); err != nil {
 			return nil, fmt.Errorf("scan user: %w", err)
 		}
-		user.Status = "active"
+		user.Status = status
 		user.CreatedAt = createdAt
 		if playerID.Valid {
 			id := playerID.String

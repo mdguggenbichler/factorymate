@@ -18,6 +18,11 @@ const (
 	RoleViewer Role = "viewer"
 )
 
+const (
+	StatusActive          = "active"
+	StatusPendingApproval = "pending_approval"
+)
+
 type User struct {
 	ID       int64  `json:"id"`
 	Username string `json:"username"`
