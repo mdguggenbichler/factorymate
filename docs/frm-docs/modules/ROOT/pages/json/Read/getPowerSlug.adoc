@@ -1,0 +1,79 @@
+:url-repo: https://www.github.com/porisius/FicsitRemoteMonitoring
+:depth:
+
+= Get Power Slug
+
+Get a list of all power slugs.
+
+== URL
+
+`GET http://localhost:8080/getPowerSlug`
+
+include::../_responseBody.adoc[]
+
+| ID | String | Unique ID of the Power Slug.
+| Name | String | Name of the Power Slug.
+| ClassName | String | Class Name of the Power Slug.
+
+{set:key-name:location}
+include::../Models/_location.adoc[]
+
+include::../Models/_features.adoc[]
+|===
+
+== Example Response
+[source,json]
+-----------------
+[
+  {
+    "ID": "BP_Crystal27_27",
+    "Name": "Blue Power Slug",
+    "ClassName": "BP_Crystal_C",
+    "location": {
+      "x": -54543.35546875,
+      "y": 270830.1875,
+      "z": -1451.72412109375,
+      "rotation": 232.89628601074219
+    },
+    "features": {
+      "properties": {
+        "name": "Blue Power Slug",
+        "type": "Power Slug"
+      },
+      "geometry": {
+        "coordinates": {
+          "x": -54543.35546875,
+          "y": 270830.1875,
+          "z": -1451.72412109375
+        },
+        "type": "Point"
+      }
+    }
+  },
+  {
+    "ID": "BP_Crystal3_3",
+    "Name": "Blue Power Slug",
+    "ClassName": "BP_Crystal_C",
+    "location": {
+      "x": -64958.64453125,
+      "y": 268214,
+      "z": -3016.97998046875,
+      "rotation": 115.72634887695312
+    },
+    "features": {
+      "properties": {
+        "name": "Blue Power Slug",
+        "type": "Power Slug"
+      },
+      "geometry": {
+        "coordinates": {
+          "x": -64958.64453125,
+          "y": 268214,
+          "z": -3016.97998046875
+        },
+        "type": "Point"
+      }
+    }
+  }
+]
+-----------------

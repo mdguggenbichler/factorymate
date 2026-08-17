@@ -1,0 +1,8 @@
+:url-repo: https://www.github.com/porisius/FicsitRemoteMonitoring
+:depth:
+
+= Get All
+
+== Warning: This endpoint has been retired due to the number of endpoints it would now serve. This caused instability due to some functions needing the Unreal Engine Game Thread.
+
+== Please consult the other endpoints for the information needed.

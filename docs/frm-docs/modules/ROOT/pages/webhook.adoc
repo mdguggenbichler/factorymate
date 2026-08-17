@@ -1,0 +1,178 @@
+= Webhook Notifications
+
+:url-repo: https://github.com/porisius/FicsitRemoteMonitoring
+
+Webhook notifications are a powerful way to get real-time updates on various in-game events. These notifications can be sent to platforms like Discord, Slack, or any service that supports webhooks. The mod provides a set of default JSON templates for different types of notifications, which can be customized to fit your needs.
+
+A standard set of JSON files is located at %SatisfactoryRootFolder%\FactoryGame\Mods\FicsitRemoteMonitoring\JSON. You have set your own custom set of JSON files placed anywhere on your system so that they are not tampered with. Please note the below variables for each notification system. More are planned, as well more data to be used in notifications.
+
+Flavor text is provided as a randomizer to keep Webhook notifications from being bland. The FlavorText.json file allows for setting up different situations with random flavor.
+
+Customized JSON files can be made as long as they are valid JSON files. It is recommended to keep these custom files in an unique location not in the game files for save keeping. Configurations for file locations are located in the Mod Configuration page. All JSON files are completely open to customization, but the flavor text randomizer does use the arrays stated in the default file.
+
+Discord Webhooks can be done with text. I strongly recommend this guide for assistance in setting them up. +
+https://birdie0.github.io/discord-webhooks-guide/index.html
+
+
+Battery Notification Variables +
+Action: Power operational, but on backup power. Also appears on each battery remaining trigger. +
+Default File: UPSPower.json
+[cols="2,4"]
+|===
+|Variable Name |Purpose/Data:
+
+|\{CircuitID}
+|Circuit ID Number
+
+|\{TimeEmpty}
+|Time in HH:MM:SS until battery(ies) depletion
+
+|\{BattPercent}
+|% of battery charge remaining
+
+|\{Flavor}
+|Randomized Flavor Text (Battery/Detrimental)
+
+|===
+'''
+Player Notification Variables +
+Action: Player connected/disconnected notification +
+Default File: PlayerOnline.json / PlayerOffline.json
+[cols="2,4"]
+|===
+|Variable Name |Purpose/Data:
+
+|\{PlayerName}
+|Username (Based on Steam/Epic Username} that connected/disconnected. Note: Non-server logouts by host are not triggered.
+
+|\{Flavor}
+|Randomized Flavor Text (Player/Positive)
+
+|===
+'''
+Power Notification Variables +
+Action: Power fuse has tripped +
+Default File: Outage.json
+[cols="2,4"]
+|===
+|Variable Name |Purpose/Data:
+
+|\{CircuitID}
+|Circuit ID Number
+
+|\{Flavor}
+|Randomized Flavor Text (Power/Detrimental)
+
+|===
+'''
+Research Notification Variables +
+Action: Milestone/M.A.M. Research Completed +
+Default File: Research.json
+[cols="2,4"]
+|===
+|Variable Name |Purpose/Data:
+
+|\{Schematic}
+|Milestone/M.A.M. Research Name
+
+|\{Recipes}
+|Recipes Unlocked
+
+|\{Flavor}
+|Randomized Flavor Text (Research/Positive)
+
+|===
+'''
+Hard Drive Notification Variables +
+Action: Hard Drive Research Completed, but not selected +
+Default File: Schematic.json
+[cols="2,4"]
+|===
+|Variable Name |Purpose/Data:
+
+|\{Schematic}
+|Available schematics found from HDD
+
+|\{Flavor}
+|Randomized Flavor Text (Research/Positive)
+
+|===
+'''
+Doggo Item Notification +
+Action: A lizard doggo has found something +
+Default File: Doggo.json
+[cols="2,4"]
+|===
+|Variable Name |Purpose/Data:
+
+|\{ItemName}
+|Name of Item Found
+
+|\{ItemNum}
+|Quantity of Item Found
+
+|\{FriendName}
+|Lizard Doggo's owner (Future Feature)
+
+|\{Flavor}
+|Randomized Flavor Text (Doggo/Positive)
+
+|===
+'''
+Train Derailment Notification +
+Action: Train has derailed (Warning: Will trigger twice if two trains. WIP: make both trains one notification) +
+Default File: Derail.json
+[cols="2,4"]
+|===
+|Variable Name |Purpose/Data:
+
+|\{TrainName}
+|Name of Train derailed
+
+|\{TrainStation}
+|Name of Train Station the Train was heading to
+
+|\{Flavor}
+|Randomized Flavor Text (Train/Detrimental)
+
+|===
+'''
+Train Error Notification +
+Action: Train has suffered an error +
+Default File: TrainError.json
+Self-Driving Error Types: TrainErrorMessage.json
+[cols="2,4"]
+|===
+|Variable Name |Purpose/Data:
+
+|\{TrainName}
+|Name of Train with error
+
+|\{SelfDriving}
+|Self-Driving Error Type
+
+|\{TrainStation}
+|Name of Train Station the Train was heading to
+
+|\{Flavor}
+|Randomized Flavor Text (Train/Detrimental)
+
+|===
+'''
+Train Stuck/Idle Notification +
+Action: Train has been idle/stuck for configurable amount of time +
+Default File: TrainIdle.json
+[cols="2,4"]
+|===
+|Variable Name |Purpose/Data:
+
+|\{TrainName}
+|Name of Train with error
+
+|\{TrainStation}
+|Name of Train Station the Train was heading to
+
+|\{Flavor}
+|Randomized Flavor Text (Train/Detrimental)
+
+|===

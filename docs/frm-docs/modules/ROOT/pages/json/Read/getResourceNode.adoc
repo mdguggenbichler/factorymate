@@ -1,0 +1,85 @@
+:url-repo: https://www.github.com/porisius/FicsitRemoteMonitoring
+:depth:
+
+= Get Resource Node
+
+Get a list of all resource nodes.
+
+`getResourceNode`: Get a list of all resource nodes. +
+`getResourceDeposit`: Get a list of all resource deposits. +
+`getResourceWell`: Get a list of all resource wells. +
+`getResourceGeyser`: Get a list of all geysers.
+
+== URL
+
+`GET http://localhost:8080/getResourceNode`
+
+include::../_responseBody.adoc[]
+
+| ID | String | Unique ID of the Resource Node.
+| Name | String | Name of the Resource Node.
+| ClassName | String | Class Name of the Resource Node.
+| Purity | String | Purity in a readable format: +
+`Impure` +
+`Normal` +
+`Pure`
+| EnumPurity | String | Enum Purity Value: +
+`RP_Inpure`: Impure +
+`RP_Normal`: Normal +
+`RP_Pure`: Pure +
+`RP_MAX`
+| ResourceForm | String | Resource Form of the Node. +
+`Unknown`: Resource form is unknown. +
+`Invalid`: Invalid resource form. +
+`Solid Core`: Solid resource form. +
+`Liquid Satellite`: TODO. +
+`Gas`: TODO. +
+`Heat`: TODO.
+| NodeType | String | Type of the Node. +
+`Unknown` +
+`Geyser`: TODO. +
+`Fracking Core`: TODO. +
+`Fracking Satellite`: TODO. +
+`Node`: Normal resource node.
+| Exploited | Boolean | Is the resource node occupied?
+
+include::../Models/_features.adoc[]
+
+|===
+
+== Example Response
+[source,json]
+-----------------
+[
+  {
+    "ID": "BP_ResourceNode100",
+    "Name": "Crude Oil",
+    "ClassName": "Desc_LiquidOil_C",
+    "Purity": "Normal",
+    "EnumPurity": "RP_Normal",
+    "ResourceForm": "Liquid",
+    "NodeType": "Node",
+    "Exploited": false,
+    "location": {
+      "x": 178265.375,
+      "y": 206095.640625,
+      "z": -9238.5712890625,
+      "rotation": 123.25028610229492
+    },
+    "features": {
+      "properties": {
+        "name": "Crude Oil",
+        "type": "Resource Node"
+      },
+      "geometry": {
+        "coordinates": {
+          "x": 178265.375,
+          "y": 206095.640625,
+          "z": -9238.5712890625
+        },
+        "type": "Point"
+      }
+    }
+  }
+]
+-----------------

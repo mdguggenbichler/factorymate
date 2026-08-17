@@ -1,0 +1,75 @@
+:url-repo: https://www.github.com/porisius/FicsitRemoteMonitoring
+:depth:
+
+= Get Drone
+
+Gets a list of all drones.
+
+== URL
+
+`GET http://localhost:8080/getDrone`
+
+include::../_responseBody.adoc[]
+
+| ID | String | Unique ID of the Drone.
+| Name | String | Name of the Drone.
+| ClassName | String | ClassName of the Drone.
+
+| HomeStation | String | Station name of the Home Station.
+| PairedStation | String | Station name of the paired Station (None if not set).
+| HasPairedStation | Boolean | Has Drone a paired station?
+| CurrentDestination | String | Current Destination of the drone (No Destination if drone has no destination).
+| FlyingSpeed | String | Current speed of the drone in km/h.
+| MaxSpeed | String | Max speed of the drone in km/h.
+| CurrentFlyingMode | String | Current flying mode of the Drone. +
+- `Unknown`: Unknown mode. +
+- `Flying`: Drone is in starting or landing mode. +
+- `None`: Drone is in idle mode. +
+- `Travelling`: Drone is travelling.
+
+{set:key-name:location}
+{set:key-description:Location details of the Drone.}
+include::../Models/_location.adoc[]
+
+include::../Models/_features.adoc[]
+
+|===
+
+== Example Response
+[source,json]
+-----------------
+[
+  {
+    "ID": "BP_DroneTransport_C_2147415346",
+    "Name": "Drone",
+    "ClassName": "BP_DroneTransport_C",
+    "HomeStation": "Arlanda",
+    "PairedStation": "None",
+    "HasPairedStation": false,
+    "CurrentDestination": "No Destination",
+    "FlyingSpeed": 0,
+    "MaxSpeed": 0,
+    "CurrentFlyingMode": "None",
+    "location": {
+      "x": -48777.9609375,
+      "y": 252677.703125,
+      "z": -3190.923583984375,
+      "rotation": 90
+    },
+    "features": {
+      "properties": {
+        "name": "Drone",
+        "type": "Drone"
+      },
+      "geometry": {
+        "coordinates": {
+          "x": -48777.9609375,
+          "y": 252677.703125,
+          "z": -3190.923583984375
+        },
+        "type": "Point"
+      }
+    }
+  }
+]
+-----------------

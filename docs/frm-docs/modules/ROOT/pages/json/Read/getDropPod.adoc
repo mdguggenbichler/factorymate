@@ -1,0 +1,72 @@
+:url-repo: https://www.github.com/porisius/FicsitRemoteMonitoring
+:depth:
+
+= Get Drop Pod
+
+Gets a list of all drop pods.
+
+== URL
+
+`GET http://localhost:8080/getDropPod`
+
+include::../_responseBody.adoc[]
+
+| ID | String | Unique ID of the Drop Pod.
+
+{set:key-name:location}
+{set:key-description:Location details of the Drop Pod.}
+include::../Models/_location.adoc[]
+
+| Opened | Boolean | Is Drop Pod opened?
+| Looted | Boolean | Is Drop Pod looted?
+| CostType | String | Type of cost required to open the Drop Pod.
+// inventory items
+| RequiredItem | Object | Required Item to open the Drop Pod.
+include::../Models/_inventoryItem.adoc[]
+
+| RequiredPower | Integer | Required Power to open the Drop Pod.
+
+// features
+include::../Models/_features.adoc[]
+
+|===
+
+== Example Response
+[source,json]
+-----------------
+[
+  {
+    "ID": "BP_DropPod14_389",
+    "location": {
+      "x": -43144,
+      "y": 145820,
+      "z": 7472,
+      "rotation": 90
+    },
+    "Opened": false,
+    "Looted": false,
+    "CostType": "Item",
+    "RequiredItem": {
+      "Name": "Modular Frame",
+      "ClassName": "Desc_ModularFrame_C",
+      "Amount": 5,
+      "MaxAmount": 50
+    },
+    "RequiredPower": 0,
+    "features": {
+      "properties": {
+        "name": "Drop Pod",
+        "type": "Drop Pod"
+      },
+      "geometry": {
+        "coordinates": {
+          "x": -43144,
+          "y": 145820,
+          "z": 7472
+        },
+        "type": "Point"
+      }
+    }
+  }
+]
+-----------------

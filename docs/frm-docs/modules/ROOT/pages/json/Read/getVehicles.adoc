@@ -1,0 +1,109 @@
+:url-repo: https://www.github.com/porisius/FicsitRemoteMonitoring
+:depth:
+
+= Get Vehicles
+
+Gets a list of all vehicles (explorers, tractors, trucks, factory carts, etc.).
+
+`getExplorer` only retrieves Explorers +
+`getTractor` only retrieves Tractors +
+`getTruck` only retrieves Trucks +
+`getFactoryCart` only retrieves Factory Carts
+
+== URL
+
+`GET http://localhost:8080/getVehicles`
+
+include::../_responseBody.adoc[]
+
+| ID | String | Unique ID of the vehicle type.
+| Name | String | Name of the vehicle type.
+| ClassName | String | ClassName of the vehicle type.
+
+{set:key-name:location}
+{set:key-description:Location details of the Vehicle.}
+include::../Models/_location.adoc[]
+
+| PathName | String | Name of Saved Path Assigned
+| Status | String | Vehicle Status
+| Driver | String | Player Name of Vehicle Driver
+| ForwardSpeed | Float | Current Speed in km/h
+| CurrentGear | Integer | Transmission Gear
+| EngineRPM | Integer | RPM of Engine
+| Airborne | Boolean | Is the truck making a jump
+| AutoPilot | Boolean | Auto pilot engaged?
+| FuelConsumption | Float | Fuel Consumption in MegaWatts
+
+| Storage | Object[] | A list of items.
+include::../Models/_inventoryItem.adoc[]
+
+| Fuel | Object[] | A list of Fuel.
+include::../Models/_inventoryItem.adoc[]
+include::../Models/_features.adoc[]
+
+|===
+
+== Example Response
+[source,json]
+-----------------
+[
+  {
+    "ID": 0,
+    "VehicleType": "Explorer",
+    "location":
+    {
+      "x": -52341.4375,
+      "y": -162543.21875,
+      "z": -904.133544921875,
+      "rotation": 313
+    },
+    "AutoPilotStatus": "None",
+    "Driver": "porisius",
+    "CurrentGear": 1,
+    "ForwardSpeed": 11.1579312744141,
+    "EngineRPM": 2244.17504882813,
+    "ThrottlePercent": 0.400730907917023,
+    "Airborne": false,
+    "AutoPilot": false,
+    "FuelConsumption": 20.0,
+    "Storage": [
+      {
+        "Name": "Battery",
+        "ClassName": "Desc_Battery_C",
+        "Amount": 200
+      },
+      {
+        "Name": "Battery",
+        "ClassName": "Desc_Battery_C",
+        "Amount": 200
+      }
+    ],
+    "Fuel": [
+      {
+        "Name": "Battery",
+        "ClassName": "Desc_Battery_C",
+        "Amount": 199
+      }
+    ],
+    "FollowingPath": false,
+    "features":
+    {
+      "properties":
+      {
+        "name": "Explorer",
+        "type": "Explorer"
+      },
+      "geometry":
+      {
+        "coordinates":
+        {
+          "X": -52341.4375,
+          "Y": -162543.21875,
+          "Z": -904.133544921875
+        },
+        "type": "Point"
+      }
+    }
+  }
+]
+-----------------

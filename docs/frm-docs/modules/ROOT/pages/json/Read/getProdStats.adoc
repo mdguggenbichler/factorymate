@@ -1,0 +1,73 @@
+:url-repo: https://www.github.com/porisius/FicsitRemoteMonitoring
+:depth:
+
+= Get Prod Stats
+
+Gets a list of the link:https://ficsit.app/mod/3tsvcG3A6gqKX1[Production Stats] Mod by Andre Aquila.
+
+[NOTE]
+====
+If the item is not part of factory's/extractor's configuration (to be produced/consumed/extracted), it will not be displayed.
+====
+
+== URL
+
+`GET http://localhost:8080/getProdStats`
+
+include::../_responseBody.adoc[]
+
+| Name | String | Name of the Item.
+| ClassName | String | Class Name of the Item.
+| ProdPerMin | String | Production/Consumption per minute (Format: P: Actual/Max /min - C: Actual/Max /min)
+| ProdPercent | Float | Efficiency percentage produced
+| ConsPercent | Float | Efficiency percentage Consumed
+| CurrentProd | Float | Current production
+| MaxProd | Float | Maximum production based on machines
+| CurrentConsumed | Float | Current consumption
+| MaxConsumed | Float | Maximum consumption based on machines
+| Type | String | Denotes how item is transferred. Item on belt, or fluid/gas on pipe
+
+|===
+
+== Example Response
+[source,json]
+-----------------
+[
+	{
+		"Name": "Alclad Aluminum Sheet",
+		"ClassName": "Desc_AluminumPlate_C",
+		"ProdPerMin": "P:0.0/min - C: 0.0/min",
+		"ProdPercent": 0,
+		"ConsPercent": 0,
+		"CurrentProd": 0,
+		"MaxProd": 240,
+		"CurrentConsumed": 0,
+		"MaxConsumed": 89.999992370605469,
+		"Type": "Belt"
+	},
+	{
+		"Name": "Alumina Solution",
+		"ClassName": "Desc_AluminaSolution_C",
+		"ProdPerMin": "P:0.0/min - C: 0.0/min",
+		"ProdPercent": 0,
+		"ConsPercent": 0,
+		"CurrentProd": 0,
+		"MaxProd": 720.00006103515625,
+		"CurrentConsumed": 0,
+		"MaxConsumed": 660,
+		"Type": "Pipe"
+	},
+	{
+		"Name": "Aluminum Casing",
+		"ClassName": "Desc_AluminumCasing_C",
+		"ProdPerMin": "P:0.0/min - C: 0.0/min",
+		"ProdPercent": 0,
+		"ConsPercent": 0,
+		"CurrentProd": 0,
+		"MaxProd": 240,
+		"CurrentConsumed": 0,
+		"MaxConsumed": 180,
+		"Type": "Belt"
+	}
+]
+-----------------

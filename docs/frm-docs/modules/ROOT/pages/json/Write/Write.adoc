@@ -1,0 +1,5 @@
+= API (Write)
+
+:url-repo: https://github.com/porisius/FicsitRemoteMonitoring
+
+include::../_write.adoc[]

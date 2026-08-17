@@ -1,0 +1,149 @@
+:url-repo: https://www.github.com/porisius/FicsitRemoteMonitoring
+:depth:
+
+= Get Pipes
+
+Get a list of all Pipes.
+
+== URL
+
+`GET http://localhost:8080/getPipes`
+
+include::../_responseBody.adoc[]
+
+| ID | String | Unique ID of the Pipe.
+| Name | String | Name of the Pipe Type.
+| ClassName | String | Class Name of the Pipe.
+
+// color slot/swatch
+{set:key-name:ColorSlot}
+include::../Models/_colorSlot.adoc[]
+
+// bounding box
+{set:key-name:BoundingBox}
+include::../Models/_boundingBox.adoc[]
+
+// Spline Data
+{set:key-name:SplineData}
+include::../Models/_splinedata.adoc[]
+
+{set:key-name:location0}
+{set:key-description:Start Location of the Pipe}
+include::../Models/_location.adoc[tags=!rotation]
+| Connected0 | Boolean | Is Pipe Connected at starting point?
+
+{set:key-name:location1}
+{set:key-description:End Location of the Pipe}
+include::../Models/_location.adoc[tags=!rotation]
+| Connected1 | Boolean | Is Pipe Connected at ending point?
+
+| Length | Float | Length of the Pipe in centimetre (cm).
+| ItemsPerMinute | Float | Speed of the Pipe.
+
+include::../Models/_features.adoc[]
+
+|===
+
+== Example Response
+[source,json]
+-----------------
+[
+  {
+    "ID": "Build_Pipeline_C_2146289486",
+    "Name": "Pipeline Mk.1",
+    "ClassName": "Build_Pipeline_C",
+    "location": {
+      "x": -279675.15625,
+      "y": -150033.5,
+      "z": -1513.14123535156,
+      "rotation": 90
+    },
+    "BoundingBox": {
+      "min": {
+        "x": -279675.15625,
+        "y": -150033.5,
+        "z": -1513.14123535156
+      },
+      "max": {
+        "x": -279675.15625,
+        "y": -150033.5,
+        "z": -1513.14123535156
+      }
+    },
+    "ColorSlot": {
+      "PrimaryColor": "FA954900",
+      "SecondaryColor": "FA954900"
+    },
+    "SplineData": [
+      {
+        "x": -279675.15625,
+        "y": -150033.5,
+        "z": -1513.14123535156
+      },
+      {
+        "x": -279675.455968669,
+        "y": -150133.499550843,
+        "z": -1513.14123535156
+      },
+      {
+        "x": -279675.455968669,
+        "y": -150133.499550843,
+        "z": -1513.14123535156
+      },
+      {
+        "x": -279676.677520446,
+        "y": -150541.06384952,
+        "z": -1435.00002617008
+      },
+      {
+        "x": -279776.911449535,
+        "y": -150640.763856185,
+        "z": -1435.00002617008
+      },
+      {
+        "x": -281765.400404549,
+        "y": -150636.103274844,
+        "z": -1435.00002617008
+      },
+      {
+        "x": -281765.63476251,
+        "y": -150636.103000226,
+        "z": -1435.00002617008
+      },
+      {
+        "x": -281865.63476251,
+        "y": -150636.103000226,
+        "z": -1435.00002617008
+      }
+    ],
+    "location0": {
+      "x": -279675.15625,
+      "y": -150033.5,
+      "z": -1513.14123535156
+    },
+    "Connected0": true,
+    "location1": {
+      "x": -281865.63476251,
+      "y": -150636.103000226,
+      "z": -1435.00002617008
+    },
+    "Connected1": true,
+    "Length": 2761.6640625,
+    "Speed": 5,
+    "features": {
+      "properties": {
+        "name": "Pipeline Mk.1",
+        "type": "Pipeline Mk.1"
+      },
+      "geometry": {
+        "coordinates": {
+          "x": -279675.15625,
+          "y": -150033.5,
+          "z": -1513.14123535156
+        },
+        "type": "Point"
+      }
+    }
+  }
+]
+-----------------

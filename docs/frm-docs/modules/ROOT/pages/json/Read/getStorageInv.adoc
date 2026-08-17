@@ -1,0 +1,84 @@
+:doctype: book
+:url-repo: https://www.github.com/porisius/FicsitRemoteMonitoring
+:depth:
+
+= Get Storage Inv
+
+This is inventory of the world broken up by their storage containers.
+This does not include pipes/belts/factory buildings, only buildings whom purpose is to provide storage except Fluid Buffers.
+
+== Similar
+
+[cols="1,1,2"]
+|===
+|Resource|Endpoint|Description
+| Inventory | xref:json/Read/getCloudInv.adoc[getCloudInv] | Gets a list of the cloud inventory.
+| Inventory | xref:json/Read/getCrateInv.adoc[getCrateInv] | Gets a list of all crate inventories.
+| Inventory | xref:json/Read/getWorldInv.adoc[getWorldInv] | Gets a list of the world inventory.
+|===
+
+== URL
+
+`GET http://localhost:8080/getStorageInv`
+
+include::../_responseBody.adoc[]
+
+| ID | String | Unique ID of the Storage Container.
+| Name | String | Name of the Storage Container.
+| ClassName | String | Class Name of the Storage Container.
+
+{set:key-name:location}
+{set:key-description:Location details of the Storage Container.}
+include::../Models/_location.adoc[]
+
+// inventory items
+| Inventory | Object[] | List of items in the Storage Container.
+include::../Models/_inventoryItem.adoc[]
+
+// bounding box
+{set:key-name:BoundingBox}
+include::../Models/_boundingBox.adoc[]
+
+// features
+include::../Models/_features.adoc[]
+|===
+
+== Example Response
+[source,json]
+-----------------
+[
+  {
+    "ID": "Build_StorageContainerMk1_C_2147395408",
+    "Name": "Storage Container",
+    "ClassName": "Build_StorageContainerMk1_C",
+    "location": {
+      "x": -63207.6484375,
+      "y": 262781.53125,
+      "z": -3207.024658203125,
+      "rotation": 150.00000089058409
+    },
+    "Inventory": [
+      {
+        "Name": "Iron Plate",
+        "ClassName": "Desc_IronPlate_C",
+        "Amount": 164,
+        "MaxAmount": 200
+      }
+    ],
+    "features": {
+      "properties": {
+        "name": "Storage Container",
+        "type": "Storage Container"
+      },
+      "geometry": {
+        "coordinates": {
+          "x": -63207.6484375,
+          "y": 262781.53125,
+          "z": -3207.024658203125
+        },
+        "type": "Point"
+      }
+    }
+  }
+]
+-----------------

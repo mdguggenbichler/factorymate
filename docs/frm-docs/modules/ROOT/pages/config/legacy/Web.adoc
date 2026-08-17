@@ -1,0 +1,32 @@
+= Web Server Configurations
+
+[WARNING]
+====
+**Only for Satisfactory 1.1 and before, not applicable for 1.2+**
+====
+
+:url-repo: https://github.com/porisius/FicsitRemoteMonitoring
+
+File: Config/FicsitRemoteMonitoring/WebServer.cfg
+
+[cols="2,2,1,4"]
+|===
+|Configuration |Headless |Type |Description
+
+|Web Server Port
+|Web_Port
+|Integer
+|TCP Port for Web Server, Default: 8080
+
+|Autostart Web Server
+|Web_Autostart
+|Boolean
+|True = Autostarts Web Server at Game Start/Load
+
+|Web Root Location
+|Web_Root
+|String
+|File location of web root, Default: <empty>
+Leave blank or "" for default location.
+
+|===

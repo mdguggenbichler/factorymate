@@ -1,0 +1,117 @@
+:doctype: book
+:url-repo: https://www.github.com/porisius/FicsitRemoteMonitoring
+:depth:
+
+= Get Recipes
+
+include::../_isGetAll.adoc[]
+include::../_useGameThread.adoc[]
+
+Get information about all recipes.
+
+== URL
+
+`GET http://localhost:8080/getRecipes`
+
+include::../_responseBody.adoc[]
+
+// recipe details
+include::../Models/_recipe.adoc[]
+// ingredients
+| {depth}Ingredients | Object[] | Ingredients for this recipe.
+{set:depth:  }
+include::../Models/_inventoryItem.adoc[]
+| {depth}  ManualRate | Float | TODO
+| {depth}  FactoryRate | Float | TODO
+{set:depth:  }
+
+// products
+| {depth}Products | Object[] | Products produced by this recipe.
+{set:depth:  }
+include::../Models/_inventoryItem.adoc[]
+| {depth}  ManualRate | Float | TODO
+| {depth}  FactoryRate | Float | TODO
+{set:depth:  }
+// recipe details end
+
+|===
+
+== Example Response
+
+This example includes only two recipes to showcase the structure of the endpoint.
+
+[source,json]
+-----------------
+[
+  {
+    "ID": "Recipe_Fence_01_C",
+    "Name": "Industrial Railing",
+    "ClassName": "Recipe_Fence_01_C",
+    "Category": "N/A",
+    "Events": [],
+    "Ingredients": [
+      {
+        "Name": "Iron Rod",
+        "ClassName": "Desc_IronRod_C",
+        "Amount": 4,
+        "MaxAmount": 200,
+        "ManualRate": 240,
+        "FactoryRate": 240
+      }
+    ],
+    "Products": [
+      {
+        "Name": "Industrial Railing",
+        "ClassName": "Desc_Fence_01_C",
+        "Amount": 1,
+        "MaxAmount": 100,
+        "ManualRate": 60,
+        "FactoryRate": 60
+      }
+    ],
+    "ProducedIn": [
+      "BP_BuildGun_C"
+    ],
+    "ManualDuration": 1,
+    "FactoryDuration": 1
+  },
+  {
+    "ID": "Recipe_Wall_Window_8x4_03_Steel_C",
+    "Name": "Panel Window",
+    "ClassName": "Recipe_Wall_Window_8x4_03_Steel_C",
+    "Category": "N/A",
+    "Events": [],
+    "Ingredients": [
+      {
+        "Name": "Iron Plate",
+        "ClassName": "Desc_IronPlate_C",
+        "Amount": 3,
+        "MaxAmount": 200,
+        "ManualRate": 180,
+        "FactoryRate": 180
+      },
+      {
+        "Name": "Concrete",
+        "ClassName": "Desc_Cement_C",
+        "Amount": 3,
+        "MaxAmount": 500,
+        "ManualRate": 180,
+        "FactoryRate": 180
+      }
+    ],
+    "Products": [
+      {
+        "Name": "Panel Window",
+        "ClassName": "Desc_Wall_Window_8x4_03_Steel_C",
+        "Amount": 1,
+        "MaxAmount": 100,
+        "ManualRate": 60,
+        "FactoryRate": 60
+      }
+    ],
+    "ProducedIn": [],
+    "ManualDuration": 1,
+    "FactoryDuration": 1
+  }
+]
+-----------------

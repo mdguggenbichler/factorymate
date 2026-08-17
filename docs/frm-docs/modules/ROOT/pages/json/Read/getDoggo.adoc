@@ -1,0 +1,69 @@
+:url-repo: https://www.github.com/porisius/FicsitRemoteMonitoring
+:depth:
+
+= Get Doggo
+
+Gets a list of all doggos.
+
+== URL
+
+`GET http://localhost:8080/getDoggo`
+
+include::../_responseBody.adoc[]
+
+| ID | String | Unique ID of the Doggo.
+| Name | String | Name of the Doggo.
+| ClassName | String | ClassName of the Doggo.
+
+{set:key-name:location}
+{set:key-description:Location details of the Doggo.}
+include::../Models/_location.adoc[]
+
+// inventory items
+| Inventory | Object[] | List of items being carried by the doggo.
+include::../Models/_inventoryItem.adoc[]
+
+// features
+include::../Models/_features.adoc[]
+
+|===
+
+== Example Response
+[source,json]
+-----------------
+[
+  {
+    "ID": "Char_SpaceRabbit_C_2147414178",
+    "Name": "Ficsit Remote Monitoring rocks",
+    "ClassName": "Char_SpaceRabbit_C",
+    "location": {
+      "x": -43942.754996165997,
+      "y": 275363.09331948927,
+      "z": -3529.0104559118095,
+      "rotation": 283.58592224121094
+    },
+    "Inventory": [
+      {
+        "Name": "Steel Beam",
+        "ClassName": "Desc_SteelPlate_C",
+        "Amount": 200,
+        "MaxAmount": 200
+      }
+    ],
+    "features": {
+      "properties": {
+        "name": "Ficsit Remote Monitoring rocks",
+        "type": "Lizard Doggo"
+      },
+      "geometry": {
+        "coordinates": {
+          "x": -43942.754996165997,
+          "y": 275363.09331948927,
+          "z": -3529.0104559118095
+        },
+        "type": "Point"
+      }
+    }
+  }
+]
+-----------------

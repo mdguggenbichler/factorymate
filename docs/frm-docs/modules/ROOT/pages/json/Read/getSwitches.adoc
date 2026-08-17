@@ -1,0 +1,96 @@
+:doctype: book
+:url-repo: https://www.github.com/porisius/FicsitRemoteMonitoring
+:depth:
+
+= Get Switches
+
+Gets a list of all switches (priority power switches and power switches).
+
+== URL
+
+`GET http://localhost:8080/getSwitches`
+
+include::../_responseBody.adoc[]
+
+| ID | String | Unique ID of the Power Switch.
+| Name | String | Name of the Power Switch.
+| SwitchTag | String | Name of Power Switch.
+| ClassName | String | Class Name of the Power Switch.
+| IsOn | Boolean | Is the Power Switch on?
+| Connected0 | Integer | Has a connection at A? 
+| Connected1 | Integer | Has a connection at B?
+| Primary | Integer | Circuit ID on connection A.
+| Secondary | Integer | Circuit ID on connection B.
+| Priority | Integer | Priority of the Power Switch (-1 = No Priority)
+
+// location
+{set:key-name:location}
+{set:key-description:Location details of the Power Switch.}
+include::../Models/_location.adoc[]
+
+// color slot/swatch
+{set:key-name:ColorSlot}
+include::../Models/_colorSlot.adoc[]
+
+// bounding box
+{set:key-name:BoundingBox}
+include::../Models/_boundingBox.adoc[]
+
+// features
+include::../Models/_features.adoc[]
+|===
+
+== Example Response
+[source,json]
+-----------------
+[
+  {
+    "ID": "Build_PriorityPowerSwitch_C_2147452709",
+    "Name": "FicsitRemoteMonitoring rocks",
+    "ClassName": "Build_PriorityPowerSwitch_C",
+    "location": {
+      "x": -56603.265625,
+      "y": 261809.015625,
+      "z": -3934.808349609375,
+      "rotation": 300.00000024011166
+    },
+    "BoundingBox": {
+      "min": {
+        "x": -56703.265625,
+        "y": 261759.015625,
+        "z": -3934.808349609375
+      },
+      "max": {
+        "x": -56503.265625,
+        "y": 261859.015625,
+        "z": -3634.808349609375
+      }
+    },
+    "ColorSlot": {
+      "PrimaryColor": "FA954900",
+      "SecondaryColor": "5F668C00"
+    },
+    "SwitchTag": "FicsitRemoteMonitoring rocks",
+    "Connected0": 1,
+    "IsOn": true,
+    "Connected1": 1,
+    "Primary": 1,
+    "Secondary": 9,
+    "Priority": 5,
+    "features": {
+      "properties": {
+        "name": "FicsitRemoteMonitoring rocks",
+        "type": "Priority Power Switch"
+      },
+      "geometry": {
+        "coordinates": {
+          "x": -56603.265625,
+          "y": 261809.015625,
+          "z": -3934.808349609375
+        },
+        "type": "Point"
+      }
+    }
+  }
+]
+-----------------

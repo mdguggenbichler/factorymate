@@ -1,0 +1,108 @@
+:doctype: book
+:url-repo: https://www.github.com/porisius/FicsitRemoteMonitoring
+:depth:
+
+= Get Extractor
+
+Get a list of all extractors/miners.
+
+== URL
+
+`GET http://localhost:8080/getExtractor`
+
+include::../_responseBody.adoc[]
+
+| ID | String | Unique ID of the Extractor.
+| Name | String | Name of the Extractor.
+| ClassName | String | ClassName of the Extractor.
+
+// color slot/swatch
+{set:key-name:ColorSlot}
+include::../Models/_colorSlot.adoc[]
+
+// bounding box
+{set:key-name:BoundingBox}
+include::../Models/_boundingBox.adoc[]
+
+| Recipe | String | Name of the Recipe.
+| RecipeClassName | String | ClassName of the Recipe.
+
+// production
+| production | Object[] | Items that are produced.
+include::../Models/_inventoryItem.adoc[]
+| {depth}  CurrentProd | Float | Current produced items per minute.
+| {depth}  MaxProd | Float | Maximum produced items per minutes.
+| {depth}  ProdPercent | Float | Current Efficiency of the extractor.
+
+// other fields
+| ManuSpeed | Float | Configured speed in % (exceeds 100 if the extractor is equipped with a power slug).
+| IsConfigured | Boolean | Is extractor configured?
+| IsProducing | Boolean | Is extractor producing items?
+| IsPaused | Boolean | Is extractor paused?
+
+// location fields
+{set:key-name:location}
+{set:key-description:Location details of the Extractor.}
+include::../Models/_location.adoc[]
+
+// power info
+include::../Models/_powerInfo.adoc[]
+
+// features fields
+include::../Models/_features.adoc[]
+
+|===
+
+== Example Response
+[source,json]
+-----------------
+[
+  {
+    "ID": "Build_MinerMk1_C_2147453782",
+    "Name": "Miner Mk.1",
+    "ClassName": "Build_MinerMk1_C",
+    "location": {
+      "x": -52587.4375,
+      "y": 264646.90625,
+      "z": -3740.842529296875,
+      "rotation": 199.99999953283191
+    },
+    "Recipe": "Limestone",
+    "RecipeClassName": "Desc_Stone_C",
+    "production": [
+      {
+        "Name": "Limestone",
+        "ClassName": "Desc_Stone_C",
+        "Amount": 12,
+        "CurrentProd": 2.3529410362243652,
+        "MaxProd": 149.99998474121094,
+        "ProdPercent": 1.5686275170519528
+      }
+    ],
+    "ManuSpeed": 250,
+    "IsConfigured": true,
+    "IsProducing": true,
+    "IsPaused": false,
+    "PowerInfo": {
+      "CircuitGroupID": 7,
+      "CircuitID": 10,
+      "PowerConsumed": 16.788753509521484,
+      "MaxPowerConsumed": 16.788753509521484
+    },
+    "features": {
+      "properties": {
+        "name": "Miner Mk.1",
+        "type": "Miner Mk.1"
+      },
+      "geometry": {
+        "coordinates": {
+          "x": -52587.4375,
+          "y": 264646.90625,
+          "z": -3740.842529296875
+        },
+        "type": "Point"
+      }
+    }
+  }
+]
+-----------------

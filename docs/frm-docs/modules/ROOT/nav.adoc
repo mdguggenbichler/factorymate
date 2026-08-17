@@ -1,0 +1,139 @@
+* xref:index.adoc[General]
+* xref:commands.adoc[Commands]
+* xref:serial.adoc[Serial]
+* xref:webserver.adoc[Web Server]
+* xref:websockets.adoc[Web Sockets]
+* xref:webhook.adoc[Webhook Notifications]
+* xref:dedicatedserver.adoc[Dedicated Server API]
+* xref:icons.adoc[Icon System (Web Server Only)]
+
+* xref:config/config.adoc[Config]
+** xref:config/current/config.adoc[Configurations]
+** xref:config/legacy/legacy.adoc[Legacy Configurations (Satisfactory 1.1 and before)]
+*** xref:config/legacy/DiscIT.adoc[DiscIT]
+*** xref:config/legacy/Monitoring.adoc[Monitoring]
+*** xref:config/legacy/Serial.adoc[Serial Devices]
+*** xref:config/legacy/Web.adoc[Web Server]
+
+* xref:json/json.adoc[API]
+
+** xref:json/authentication.adoc[Authentication]
+** xref:json/Read/Read.adoc[Read]
+
+*** xref:json/Read/getAll.adoc[getAll - Retired]
+
+*** Chat
+**** xref:json/Read/getChatMessages.adoc[getChatMessages]
+
+*** Factory
+
+**** xref:json/Read/getFactory.adoc[getAssembler]
+**** xref:json/Read/getBelts.adoc[getBelts]
+**** xref:json/Read/getFactory.adoc[getBlender]
+**** xref:json/Read/getCables.adoc[getCables]
+**** xref:json/Read/getFactory.adoc[getConstructor]
+**** xref:json/Read/getFactory.adoc[getConverter]
+**** xref:json/Read/getFactory.adoc[getEncoder]
+**** xref:json/Read/getElevators.adoc[getElevators]
+**** xref:json/Read/getExtractor.adoc[getExtractor]
+**** xref:json/Read/getFactory.adoc[getFactory]
+**** xref:json/Read/getFrackingActivator.adoc[getFrackingActivator]
+**** xref:json/Read/getFactory.adoc[getFoundry]
+**** xref:json/Read/getHUBTerminal.adoc[getHUBTerminal]
+**** xref:json/Read/getHyperEntrance.adoc[getHyperEntrance]
+**** xref:json/Read/getHypertube.adoc[getHypertube]
+**** xref:json/Read/getFactory.adoc[getManufacturer]
+**** xref:json/Read/getFactory.adoc[getPackager]
+**** xref:json/Read/getFactory.adoc[getParticle]
+**** xref:json/Read/getPipes.adoc[getPipes]
+**** xref:json/Read/getPipeJunctions.adoc[getPipeJunctions]
+**** xref:json/Read/getPortal.adoc[getPortal]
+**** xref:json/Read/getPump.adoc[getPump]
+**** xref:json/Read/getRadarTower.adoc[getRadarTower]
+**** xref:json/Read/getFactory.adoc[getRefinery]
+**** xref:json/Read/getResourceSinkBuilding.adoc[getResourceSinkBuilding]
+**** xref:json/Read/getFactory.adoc[getSmelter]
+**** xref:json/Read/getSpaceElevator.adoc[getSpaceElevator]
+**** xref:json/Read/getSplitterMerger.adoc[getSplitterMerger]
+**** xref:json/Read/getSwitches.adoc[getSwitches]
+**** xref:json/Read/getSPWN.adoc[getSPWN]
+**** xref:json/Read/getTradingPost.adoc[getTradingPost]
+**** xref:json/Read/getTrainRails.adoc[getTrainRails]
+
+*** Generators
+**** xref:json/Read/getGenerators.adoc[getBiomassGenerator]
+**** xref:json/Read/getGenerators.adoc[getCoalGenerator]
+**** xref:json/Read/getGenerators.adoc[getFuelGenerator]
+**** xref:json/Read/getGenerators.adoc[getGenerators]
+**** xref:json/Read/getGenerators.adoc[getGeothermalGenerator]
+**** xref:json/Read/getGenerators.adoc[getNuclearGenerator]
+
+*** Inventory
+**** xref:json/Read/getCloudInv.adoc[getCloudInv]
+**** xref:json/Read/getCrateInv.adoc[getCrateInv]
+**** xref:json/Read/getStorageInv.adoc[getStorageInv]
+**** xref:json/Read/getWorldInv.adoc[getWorldInv]
+
+*** Resource Nodes
+**** xref:json/Read/getResourceNode.adoc[getResourceDeposit]
+**** xref:json/Read/getResourceNode.adoc[getResourceGeyser]
+**** xref:json/Read/getResourceNode.adoc[getResourceNode]
+**** xref:json/Read/getResourceNode.adoc[getResourceWell]
+
+*** Session
+**** xref:json/Read/getModList.adoc[getModList]
+**** xref:json/Read/getPlayer.adoc[getPlayer]
+**** xref:json/Read/getResearchTrees.adoc[getResearchTrees]
+**** xref:json/Read/getSessionInfo.adoc[getSessionInfo]
+
+*** Sink
+**** xref:json/Read/getResourceSink.adoc[getExplorationSink]
+**** xref:json/Read/getResourceSink.adoc[getResourceSink]
+**** xref:json/Read/getSinkList.adoc[getSinkList]
+
+*** Stations
+**** xref:json/Read/getDroneStation.adoc[getDroneStation]
+**** xref:json/Read/getTrainStation.adoc[getTrainStation]
+**** xref:json/Read/getTruckStation.adoc[getTruckStation]
+
+*** Vehicles
+**** xref:json/Read/getDrone.adoc[getDrone]
+**** xref:json/Read/getVehicles.adoc[getExplorer]
+**** xref:json/Read/getVehicles.adoc[getFactoryCart]
+**** xref:json/Read/getVehicles.adoc[getTractor]
+**** xref:json/Read/getTrains.adoc[getTrains]
+**** xref:json/Read/getVehicles.adoc[getTruck]
+**** xref:json/Read/getVehiclePaths.adoc[getVehiclePaths]
+**** xref:json/Read/getVehicles.adoc[getVehicles]
+
+*** World
+**** xref:json/Read/getArtifacts.adoc[getArtifacts]
+**** xref:json/Read/getCreatures.adoc[getCreatures]
+**** xref:json/Read/getDoggo.adoc[getDoggo]
+**** xref:json/Read/getDropPod.adoc[getDropPod]
+**** xref:json/Read/getHazards.adoc[getHazards]
+**** xref:json/Read/getMapMarkers.adoc[getMapMarkers]
+**** xref:json/Read/getPowerSlug.adoc[getPowerSlug]
+**** xref:json/Read/getProdStats.adoc[getProdStats]
+**** xref:json/Read/getRecipes.adoc[getRecipes]
+**** xref:json/Read/getSchematics.adoc[getSchematics]
+**** xref:json/Read/getTapes.adoc[getTapes]
+**** xref:json/Read/getUnlockItems.adoc[getUnlockItems]
+**** xref:json/Read/getUObjectCount.adoc[getUObjectCount]
+
+*** Power
+**** xref:json/Read/getPower.adoc[getPower]
+**** xref:json/Read/getPowerUsage.adoc[getPowerUsage]
+
+** xref:json/Write/Write.adoc[Write]
+
+*** Chat
+**** xref:json/Write/sendChatMessage.adoc[sendChatMessage]
+
+*** Factory
+**** xref:json/Write/setEnabled.adoc[setEnabled]
+**** xref:json/Write/setSwitches.adoc[setSwitches]
+
+*** World
+**** xref:json/Write/createPing.adoc[createPing]
+**** xref:json/Write/setModSetting.adoc[setModSetting]

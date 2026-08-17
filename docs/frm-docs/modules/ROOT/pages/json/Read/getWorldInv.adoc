@@ -1,0 +1,46 @@
+:doctype: book
+:url-repo: https://www.github.com/porisius/FicsitRemoteMonitoring
+:depth:
+
+= Get World Inv
+
+This is inventory of the world regardless of location.
+This does not include pipes/belts/factory buildings, only buildings whom purpose is to provide storage except Fluid Buffers.
+
+== Similar
+
+[cols="1,1,2"]
+|===
+|Resource|Endpoint|Description
+| Inventory | xref:json/Read/getCloudInv.adoc[getCloudInv] | Gets a list of the cloud inventory.
+| Inventory | xref:json/Read/getCrateInv.adoc[getCrateInv] | Gets a list of all crate inventories.
+| Inventory | xref:json/Read/getStorageInv.adoc[getStorageInv] | Gets a list of all storage inventories.
+|===
+
+== URL
+
+`GET http://localhost:8080/getWorldInv`
+
+include::../_responseBody.adoc[]
+
+include::../Models/_inventoryItem.adoc[]
+|===
+
+== Example Response
+[source,json]
+-----------------
+[
+  {
+    "Name": "Iron Plate",
+    "ClassName": "Desc_IronPlate_C",
+    "Amount": 164,
+    "MaxAmount": 200
+  },
+  {
+    "Name": "Copper Sheet",
+    "ClassName": "Desc_CopperSheet_C",
+    "Amount": 200,
+    "MaxAmount": 200
+  }
+]
+-----------------

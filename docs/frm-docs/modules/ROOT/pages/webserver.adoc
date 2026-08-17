@@ -1,0 +1,31 @@
+= Web Server
+
+:url-repo: https://github.com/porisius/FicsitRemoteMonitoring
+
+FRM provides a HTTP & WebSocket server that can be configured on a port of your choosing (Default: 8080). This can be modified by changing the respective configuration value in either the Server Manager for Dedicated Servers or the Main Menu Options for Single-Player, Hosted Sessions, and Client Sessions.
+
+Accessing the web server can be done via a browser (Tested on Chrome and Opera) at localhost:<port> (Ex. localhost:8080)
+
+The web server, by default, is not activated until the appropriate chat command is provided. You may also have the web server auto-start changing the Web_Autostart in the Config File Method to true.
+
+Please note that the web server and web socket system are one module, so enabling one enables the other.
+
+Chat Commands:
+
+/frm http start - Starts Web Server +
+/frm http stop - Stops Web Server
+
+Web Documents: +
+The HTML/JS Code for FRM's Web Server can be found at %SatisfactoryRootFolder%\FactoryGame\Mods\FicsitRemoteMonitoring\www. +
+An alternate path for customization is located in the FRM HTTP Config file.
+
+Private Web Server (Apache/Nginx/IIS) +
+You are able to use a separate web server if you wish to leverage technologies not available to FRM's Web Server library.
+
+API Endpoints: +
+There are currently several API Endpoints configured, but more are planned. All paths are referenced from the URL root, and may be seen in their output by adding them to the root URL.
+
+Ex. API Endpoint: getPower - localhost:8080/getPower
+
+API Endpoint: / +
+Redirects to /index.html

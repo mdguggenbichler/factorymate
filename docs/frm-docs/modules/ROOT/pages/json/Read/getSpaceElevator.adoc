@@ -1,0 +1,108 @@
+:doctype: book
+:url-repo: https://www.github.com/porisius/FicsitRemoteMonitoring
+:depth:
+
+= Get Space Elevator
+
+Get a list of all space elevators.
+
+== URL
+
+`GET http://localhost:8080/getSpaceElevator`
+
+include::../_responseBody.adoc[]
+
+| ID | String | Unique ID of the Space Elevator.
+| Name | String | Name of the Space Elevator.
+| ClassName | String | ClassName of the Space Elevator.
+
+{set:key-name:location}
+{set:key-description:Location details of the Space Elevator.}
+include::../Models/_location.adoc[]
+
+// color slot/swatch
+{set:key-name:ColorSlot}
+include::../Models/_colorSlot.adoc[]
+
+// bounding box
+{set:key-name:BoundingBox}
+include::../Models/_boundingBox.adoc[]
+
+// CurrentPhase
+| CurrentPhase | Object[] | A list of required items for the current phase.
+include::../Models/_inventoryItem.adoc[]
+| &nbsp;&nbsp;RemainingCost | Integer | Remaining items to complete the phase item.
+| &nbsp;&nbsp;TotalCost | Integer | Total item amount required to complete the phase item.
+
+// normal fields
+| FullyUpgraded | Boolean | `true` if the Space Elevator is fully upgraded.
+| UpgradeReady | Boolean | `true` if an upgrade is ready.
+
+// features fields
+include::../Models/_features.adoc[]
+
+|===
+
+== Example Response
+[source,json]
+-----------------
+[
+  {
+    "ID": "Build_SpaceElevator_C_2147473454",
+    "Name": "Space Elevator",
+    "ClassName": "Build_SpaceElevator_C",
+    "location": {
+      "x": -64008.390625,
+      "y": 249982.640625,
+      "z": -3758.981689453125,
+      "rotation": 90
+    },
+    "CurrentPhase": [
+      {
+        "Name": "Nuclear Pasta",
+        "ClassName": "Desc_SpaceElevatorPart_9_C",
+        "Amount": 1,
+        "RemainingCost": 999,
+        "TotalCost": 1000
+      },
+      {
+        "Name": "Biochemical Sculptor",
+        "ClassName": "Desc_SpaceElevatorPart_10_C",
+        "Amount": 0,
+        "RemainingCost": 1000,
+        "TotalCost": 1000
+      },
+      {
+        "Name": "AI Expansion Server",
+        "ClassName": "Desc_SpaceElevatorPart_12_C",
+        "Amount": 0,
+        "RemainingCost": 256,
+        "TotalCost": 256
+      },
+      {
+        "Name": "Ballistic Warp Drive",
+        "ClassName": "Desc_SpaceElevatorPart_11_C",
+        "Amount": 0,
+        "RemainingCost": 200,
+        "TotalCost": 200
+      }
+    ],
+    "FullyUpgraded": false,
+    "UpgradeReady": false,
+    "features": {
+      "properties": {
+        "name": "Space Elevator",
+        "type": "Space Elevator"
+      },
+      "geometry": {
+        "coordinates": {
+          "x": -64008.390625,
+          "y": 249982.640625,
+          "z": -3758.981689453125
+        },
+        "type": "Point"
+      }
+    }
+  }
+]
+-----------------

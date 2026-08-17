@@ -1,0 +1,144 @@
+:doctype: book
+:url-repo: https://www.github.com/porisius/FicsitRemoteMonitoring
+:depth:
+
+= Get Factory
+
+Get a list of all factory buildings.
+
+getAssembler only retrieves Assemblers +
+getBlender only retrieves Blenders +
+getConstructor only retrieves Constructors +
+getParticle only retrieves Particle Accelerators +
+etc. +
+
+== URL
+
+`GET http://localhost:8080/getFactory`
+
+include::../_responseBody.adoc[]
+
+| ID | String | Unique ID of the Factory Building.
+| Name | String | Name of the Factory Building.
+| ClassName | String | ClassName of the Factory Building.
+
+// location fields
+{set:key-name:location}
+{set:key-description:Location details of the Factory Building.}
+include::../Models/_location.adoc[]
+
+| Recipe | String | Name of the item being produced.
+| RecipeClassName | String | ClassName of the item being produced.
+
+// production
+| production | Object[] | List of produced items.
+| {depth}  Name | String | Name of the item.
+| {depth}  ClassName | String | ClassName of the item.
+| {depth}  Amount | String | Number of items to be produced.
+| {depth}  CurrentProd | Float | Current production rate per minute (amount decreases if an ingredient is unavailable).
+| {depth}  MaxProd | Float | Maximum items produced per minute.
+| {depth}  ProdPercent | Float | Efficiency Percentage.
+
+// ingredients
+| ingredients | Object[] | List of required items.
+| {depth}  Name | String | Name of the item.
+| {depth}  ClassName | String | ClassName of the item.
+| {depth}  Amount | String | Number of items required for product.
+| {depth}  CurrentConsumed | Float | Current consumption rate per minute (amount decreases if an ingredient is unavailable).
+| {depth}  MaxConsumed | Float | Maximum items consumed per minute.
+| {depth}  ConsPercent | Float | Efficiency Percentage.
+
+// input inventory
+| InputInventory | Object[] | A list of items in the input inventory.
+include::../Models/_inventoryItem.adoc[]
+
+// output inventory
+| OutputInventory | Object[] | A list of items in the output inventory.
+include::../Models/_inventoryItem.adoc[]
+
+| ManuSpeed | Float | Configured speed in % (exceeds 100 if the machine is equipped with a power slug).
+| Somersloops | Integer | Number of Somersloops in the machine.
+| PowerShards | Integer | Number of Power Shards in the machine.
+| IsConfigured | Boolean | Is a recipe configured?
+| IsProducing | Boolean | Is the building producing now?
+| IsPaused | Boolean | Is paused?
+
+// power info fields
+include::../Models/_powerInfo.adoc[]
+
+// color slot/swatch
+{set:key-name:ColorSlot}
+include::../Models/_colorSlot.adoc[]
+
+// bounding box
+{set:key-name:BoundingBox}
+include::../Models/_boundingBox.adoc[]
+
+// features fields
+include::../Models/_features.adoc[]
+|===
+
+== Example Response
+[source,json]
+-----------------
+[
+  {
+    "ID": "Build_ConstructorMk1_C_2147415548",
+    "Name": "Constructor",
+    "ClassName": "Build_ConstructorMk1_C",
+    "location": {
+      "x": -70700,
+      "y": 254500,
+      "z": -3599.984130859375,
+      "rotation": 90
+    },
+    "Recipe": "Concrete",
+    "RecipeClassName": "Recipe_Concrete_C",
+    "production": [
+      {
+        "Name": "Concrete",
+        "ClassName": "Desc_Cement_C",
+        "Amount": 33,
+        "CurrentProd": 0,
+        "MaxProd": 1.649999976158142,
+        "ProdPercent": 0
+      }
+    ],
+    "ingredients": [
+      {
+        "Name": "Limestone",
+        "ClassName": "Desc_Stone_C",
+        "Amount": 1,
+        "CurrentConsumed": 0,
+        "MaxConsumed": 4.949999809265137,
+        "ConsPercent": 0
+      }
+    ],
+    "Productivity": 0,
+    "ManuSpeed": 100,
+    "IsConfigured": true,
+    "IsProducing": false,
+    "IsPaused": true,
+    "PowerInfo": {
+      "CircuitGroupID": 0,
+      "CircuitID": 1,
+      "PowerConsumed": 0.10000000149011612,
+      "MaxPowerConsumed": 0.21619677543640137
+    },
+    "features": {
+      "properties": {
+        "name": "Constructor",
+        "type": "Constructor"
+      },
+      "geometry": {
+        "coordinates": {
+          "x": -70700,
+          "y": 254500,
+          "z": -3599.984130859375
+        },
+        "type": "Point"
+      }
+    }
+  }
+]
+-----------------

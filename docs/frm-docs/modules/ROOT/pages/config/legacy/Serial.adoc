@@ -1,0 +1,46 @@
+= Serial/RS232 Configurations
+
+[WARNING]
+====
+**Only for Satisfactory 1.1 and before, not applicable for 1.2+**
+====
+
+:url-repo: https://github.com/porisius/FicsitRemoteMonitoring
+
+File: Config/FicsitRemoteMonitoring/SerialDevices.cfg
+
+[cols="2,2,1,4"]
+|===
+|Configuration |Headless |Type |Description
+
+|Serial Port
+|COM_Port
+|String
+|Serial/RS232 Port (Requires ArduinoKit). Changes from UE4Duino, you must specify the device name (i.e. COM3) Linux/Mac operations have not been explored at this time to document, but are supported.
+
+|Baud Rate
+|Baud_Rate
+|String
+|Serial/RS232 Baud Rate (Requires ArduinoKit)
+
+|Autostart Serial Device
+|COM_Autostart
+|Boolean
+|True = Starts serial communication at startup (Requires ArduinoKit)
+
+|Pulsing Power Stats
+|Auto_Serial
+|Boolean
+|If True, FRM ignores inputs and sends the output of the getPower API Endpoint. (Requires ArduinoKit)
+
+|Serial Tick Delay
+|Serial_Delay
+|Float
+|Delay between updates (in seconds) to serial device. This is only used for cases with Auto_Serial. (Requires ArduinoKit)
+
+|Serial Stack Size
+|SerialStackSize
+|Integer
+|Maximum buffer size (Requires ArduinoKit)
+
+|===

@@ -1,0 +1,219 @@
+﻿:url-repo: https://www.github.com/porisius/FicsitRemoteMonitoring
+:depth:
+
+= Get Research Trees
+
+include::../_useGameThread.adoc[]
+
+Gets a list of all MAM research trees.
+
+== URL
+
+`GET http://localhost:8080/getResearchTrees`
+
+include::../_responseBody.adoc[]
+
+| Name | String | M.A.M Research Name Category
+| Nodes | Object | Research Nodes
+| {depth}  ID | String | Unique ID of the Research Node.
+| {depth}  Name | String | Name of the Research Node.
+| {depth}  ClassName | String | ClassName of the Research Node.
+| {depth}  Description | String | Description of the Research Node.
+| {depth}  Category | String | Category of the Research Node.
+| {depth}  State | String | Purchase/Hidden of the Research Node.
+| {depth}  TechTier | Integer | Tech Tier of the Research Node.
+| {depth}  TimeToComplete | Integer | Time, in seconds, for research completion.
+
+| {depth}  Cost | Object | Train Loading/Unloading Platforms and Stations Inventory
+| {depth}    Name | String | Name of the item.
+| {depth}    ClassName | String | Class Name of the item.
+| {depth}    Amount | Integer | Amount of the item.
+| {depth}    MaxAmount | Integer | Stack size of the item.
+
+| {depth}  UnhiddenBy | Object | Research Node(s) that reveal this Research Node Coordinates Object
+| {depth}    x | Integer | x Coordinate in M.A.M. of research node
+| {depth}    y | Integer | y Coordinate in M.A.M. of research node
+
+| {depth}  Parents | Object | Parent/Required Research Node Coordinates Object
+| {depth}    x | Integer | x Coordinate in M.A.M. of research node
+| {depth}    y | Integer | y Coordinate in M.A.M. of research node
+
+| {depth}  Coordinates | Object | Coordinates Object of Research Node
+| {depth}    x | Integer | x Coordinate in M.A.M. of research node
+| {depth}    y | Integer | y Coordinate in M.A.M. of research node
+
+|===
+
+== Example Response
+[source,json]
+-----------------
+[
+  {
+    "Name": "Alien Megafauna",
+    "Nodes": [
+      {
+        "ID": "BPD_ResearchTreeNode_C_33",
+        "Name": "Inflated Pocket Dimension",
+        "ClassName": "BPD_ResearchTreeNode_C_33",
+        "Description": "",
+        "Category": "Organization",
+        "State": "Purchased",
+        "TechTier": 3,
+        "TimeToComplete": 3,
+        "Cost": [
+          {
+            "Name": "Alien Protein",
+            "ClassName": "Desc_AlienProtein_C",
+            "Amount": 3,
+            "MaxAmount": 100
+          },
+          {
+            "Name": "Cable",
+            "ClassName": "Desc_Cable_C",
+            "Amount": 1000,
+            "MaxAmount": 200
+          }
+        ],
+        "UnhiddenBy": [
+          {
+            "x": 1,
+            "y": 0
+          },
+          {
+            "x": 2,
+            "y": 0
+          },
+          {
+            "x": 4,
+            "y": 0
+          },
+          {
+            "x": 5,
+            "y": 0
+          }
+        ],
+        "Parents": [
+          {
+            "x": 3,
+            "y": 3
+          }
+        ],
+        "Coordinates": {
+          "x": 4,
+          "y": 4
+        }
+      },
+      {
+        "ID": "BPD_ResearchTreeNode_C_34",
+        "Name": "Hostile Organism Detection",
+        "ClassName": "BPD_ResearchTreeNode_C_34",
+        "Description": "",
+        "Category": "Organization",
+        "State": "Purchased",
+        "TechTier": 3,
+        "TimeToComplete": 3,
+        "Cost": [
+          {
+            "Name": "Alien DNA Capsule",
+            "ClassName": "Desc_AlienDNACapsule_C",
+            "Amount": 10,
+            "MaxAmount": 50
+          },
+          {
+            "Name": "Crystal Oscillator",
+            "ClassName": "Desc_CrystalOscillator_C",
+            "Amount": 5,
+            "MaxAmount": 100
+          },
+          {
+            "Name": "High-Speed Connector",
+            "ClassName": "Desc_HighSpeedConnector_C",
+            "Amount": 5,
+            "MaxAmount": 100
+          }
+        ],
+        "UnhiddenBy": [
+          {
+            "x": 1,
+            "y": 0
+          },
+          {
+            "x": 2,
+            "y": 0
+          },
+          {
+            "x": 4,
+            "y": 0
+          },
+          {
+            "x": 5,
+            "y": 0
+          }
+        ],
+        "Parents": [
+          {
+            "x": 3,
+            "y": 3
+          }
+        ],
+        "Coordinates": {
+          "x": 5,
+          "y": 5
+        }
+      },
+      {
+        "ID": "BPD_ResearchTreeNode_C_35",
+        "Name": "Expanded Toolbelt",
+        "ClassName": "BPD_ResearchTreeNode_C_35",
+        "Description": "",
+        "Category": "Organization",
+        "State": "Purchased",
+        "TechTier": 3,
+        "TimeToComplete": 3,
+        "Cost": [
+          {
+            "Name": "Alien DNA Capsule",
+            "ClassName": "Desc_AlienDNACapsule_C",
+            "Amount": 5,
+            "MaxAmount": 50
+          },
+          {
+            "Name": "Steel Beam",
+            "ClassName": "Desc_SteelPlate_C",
+            "Amount": 500,
+            "MaxAmount": 200
+          }
+        ],
+        "UnhiddenBy": [
+          {
+            "x": 1,
+            "y": 0
+          },
+          {
+            "x": 2,
+            "y": 0
+          },
+          {
+            "x": 4,
+            "y": 0
+          },
+          {
+            "x": 5,
+            "y": 0
+          }
+        ],
+        "Parents": [
+          {
+            "x": 4,
+            "y": 4
+          }
+        ],
+        "Coordinates": {
+          "x": 4,
+          "y": 5
+        }
+      }
+    ]
+  }
+]
+-----------------

@@ -1,0 +1,4 @@
+﻿| {depth}  Name | String | Name of the item.
+| {depth}  ClassName | String | Class Name of the item.
+| {depth}  Amount | Integer | Amount of the item.
+| {depth}  MaxAmount | Integer | Stack size of the item.

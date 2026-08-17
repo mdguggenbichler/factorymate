@@ -1,0 +1,63 @@
+:url-repo: https://www.github.com/porisius/FicsitRemoteMonitoring
+:depth:
+
+= Get Mod List
+
+Get a list of all installed mods.
+
+== URL
+
+`GET http://localhost:8080/getModList`
+
+include::../_responseBody.adoc[]
+
+| Name | String | Name of the Mod.
+| SMRName | String | Name of Mod as Mod Repository and Unreal Engine see it as.
+| Version | String | Version (SemVer format) of the Mod.
+| Description | String | Description of the Mod.
+| DocsURL | String | Docs URL of the Mod.
+| SupportURL | String | Support URL of the Mod.
+| CreatedBy | String | Author of the Mod.
+| RemoteVersionRange | String | Acceptable Version Range of other client/server mod versions.
+| RequiredOnRemote | Boolean | Is the Mod required on both the server and client
+|===
+
+== Example Response
+[source,json]
+-----------------
+[
+  {
+    "Name": "Ficsit Remote Monitoring",
+    "SMRName": "FicsitRemoteMonitoring",
+    "Version": "1.4.0",
+    "Description": "Statistical and GeoLocation Monitoring for Satisfactory",
+    "DocsURL": "https://docs.ficsit.app/ficsitremotemonitoring/latest/index.html",
+    "AcceptsAnyRemoteVersion": "https://github.com/porisius/FicsitRemoteMonitoring",
+    "CreatedBy": "Porisius",
+    "RemoteVersionRange": ">=1.4.0",
+    "RequiredOnRemote": false
+  },
+  {
+    "Name": "Satisfactory",
+    "SMRName": "FactoryGame",
+    "Version": "415558.0.0",
+    "Description": "",
+    "DocsURL": "",
+    "AcceptsAnyRemoteVersion": "http://www.coffeestainstudios.com",
+    "CreatedBy": "Coffee Stain Studios AB",
+    "RemoteVersionRange": "*",
+    "RequiredOnRemote": false
+  },
+  {
+    "Name": "Satisfactory Mod Loader",
+    "SMRName": "SML",
+    "Version": "3.11.1",
+    "Description": "Mod loading and compatibility API for Satisfactory",
+    "DocsURL": "https://docs.ficsit.app",
+    "AcceptsAnyRemoteVersion": "https://discord.ficsit.app",
+    "CreatedBy": "SML Team",
+    "RemoteVersionRange": ">=3.11.1",
+    "RequiredOnRemote": true
+  }
+]
+-----------------

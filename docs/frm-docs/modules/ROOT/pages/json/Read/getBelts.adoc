@@ -1,0 +1,89 @@
+:url-repo: https://www.github.com/porisius/FicsitRemoteMonitoring
+:depth:
+
+= Get Belts
+
+Get a list of all belts.
+
+== URL
+
+`GET http://localhost:8080/getBelts`
+
+include::../_responseBody.adoc[]
+
+| ID | String | Unique ID of the Belt.
+| Name | String | Name of the Belt Type.
+| ClassName | String | Class Name of the Belt.
+
+// color slot/swatch
+{set:key-name:ColorSlot}
+include::../Models/_colorSlot.adoc[]
+
+// bounding box
+{set:key-name:BoundingBox}
+include::../Models/_boundingBox.adoc[]
+
+// bounding box
+{set:key-name:BoundingBox}
+include::../Models/_boundingBox.adoc[]
+
+// Spline Data
+{set:key-name:SplineData}
+include::../Models/_splinedata.adoc[]
+
+{set:key-name:location0}
+{set:key-description:Start Location of the Belt}
+include::../Models/_location.adoc[tags=!rotation]
+| Connected0 | Boolean | Is Belt Connected at starting point?
+
+{set:key-name:location1}
+{set:key-description:End Location of the Belt}
+include::../Models/_location.adoc[tags=!rotation]
+| Connected1 | Boolean | Is Belt Connected at ending point?
+
+| Length | Float | Length of the Belt in centimetre (cm).
+| ItemsPerMinute | Float | Speed of the Belt.
+
+include::../Models/_features.adoc[]
+
+|===
+
+== Example Response
+[source,json]
+-----------------
+[
+  {
+    "ID": "Build_ConveyorBeltMk1_C_2147415070",
+    "Name": "Conveyor Belt Mk.1",
+    "ClassName": "Build_ConveyorBeltMk1_C",
+    "location0": {
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    "Connected0": true,
+    "location1": {
+      "x": -964.5940059659988,
+      "y": -258.68724653875688,
+      "z": 27.264452340796197
+    },
+    "Connected1": true,
+    "Length": 1000.2387084960938,
+    "ItemsPerMinute": 60,
+    "features": {
+      "properties": {
+        "name": "Conveyor Belt Mk.1",
+        "type": "Conveyor Belt Mk.1"
+      },
+      "geometry": {
+        "coordinates": {
+          "x": -54853.11328125,
+          "y": 263822.28125,
+          "z": -3733.415771484375
+        },
+        "type": "Point"
+      }
+    }
+  }
+]
+-----------------

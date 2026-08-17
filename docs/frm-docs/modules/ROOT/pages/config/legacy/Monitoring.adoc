@@ -1,0 +1,21 @@
+= Monitoring Configurations
+
+[WARNING]
+====
+**Only for Satisfactory 1.1 and before, not applicable for 1.2+**
+====
+
+:url-repo: https://github.com/porisius/FicsitRemoteMonitoring
+
+File: Config/FicsitRemoteMonitoring/MonitoringConfig.cfg
+
+[cols="2,2,1,4"]
+|===
+|Configuration |Headless |Type |Description
+
+|Debug/Minimialize Mode
+|JSONDebugMode
+|Boolean (Default: False)
+|If False, removes the unnecessary white spaces and line breaks, shortens and reduces amount needed to transmit. If True, JSON becomes more human readable.
+
+|===

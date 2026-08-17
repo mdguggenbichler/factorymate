@@ -1,0 +1,235 @@
+:url-repo: https://www.github.com/porisius/FicsitRemoteMonitoring
+:depth:
+
+= Get Radar Tower
+
+Gets a list of all radar towers.
+
+== URL
+
+`GET http://localhost:8080/getRadarTower`
+
+include::../_responseBody.adoc[]
+
+| ID | String | Unique ID of the Space Elevator.
+| Name | String | Name of the Space Elevator.
+| ClassName | String | ClassName of the Space Elevator.
+
+{set:key-name:location}
+{set:key-description:Location details of the Space Elevator.}
+include::../Models/_location.adoc[]
+
+// color slot/swatch
+{set:key-name:ColorSlot}
+include::../Models/_colorSlot.adoc[]
+
+// bounding box
+{set:key-name:BoundingBox}
+include::../Models/_boundingBox.adoc[]
+
+| RevealRadius | Integer | Radar Tower Scan Radius
+| RevealType | String | Reveal Type +
+- `FOWRT_None`: None +
+- `FOWRT_Static` : Static +
+- `FOWRT_StaticNoGradient`: Static No Gradient +
+- `FOWRT_Dynamic`: Dynamic
+
+| ScannedResourceNodes | Object | Scanned Resource Nodes Object
+| {depth}  ID | String | Unique ID of the Resource Node.
+| {depth}  Name | String | Name of the Resource Node.
+| {depth}  ClassName | String | Class Name of the Resource Node.
+| {depth}  Purity | String | Purity in a readable format: +
+- `Impure` +
+- `Normal` +
+- `Pure`
+| {depth}  EnumPurity | String | Enum Purity Value: +
+- `RP_Inpure`: Impure +
+- `RP_Normal`: Normal +
+- `RP_Pure`: Pure +
+- `RP_MAX`
+| {depth}  ResourceForm | String | Resource Form of the Node. +
+- `Unknown`: Resource form is unknown. +
+- `Invalid`: Invalid resource form. +
+- `Solid Core`: Solid resource form. +
+- `Liquid Satellite`: TODO. +
+- `Gas`: TODO. +
+- `Heat`: TODO.
+| {depth}  NodeType | String | Type of the Node. +
+- `Unknown` +
+- `Geyser`: TODO. +
+- `Fracking Core`: TODO. +
+- `Fracking Satellite`: TODO. +
+- `Node`: Normal resource node.
+| {depth}  Exploited | Boolean | Is the resource node occupied?
+
+{set:key-name:Fauna}
+{set:key-description:Fauna Scanned.}
+include::../Models/_radarTower.adoc[]
+
+{set:key-name:Signal}
+{set:key-description:Signals Scanned.}
+include::../Models/_radarTower.adoc[]
+
+{set:key-name:Flora}
+{set:key-description:Flora Scanned.}
+include::../Models/_radarTower.adoc[]
+
+include::../Models/_features.adoc[]
+
+|===
+
+== Example Response
+[source,json]
+-----------------
+[
+  {
+    "ID": "Build_RadarTower_C_2147451028",
+    "Name": "Radar Tower",
+    "ClassName": "Build_RadarTower_C",
+    "location": {
+      "x": -78600,
+      "y": 239600,
+      "z": 21100.0078125,
+      "rotation": 90
+    },
+    "BoundingBox": {
+      "min": {
+        "x": -79100,
+        "y": 239100,
+        "z": 21100.0078125
+      },
+      "max": {
+        "x": -78100,
+        "y": 240100,
+        "z": 32900.0078125
+      }
+    },
+    "ColorSlot": {
+      "PrimaryColor": "C800BD00",
+      "SecondaryColor": "C800BD00"
+    },
+    "RevealRadius": 100000,
+    "RevealType": "FOWRT_None",
+    "ScannedResourceNodes": [
+      {
+        "ID": "BP_ResourceNode126_6409",
+        "Name": "Iron Ore",
+        "ClassName": "Desc_OreIron_C",
+        "Purity": "Pure",
+        "EnumPurity": "RP_Pure",
+        "ResourceForm": "Solid",
+        "NodeType": "Node",
+        "Exploited": false,
+        "location": {
+          "x": -96100.7109375,
+          "y": 163752.859375,
+          "z": -3734.49267578125,
+          "rotation": 120.574010848999
+        }
+      },
+      {
+        "ID": "BP_ResourceNode127",
+        "Name": "Copper Ore",
+        "ClassName": "Desc_OreCopper_C",
+        "Purity": "Normal",
+        "EnumPurity": "RP_Normal",
+        "ResourceForm": "Solid",
+        "NodeType": "Node",
+        "Exploited": false,
+        "location": {
+          "x": -94265.1171875,
+          "y": 165842.203125,
+          "z": -3734.83447265625,
+          "rotation": 81.1117086410523
+        }
+      },
+      {
+        "ID": "BP_ResourceNode172",
+        "Name": "SAM",
+        "ClassName": "Desc_SAM_C",
+        "Purity": "Normal",
+        "EnumPurity": "RP_Normal",
+        "ResourceForm": "Solid",
+        "NodeType": "Node",
+        "Exploited": false,
+        "location": {
+          "x": -24065.671875,
+          "y": 269858.09375,
+          "z": -13353.7685546875,
+          "rotation": 90
+        }
+      }
+    ],
+    "Fauna": [
+      {
+        "Name": "Fluffy-Tailed Hog",
+        "ClassName": "Desc_HogBasic_C",
+        "Amount": 1
+      },
+      {
+        "Name": "Unknown File Error #6265616e",
+        "ClassName": "Desc_SpaceGiraffe_C",
+        "Amount": 1
+      },
+      {
+        "Name": "Small Stinger",
+        "ClassName": "Desc_StingerSmall_C",
+        "Amount": 1
+      }
+    ],
+    "Signal": [
+      {
+        "Name": "Somersloop",
+        "ClassName": "Desc_WAT1_C",
+        "Amount": 6
+      },
+      {
+        "Name": "Mercer Sphere",
+        "ClassName": "Desc_WAT2_C",
+        "Amount": 14
+      },
+      {
+        "Name": "Blue Power Slug",
+        "ClassName": "Desc_Crystal_C",
+        "Amount": 57
+      },
+      {
+        "Name": "Hard Drive",
+        "ClassName": "Desc_HardDrive_C",
+        "Amount": 5
+      }
+    ],
+    "Flora": [
+      {
+        "Name": "Berry Bush Plant",
+        "ClassName": "Desc_BerryBush_C",
+        "Amount": 1
+      },
+      {
+        "Name": "Bacon Agaric",
+        "ClassName": "Desc_Shroom_C",
+        "Amount": 1
+      },
+      {
+        "Name": "Nut Bush Plant",
+        "ClassName": "Desc_NutBush_C",
+        "Amount": 1
+      }
+    ],
+    "features": {
+      "properties": {
+        "name": "Radar Tower",
+        "type": "Radar Tower"
+      },
+      "geometry": {
+        "coordinates": {
+          "x": -78600,
+          "y": 239600,
+          "z": 21100.0078125
+        },
+        "type": "Point"
+      }
+    }
+  }
+]
+-----------------
