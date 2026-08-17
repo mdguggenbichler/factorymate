@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"testing"
@@ -11,6 +13,7 @@ import (
 
 	"factorymate/internal/db"
 	"factorymate/internal/frm"
+	"factorymate/internal/notify"
 	"factorymate/internal/poller"
 )
 
@@ -168,6 +171,91 @@ func TestServerOfflineOnUnreachable(t *testing.T) {
 	if playerCount == 0 {
 		t.Fatal("player_state should be untouched while unreachable")
 	}
+}
+
+func TestDispatchWiredInPollLoop(t *testing.T) {
+	t.Chdir("../..")
+
+	ctx := context.Background()
+	database := openTestDB(t)
+	defer database.Close()
+
+	if err := db.Init(ctx, database, db.SeedConfig{}); err != nil {
+		t.Fatalf("init: %v", err)
+	}
+
+	var webhookCalls int
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		webhookCalls++
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	defer srv.Close()
+
+	cfgJSON, _ := json.Marshal(notify.DiscordConfig{WebhookURL: srv.URL})
+	res, err := database.ExecContext(ctx, `
+		INSERT INTO notification_targets (name, provider_type, config_json, enabled, created_at)
+		VALUES (?, ?, ?, 1, ?)`,
+		"Test", "discord", string(cfgJSON), time.Now().UTC().Format(time.RFC3339),
+	)
+	if err != nil {
+		t.Fatalf("insert target: %v", err)
+	}
+	targetID, _ := res.LastInsertId()
+	if _, err := database.ExecContext(ctx,
+		`INSERT INTO message_type_targets (message_type_key, target_id) VALUES ('player_joined', ?)`, targetID); err != nil {
+		t.Fatalf("assign target: %v", err)
+	}
+
+	phases, _ := poller.LoadElevatorPhases("data/elevator_phases.json")
+	dispatcher := notify.NewDispatcher(database, map[string]notify.Provider{
+		"discord": notify.NewDiscordProvider(),
+	})
+
+	fetcher := &sequenceFetcher{
+		steps: []frm.FastPollResult{
+			{Players: []frm.Player{{ID: "p1", Name: "Alice", Online: false}}},
+			{Players: []frm.Player{{ID: "p1", Name: "Alice", Online: true}}},
+		},
+	}
+
+	p := poller.New(database, fetcher, phases, func(ctx context.Context, ev poller.Event) error {
+		return dispatcher.HandleEvent(ctx, ev.MessageTypeKey, ev.Variables)
+	})
+
+	if err := p.Poll(ctx); err != nil {
+		t.Fatalf("poll 1: %v", err)
+	}
+	if err := p.Poll(ctx); err != nil {
+		t.Fatalf("poll 2: %v", err)
+	}
+
+	if webhookCalls != 1 {
+		t.Fatalf("webhook calls = %d, want 1", webhookCalls)
+	}
+
+	var logCount int
+	if err := database.QueryRowContext(ctx,
+		`SELECT COUNT(*) FROM notification_log WHERE message_type_key = 'player_joined' AND success = 1`,
+	).Scan(&logCount); err != nil {
+		t.Fatalf("count notification_log: %v", err)
+	}
+	if logCount != 1 {
+		t.Fatalf("notification_log success rows = %d, want 1", logCount)
+	}
+}
+
+type sequenceFetcher struct {
+	steps []frm.FastPollResult
+	idx   int
+}
+
+func (f *sequenceFetcher) GetFast(ctx context.Context) frm.FastPollResult {
+	if f.idx >= len(f.steps) {
+		return f.steps[len(f.steps)-1]
+	}
+	result := f.steps[f.idx]
+	f.idx++
+	return result
 }
 
 func TestVehicleStuckDebounce(t *testing.T) {

@@ -12,6 +12,7 @@ import (
 
 	"factorymate/internal/db"
 	"factorymate/internal/frm"
+	"factorymate/internal/notify"
 	"factorymate/internal/poller"
 
 	"github.com/go-chi/chi/v5"
@@ -56,7 +57,13 @@ func main() {
 
 func runPoller(ctx context.Context, database *sql.DB, phases *poller.ElevatorPhases) {
 	fetcher := &settingsFetcher{db: database}
-	p := poller.New(database, fetcher, phases, nil)
+	dispatcher := notify.NewDispatcher(database, map[string]notify.Provider{
+		"discord": notify.NewDiscordProvider(),
+	})
+	onEvent := func(ctx context.Context, ev poller.Event) error {
+		return dispatcher.HandleEvent(ctx, ev.MessageTypeKey, ev.Variables)
+	}
+	p := poller.New(database, fetcher, phases, onEvent)
 	p.Run(ctx)
 }
 
