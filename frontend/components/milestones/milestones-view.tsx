@@ -3,16 +3,20 @@
 import { useMemo } from "react"
 import { useTranslations } from "next-intl"
 
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion"
+import { MilestoneTierLadder } from "@/components/milestones/milestone-tier-ladder"
+import { MilestoneTypeSections } from "@/components/milestones/milestone-type-sections"
 import { Badge } from "@/components/ui/badge"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type { MilestoneGroup } from "@/lib/api-types"
+import {
+  buildTierLadder,
+  countMilestoneProgress,
+  filterGroupsByType,
+  flattenSchematics,
+  highestCompleteTier,
+  nextPartialTier,
+} from "@/lib/milestone-layout"
 
 type MilestonesViewProps = {
   groups: MilestoneGroup[]
@@ -25,13 +29,37 @@ export function MilestonesView({ groups }: MilestonesViewProps) {
 
   const groupsByType = useMemo(() => {
     const map = new Map<string, MilestoneGroup[]>()
-    for (const group of groups) {
-      const existing = map.get(group.type) ?? []
-      existing.push(group)
-      map.set(group.type, existing)
+    for (const type of TAB_TYPES) {
+      map.set(type, filterGroupsByType(groups, type))
     }
     return map
   }, [groups])
+
+  const milestoneGroups = useMemo(
+    () => groupsByType.get("Milestone") ?? [],
+    [groupsByType]
+  )
+  const milestoneLadder = useMemo(
+    () => buildTierLadder(milestoneGroups),
+    [milestoneGroups]
+  )
+  const milestoneProgress = useMemo(
+    () => countMilestoneProgress(flattenSchematics(milestoneGroups)),
+    [milestoneGroups]
+  )
+  const highestTier = useMemo(
+    () => highestCompleteTier(milestoneLadder),
+    [milestoneLadder]
+  )
+  const nextTier = useMemo(
+    () => nextPartialTier(milestoneLadder),
+    [milestoneLadder]
+  )
+
+  function tabProgress(type: (typeof TAB_TYPES)[number]) {
+    const typeGroups = groupsByType.get(type) ?? []
+    return countMilestoneProgress(flattenSchematics(typeGroups))
+  }
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
@@ -41,90 +69,70 @@ export function MilestonesView({ groups }: MilestonesViewProps) {
       </div>
 
       <Tabs defaultValue="Milestone">
-        <TabsList>
-          {TAB_TYPES.map((type) => (
-            <TabsTrigger key={type} value={type}>
-              {t(`tabs.${typeToKey(type)}`)}
-            </TabsTrigger>
-          ))}
+        <TabsList className="h-auto flex-wrap">
+          {TAB_TYPES.map((type) => {
+            const { purchased, total } = tabProgress(type)
+            return (
+              <TabsTrigger key={type} value={type} className="gap-2">
+                <span>{t(`tabs.${typeToKey(type)}`)}</span>
+                {total > 0 ? (
+                  <Badge variant="outline" className="px-1.5 py-0 text-[10px]">
+                    {t("tabProgress", { purchased, total })}
+                  </Badge>
+                ) : null}
+              </TabsTrigger>
+            )
+          })}
         </TabsList>
 
-        {TAB_TYPES.map((type) => {
-          const typeGroups = groupsByType.get(type) ?? []
-          return (
-            <TabsContent key={type} value={type}>
-              {typeGroups.length === 0 ? (
-                <Card>
-                  <CardContent className="py-8 text-sm text-muted-foreground">
-                    {t("empty")}
-                  </CardContent>
-                </Card>
-              ) : (
-                <Accordion multiple className="space-y-2">
-                  {typeGroups.map((group) => (
-                    <AccordionItem
-                      key={`${group.type}-${group.techTier}`}
-                      value={`${group.type}-${group.techTier}`}
-                      className="rounded-lg border px-4"
-                    >
-                      <AccordionTrigger>
-                        <div className="flex items-center gap-2">
-                          <span>{t("tierGroup", { tier: group.techTier })}</span>
-                          <Badge variant="outline">
-                            {t("schematicCount", { count: group.schematics.length })}
-                          </Badge>
-                        </div>
-                      </AccordionTrigger>
-                      <AccordionContent>
-                        <div className="space-y-3">
-                          {group.schematics.map((schematic) => (
-                            <Card key={schematic.id}>
-                              <CardHeader className="pb-2">
-                                <div className="flex flex-wrap items-center gap-2">
-                                  <CardTitle className="text-base">
-                                    {schematic.name}
-                                  </CardTitle>
-                                  <Badge
-                                    variant={
-                                      schematic.purchased ? "default" : "secondary"
-                                    }
-                                  >
-                                    {schematic.purchased
-                                      ? t("status.unlocked")
-                                      : schematic.locked
-                                        ? t("status.locked")
-                                        : t("status.available")}
-                                  </Badge>
-                                </div>
-                              </CardHeader>
-                              {schematic.recipes.length > 0 ? (
-                                <CardContent>
-                                  <p className="mb-2 text-sm text-muted-foreground">
-                                    {t("recipes")}
-                                  </p>
-                                  <div className="flex flex-wrap gap-1">
-                                    {schematic.recipes.map((recipe) => (
-                                      <Badge
-                                        key={recipe.className}
-                                        variant="outline"
-                                      >
-                                        {recipe.name}
-                                      </Badge>
-                                    ))}
-                                  </div>
-                                </CardContent>
-                              ) : null}
-                            </Card>
-                          ))}
-                        </div>
-                      </AccordionContent>
-                    </AccordionItem>
-                  ))}
-                </Accordion>
-              )}
-            </TabsContent>
-          )
-        })}
+        <TabsContent value="Milestone" className="space-y-6">
+          {milestoneGroups.length === 0 ? (
+            <Card>
+              <CardContent className="py-8 text-sm text-muted-foreground">
+                {t("empty")}
+              </CardContent>
+            </Card>
+          ) : (
+            <>
+              <Card>
+                <CardContent className="flex flex-col gap-2 py-4 sm:flex-row sm:flex-wrap sm:items-center sm:gap-6">
+                  <p className="text-sm">
+                    {t("progressSummary", {
+                      purchased: milestoneProgress.purchased,
+                      total: milestoneProgress.total,
+                    })}
+                  </p>
+                  {highestTier != null ? (
+                    <p className="text-sm text-muted-foreground">
+                      {t("highestTierComplete", { tier: highestTier })}
+                    </p>
+                  ) : null}
+                  {nextTier != null &&
+                  (highestTier == null || nextTier > highestTier) ? (
+                    <p className="text-sm text-muted-foreground">
+                      {t("nextTierHint", { tier: nextTier })}
+                    </p>
+                  ) : null}
+                </CardContent>
+              </Card>
+              <MilestoneTierLadder ladder={milestoneLadder} />
+            </>
+          )}
+        </TabsContent>
+
+        <TabsContent value="Hard Drive">
+          <MilestoneTypeSections
+            groups={groupsByType.get("Hard Drive") ?? []}
+            variant="hardDrive"
+          />
+        </TabsContent>
+
+        <TabsContent value="Alternate">
+          <MilestoneTypeSections
+            groups={groupsByType.get("Alternate") ?? []}
+            variant="alternate"
+          />
+        </TabsContent>
       </Tabs>
     </div>
   )
