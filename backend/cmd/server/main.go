@@ -10,13 +10,14 @@ import (
 	"os/signal"
 	"syscall"
 
+	"factorymate/internal/api"
+	"factorymate/internal/auth"
 	"factorymate/internal/db"
 	"factorymate/internal/frm"
 	"factorymate/internal/notify"
 	"factorymate/internal/poller"
 
 	"github.com/go-chi/chi/v5"
-	_ "golang.org/x/crypto/bcrypt"
 )
 
 func main() {
@@ -40,6 +41,9 @@ func main() {
 
 	go runPoller(ctx, database, phases)
 
+	authSvc := auth.NewService(database)
+	go authSvc.StartCleanupJob(ctx)
+
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
@@ -47,6 +51,9 @@ func main() {
 
 	r := chi.NewRouter()
 	r.Get("/healthz", healthz)
+	r.Route("/api", func(r chi.Router) {
+		api.NewHandler(authSvc).Mount(r)
+	})
 
 	addr := ":" + port
 	log.Printf("listening on %s", addr)
