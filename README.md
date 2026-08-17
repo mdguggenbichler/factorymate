@@ -24,6 +24,8 @@ docs/             Product spec, roadmap, vendored FRM API reference
 
 See [`docs/development.md`](docs/development.md) for full setup and [`docs/testing.md`](docs/testing.md) for integration-test strategy (FRM fixtures, Discord webhook mocks).
 
+**Live FRM (read-only):** `http://192.168.178.42:8889` — agents may `GET` the 12 polled endpoints for real example data. See [`.cursor/rules/04-frm-live.mdc`](.cursor/rules/04-frm-live.mdc).
+
 ## Milestone workflow
 
 Development follows the roadmap **in order** (M0 → M13). Use the orchestrator skill (`.agents/skills/orchestrator/SKILL.md`) for autonomous milestone runs: execution sub-agent implements, verifier sub-agent checks, roadmap checkboxes updated on PASS.

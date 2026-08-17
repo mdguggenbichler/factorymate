@@ -1,6 +1,31 @@
 # Testing strategy
 
-FactoryMate milestones should be verifiable **without** a real Discord channel, production deploy, or always-on FRM server. Live tests are opt-in.
+FactoryMate milestones should be verifiable **without** a real Discord channel or production deploy. Live FRM is available on the home network for optional integration tests and fixture capture (see below).
+
+## Live FRM server (read-only)
+
+A **live FRM instance** on the group's home network is available for agents and developers. Use it to capture real response shapes, validate structs, and refresh fixtures.
+
+| Field | Value |
+| --- | --- |
+| Base URL | `http://192.168.178.42:8889` |
+| Auth | None on this deployment |
+| Cursor rule | `.cursor/rules/04-frm-live.mdc` |
+
+**READ ONLY:** `GET` on the 12 polled Read endpoints (spec §4.1) only. Never call FRM Write endpoints or mutate game state.
+
+```bash
+# Quick smoke test (all 12 endpoints should return HTTP 200)
+for ep in getPlayer getPower getSchematics getSpaceElevator getResearchTrees getTrains getVehicles \
+          getProdStats getResourceSink getFactory getDrone getDoggo; do
+  curl -sS -o /dev/null -w "$ep %{http_code}\n" "http://192.168.178.42:8889/$ep"
+done
+
+# Refresh a committed fixture
+curl -sS "http://192.168.178.42:8889/getPower" -o backend/testdata/frm/getPower.json
+```
+
+Committed fixtures live in `backend/testdata/frm/` (see README there). Large responses — query live rather than committing full dumps.
 
 ## Discord webhook testing (M4, M6)
 

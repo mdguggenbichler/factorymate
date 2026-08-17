@@ -14,7 +14,8 @@ Copy `.env.example` to `.env` at the repo root (or export vars in your shell).
 | --- | --- |
 | `SESSION_SECRET` | **Required** for backend — cookie signing |
 | `DATABASE_PATH` | SQLite file path (default `./data/factorymate.db` for local dev) |
-| `FRM_HOST` / `FRM_PORT` | Initial FRM endpoint; seeded into `app_settings` on first boot |
+| `FRM_HOST` / `FRM_PORT` | Initial FRM endpoint; seeded into `app_settings` on first boot. Group live server: `192.168.178.42:8889` |
+| `FRM_TEST_HOST` / `FRM_TEST_PORT` | Live FRM for integration tests and fixture capture (read-only) — defaults in `.env.example` |
 | `NEXT_PUBLIC_API_URL` | Frontend dev: direct backend URL (`http://localhost:8080`) |
 | `BACKEND_URL` | Next.js rewrite target (`http://localhost:8080` local, `http://backend:8080` in compose) |
 

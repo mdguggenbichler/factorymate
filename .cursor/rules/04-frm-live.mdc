@@ -1,0 +1,80 @@
+---
+description: Live FRM server — read-only access for fixtures, integration tests, and field validation
+globs: backend/**
+alwaysApply: false
+---
+
+# Live FRM server (read-only)
+
+A **live FicsIt Remote Monitoring (FRM)** instance is available on the group's home network for development and verification. Agents may query it any time for real response shapes and example data.
+
+## Endpoint
+
+| Field | Value |
+| --- | --- |
+| Host | `192.168.178.42` |
+| Port | `8889` |
+| Base URL | `http://192.168.178.42:8889` |
+| Auth | None required (no `X-FRM-Authorization` on this deployment) |
+
+Env vars for integration tests: `FRM_TEST_HOST=192.168.178.42`, `FRM_TEST_PORT=8889` (see `.env.example`).
+
+## READ ONLY — mandatory
+
+- **Only** `GET` requests to **Read** endpoints under spec §4.1.
+- **Never** call `docs/frm-docs/.../json/Write/*` endpoints (`setSwitches`, `sendChatMessage`, `createPing`, etc.).
+- **Never** POST, PUT, PATCH, or DELETE to the FRM server.
+- **Never** change game state, send chat, or trigger in-game actions via FRM.
+
+FactoryMate v1 is read-only against FRM. Violating this rule is a hard stop.
+
+## Polled endpoints (all verified reachable)
+
+**Fast poll (§4.1):**
+
+```text
+GET /getPlayer
+GET /getPower
+GET /getSchematics
+GET /getSpaceElevator
+GET /getResearchTrees
+GET /getTrains
+GET /getVehicles
+```
+
+**Slow poll (§4.1):**
+
+```text
+GET /getProdStats
+GET /getResourceSink
+GET /getFactory
+GET /getDrone
+GET /getDoggo
+```
+
+## When to use live FRM
+
+| Use case | Action |
+| --- | --- |
+| M2 struct design / parse tests | `curl` live endpoint, compare to `docs/frm-docs/` adoc |
+| M3/M9 field validation | Capture response snippet, save to `backend/testdata/frm/` if useful offline |
+| `getFactory` `building_type` mapping (§4.1) | Query live `getFactory`, extract real `ClassName` values |
+| Elevator phase matching (M3.1) | Query live `getSpaceElevator` for current save state |
+| Integration tests | `go test -tags=integration` when `FRM_TEST_HOST` is set |
+
+Prefer **JSON fixtures** in `backend/testdata/frm/` for unit tests so CI does not depend on network. Refresh fixtures from live FRM when structs change or adoc drifts.
+
+## Example
+
+```bash
+curl -sS "http://192.168.178.42:8889/getPower" | jq .
+curl -sS "http://192.168.178.42:8889/getSpaceElevator" | jq .
+```
+
+Large responses (`getSchematics`, `getFactory`): pipe to a file locally; do not commit multi‑MB captures unless trimmed for fixture use.
+
+## Reference
+
+- API shapes: `docs/frm-docs/modules/ROOT/pages/json/Read/`
+- FactoryMate contract: `docs/factorymate-spec.md` §4.1, §4.1.1
+- Testing policy: `docs/testing.md`

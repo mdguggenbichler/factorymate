@@ -26,7 +26,7 @@ See `docs/testing.md`. Summary for verifiers:
 | Dependency | CI / autonomous PASS | Opt-in live |
 | --- | --- | --- |
 | Discord webhook | Go `httptest` mock server | `DISCORD_TEST_WEBHOOK_URL` |
-| FRM API | JSON fixtures in `backend/testdata/frm/` | `go test -tags=integration` when `FRM_TEST_HOST` set |
+| FRM API | JSON fixtures in `backend/testdata/frm/`; **live read-only** `http://192.168.178.42:8889` (rule: `.cursor/rules/04-frm-live.mdc`) | `go test -tags=integration` when `FRM_TEST_HOST` set |
 | GuggiRaid deploy | `docker compose build` | Human smoke test at M13 DoD |
 
 ## Milestone scopes

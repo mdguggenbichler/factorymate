@@ -28,7 +28,7 @@ Do not push unless the user explicitly asks.
 ## Testing without production services
 
 - **Discord webhooks:** use Go `httptest` mock server or optional `fauxcord` container — see [`docs/testing.md`](docs/testing.md)
-- **FRM:** unit tests use JSON fixtures in `backend/testdata/frm/`; live integration tests are opt-in via build tag `integration`
+- **FRM:** unit tests use JSON fixtures in `backend/testdata/frm/`; **live read-only server** at `http://192.168.178.42:8889` — see [`.cursor/rules/04-frm-live.mdc`](.cursor/rules/04-frm-live.mdc)
 - **Do not** require a real Discord channel or production deploy for CI to pass
 
 ## Key paths

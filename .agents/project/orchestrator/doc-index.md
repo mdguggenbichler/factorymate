@@ -16,6 +16,7 @@ Quick reference for orchestrator **DOC REFERENCE** blocks. Sub-agents read these
 | `roadmap` | `docs/factorymate-roadmap.md` | Milestones M0–M14 |
 | `frm` | `docs/frm-docs/modules/ROOT/pages/json/Read/` | FRM endpoint adocs (read-only vendored copy — see `docs/frm-docs-reference.md`) |
 | `frm-ref` | `docs/frm-docs-reference.md` | What `frm-docs/` is and how to refresh it |
+| `frm-live` | `.cursor/rules/04-frm-live.mdc` | Live FRM at `192.168.178.42:8889` — read-only GET for fixtures/tests |
 | `defaults` | `backend/data/message_defaults.json` | Seeded notification templates |
 | `scopes` | `.agents/project/orchestrator/milestone-scopes.md` | Per-milestone READ/WRITE + scoped CI |
 | `testing` | `docs/testing.md` | FRM fixtures, Discord httptest mocks |
