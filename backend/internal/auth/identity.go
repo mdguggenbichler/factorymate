@@ -17,10 +17,9 @@ type ExternalFields struct {
 }
 
 // MeUser extends User with fields returned by GET /api/auth/me (O15).
+// Do not redeclare User fields here: shadowing breaks User.MarshalJSON flattening.
 type MeUser struct {
 	User
-	PendingPlayerName *string `json:"pendingPlayerName,omitempty"`
-	External          ExternalFields
 }
 
 // TryResolvePendingPlayers links users whose pending_player_name matches a server player.
