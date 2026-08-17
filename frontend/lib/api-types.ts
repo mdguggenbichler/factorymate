@@ -215,6 +215,11 @@ export type ResearchCostItem = {
   amount: number
 }
 
+export type ResearchCoordinate = {
+  x: number
+  y: number
+}
+
 export type ResearchNode = {
   id: string
   name: string
@@ -222,6 +227,8 @@ export type ResearchNode = {
   state: string
   techTier: number | null
   cost: ResearchCostItem[]
+  coordinates: ResearchCoordinate | null
+  parents: ResearchCoordinate[]
   updatedAt: string
 }
 

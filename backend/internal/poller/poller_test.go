@@ -49,7 +49,7 @@ func TestFirstPollBaselineNoEvents(t *testing.T) {
 	assertPlayerBaseline(t, ctx, database, "player-1", true)
 	assertCircuitBaseline(t, ctx, database, 1, true)
 	assertSchematicBaseline(t, ctx, database, "milestone-1", true)
-	assertResearchBaseline(t, ctx, database, "node-1", "Purchased")
+	assertResearchBaseline(t, ctx, database, "node-1", "Purchased", 4, 0, "[]")
 	assertElevatorPhase(t, ctx, database, "elevator-1", 2)
 }
 
@@ -353,6 +353,8 @@ func firstObservationFixture(t *testing.T) frm.FastPollResult {
 			Name: "Test Tree",
 			Nodes: []frm.ResearchNode{{
 				ID: "node-1", Name: "Test Node", State: "Purchased", TechTier: 2,
+				Coordinates: frm.ResearchCoordinate{X: 4, Y: 0},
+				Parents:     []frm.ResearchCoordinate{},
 			}},
 		}},
 		Trains: []frm.Train{{
@@ -428,16 +430,24 @@ func assertSchematicBaseline(t *testing.T, ctx context.Context, database *sql.DB
 	}
 }
 
-func assertResearchBaseline(t *testing.T, ctx context.Context, database *sql.DB, id, wantState string) {
+func assertResearchBaseline(t *testing.T, ctx context.Context, database *sql.DB, id, wantState string, wantX, wantY int, wantParentsJSON string) {
 	t.Helper()
 	var state string
+	var coordX, coordY int
+	var parentsJSON string
 	if err := database.QueryRowContext(ctx,
-		`SELECT state FROM research_node_state WHERE node_id = ?`, id,
-	).Scan(&state); err != nil {
+		`SELECT state, coord_x, coord_y, parents_json FROM research_node_state WHERE node_id = ?`, id,
+	).Scan(&state, &coordX, &coordY, &parentsJSON); err != nil {
 		t.Fatalf("research_node_state: %v", err)
 	}
 	if state != wantState {
 		t.Fatalf("node %s state = %q, want %q", id, state, wantState)
+	}
+	if coordX != wantX || coordY != wantY {
+		t.Fatalf("node %s coords = (%d,%d), want (%d,%d)", id, coordX, coordY, wantX, wantY)
+	}
+	if parentsJSON != wantParentsJSON {
+		t.Fatalf("node %s parents_json = %q, want %q", id, parentsJSON, wantParentsJSON)
 	}
 }
 

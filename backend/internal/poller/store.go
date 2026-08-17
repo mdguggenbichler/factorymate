@@ -325,9 +325,16 @@ func upsertResearchNodeState(ctx context.Context, db *sql.DB, treeName string, n
 	if err != nil {
 		return err
 	}
+	parentsJSON, err := json.Marshal(n.Parents)
+	if err != nil {
+		return err
+	}
 	_, err = db.ExecContext(ctx, `
-		INSERT INTO research_node_state (node_id, tree_name, name, category, state, tech_tier, cost_json, updated_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+		INSERT INTO research_node_state (
+			node_id, tree_name, name, category, state, tech_tier, cost_json,
+			coord_x, coord_y, parents_json, updated_at
+		)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 		ON CONFLICT(node_id) DO UPDATE SET
 			tree_name = excluded.tree_name,
 			name = excluded.name,
@@ -335,8 +342,12 @@ func upsertResearchNodeState(ctx context.Context, db *sql.DB, treeName string, n
 			state = excluded.state,
 			tech_tier = excluded.tech_tier,
 			cost_json = excluded.cost_json,
+			coord_x = excluded.coord_x,
+			coord_y = excluded.coord_y,
+			parents_json = excluded.parents_json,
 			updated_at = excluded.updated_at`,
 		n.ID, treeName, n.Name, n.Category, n.State, n.TechTier, string(costJSON),
+		n.Coordinates.X, n.Coordinates.Y, string(parentsJSON),
 		now.UTC().Format(time.RFC3339),
 	)
 	return err

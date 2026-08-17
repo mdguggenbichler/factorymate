@@ -807,8 +807,9 @@ func (h *Handler) GetMilestones(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) GetResearch(w http.ResponseWriter, r *http.Request) {
 	rows, err := h.db.QueryContext(r.Context(), `
-		SELECT node_id, tree_name, name, category, state, tech_tier, cost_json, updated_at
-		FROM research_node_state ORDER BY tree_name, name`)
+		SELECT node_id, tree_name, name, category, state, tech_tier, cost_json,
+			coord_x, coord_y, parents_json, updated_at
+		FROM research_node_state ORDER BY tree_name, coord_y, coord_x, name`)
 	if err != nil {
 		writeError(w, r, http.StatusInternalServerError, "internal error")
 		return
@@ -821,8 +822,12 @@ func (h *Handler) GetResearch(w http.ResponseWriter, r *http.Request) {
 		var category sql.NullString
 		var state string
 		var techTier sql.NullInt64
-		var costJSON, updatedAt string
-		if err := rows.Scan(&nodeID, &treeName, &name, &category, &state, &techTier, &costJSON, &updatedAt); err != nil {
+		var coordX, coordY sql.NullInt64
+		var costJSON, parentsJSON, updatedAt string
+		if err := rows.Scan(
+			&nodeID, &treeName, &name, &category, &state, &techTier, &costJSON,
+			&coordX, &coordY, &parentsJSON, &updatedAt,
+		); err != nil {
 			writeError(w, r, http.StatusInternalServerError, "internal error")
 			return
 		}
@@ -835,15 +840,34 @@ func (h *Handler) GetResearch(w http.ResponseWriter, r *http.Request) {
 				"amount": item.Amount,
 			})
 		}
-		treeMap[treeName] = append(treeMap[treeName], map[string]any{
+		var parents []frm.ResearchCoordinate
+		_ = parseJSONColumn(parentsJSON, &parents)
+		parentMaps := make([]map[string]any, 0, len(parents))
+		for _, parent := range parents {
+			parentMaps = append(parentMaps, map[string]any{
+				"x": parent.X,
+				"y": parent.Y,
+			})
+		}
+		node := map[string]any{
 			"id":        nodeID,
 			"name":      name,
 			"category":  nullStringPtr(category),
 			"state":     state,
 			"techTier":  nullIntPtr(techTier),
 			"cost":      cost,
+			"parents":   parentMaps,
 			"updatedAt": updatedAt,
-		})
+		}
+		if coordX.Valid && coordY.Valid {
+			node["coordinates"] = map[string]any{
+				"x": coordX.Int64,
+				"y": coordY.Int64,
+			}
+		} else {
+			node["coordinates"] = nil
+		}
+		treeMap[treeName] = append(treeMap[treeName], node)
 	}
 	if err := rows.Err(); err != nil {
 		writeError(w, r, http.StatusInternalServerError, "internal error")

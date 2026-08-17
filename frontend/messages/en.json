@@ -258,10 +258,20 @@
   },
   "research": {
     "title": "Research",
-    "description": "M.A.M. research trees and node costs.",
+    "description": "M.A.M. research trees with node layout, prerequisites, and costs.",
     "empty": "No research data available.",
+    "layoutPending": "Tree layout data is not available yet. It will appear after the next fast poll.",
     "nodeCount": "{count, plural, one {# node} other {# nodes}}",
     "costItem": "{name} × {amount}",
+    "nodeDetails": {
+      "tier": "Tech tier {tier}",
+      "cost": "Cost"
+    },
+    "state": {
+      "purchased": "Purchased",
+      "available": "Available",
+      "hidden": "Hidden"
+    },
     "columns": {
       "name": "Node",
       "state": "State",

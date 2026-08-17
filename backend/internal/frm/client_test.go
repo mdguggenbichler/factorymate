@@ -80,8 +80,15 @@ func TestParseFixture_getResearchTrees(t *testing.T) {
 	if len(trees) == 0 || len(trees[0].Nodes) == 0 {
 		t.Fatal("expected research tree with nodes")
 	}
-	if len(trees[0].Nodes[0].Cost) == 0 {
+	node := trees[0].Nodes[0]
+	if len(node.Cost) == 0 {
 		t.Fatal("expected node with cost items")
+	}
+	if node.Coordinates.X != 4 || node.Coordinates.Y != 4 {
+		t.Fatalf("coordinates = %+v, want (4,4)", node.Coordinates)
+	}
+	if len(node.Parents) != 1 || node.Parents[0].X != 3 || node.Parents[0].Y != 3 {
+		t.Fatalf("parents = %+v, want [{3,3}]", node.Parents)
 	}
 }
 

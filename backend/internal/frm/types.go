@@ -69,15 +69,23 @@ type Item struct {
 	MaxAmount int    `json:"MaxAmount"`
 }
 
+// ResearchCoordinate is a grid position in the M.A.M. research tree.
+type ResearchCoordinate struct {
+	X int `json:"x"`
+	Y int `json:"y"`
+}
+
 // ResearchNode is a M.A.M. research node.
 type ResearchNode struct {
-	ID        string `json:"ID"`
-	Name      string `json:"Name"`
-	ClassName string `json:"ClassName"`
-	Category  string `json:"Category"`
-	State     string `json:"State"`
-	TechTier  int    `json:"TechTier"`
-	Cost      []Item `json:"Cost"`
+	ID          string               `json:"ID"`
+	Name        string               `json:"Name"`
+	ClassName   string               `json:"ClassName"`
+	Category    string               `json:"Category"`
+	State       string               `json:"State"`
+	TechTier    int                  `json:"TechTier"`
+	Cost        []Item               `json:"Cost"`
+	Coordinates ResearchCoordinate   `json:"Coordinates"`
+	Parents     []ResearchCoordinate `json:"Parents"`
 }
 
 // ResearchTree is a FRM getResearchTrees entry.

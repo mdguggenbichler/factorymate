@@ -226,16 +226,31 @@ func TestReadEndpoints(t *testing.T) {
 		var body struct {
 			Trees []struct {
 				Nodes []struct {
-					State string `json:"state"`
-					Cost  []struct {
+					State        string `json:"state"`
+					Coordinates  *struct {
+						X int `json:"x"`
+						Y int `json:"y"`
+					} `json:"coordinates"`
+					Parents []struct {
+						X int `json:"x"`
+						Y int `json:"y"`
+					} `json:"parents"`
+					Cost []struct {
 						Amount int `json:"amount"`
 					} `json:"cost"`
 				} `json:"nodes"`
 			} `json:"trees"`
 		}
 		decodeJSONRecorder(t, resp, &body)
-		if body.Trees[0].Nodes[0].State != "Purchased" || body.Trees[0].Nodes[0].Cost[0].Amount != 100 {
+		node := body.Trees[0].Nodes[0]
+		if node.State != "Purchased" || node.Cost[0].Amount != 100 {
 			t.Fatalf("trees = %+v", body.Trees)
+		}
+		if node.Coordinates == nil || node.Coordinates.X != 2 || node.Coordinates.Y != 3 {
+			t.Fatalf("coordinates = %+v, want (2,3)", node.Coordinates)
+		}
+		if len(node.Parents) != 1 || node.Parents[0].X != 1 || node.Parents[0].Y != 0 {
+			t.Fatalf("parents = %+v, want [{1,0}]", node.Parents)
 		}
 	})
 
@@ -979,8 +994,12 @@ func seedAPIFixtures(t *testing.T, ctx context.Context, database *sql.DB) {
 	}
 
 	_, err = database.ExecContext(ctx, `
-		INSERT INTO research_node_state (node_id, tree_name, name, category, state, tech_tier, cost_json, updated_at)
-		VALUES ('n1', 'MAM', 'Oil Processing', 'Oil', 'Purchased', 5, '[{"Name":"Iron Plate","Amount":100}]', ?)`, now)
+		INSERT INTO research_node_state (
+			node_id, tree_name, name, category, state, tech_tier, cost_json,
+			coord_x, coord_y, parents_json, updated_at
+		)
+		VALUES ('n1', 'MAM', 'Oil Processing', 'Oil', 'Purchased', 5,
+			'[{"Name":"Iron Plate","Amount":100}]', 2, 3, '[{"x":1,"y":0}]', ?)`, now)
 	if err != nil {
 		t.Fatalf("seed research: %v", err)
 	}
