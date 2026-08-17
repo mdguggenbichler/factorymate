@@ -292,11 +292,13 @@ export function ModsView({ initialData, isAdmin }: ModsViewProps) {
                     </TableCell>
                     <TableCell>
                       <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Badge variant={mod.requiredOnRemote ? "default" : "secondary"}>
-                            {mod.requiredOnRemote ? t("requiredYes") : t("requiredNo")}
-                          </Badge>
-                        </TooltipTrigger>
+                        <TooltipTrigger
+                          render={
+                            <Badge variant={mod.requiredOnRemote ? "default" : "secondary"}>
+                              {mod.requiredOnRemote ? t("requiredYes") : t("requiredNo")}
+                            </Badge>
+                          }
+                        />
                         <TooltipContent className="max-w-xs">
                           {t("requiredTooltip")}
                         </TooltipContent>
