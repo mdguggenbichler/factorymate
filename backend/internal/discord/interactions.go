@@ -152,6 +152,46 @@ func (b *Bot) handleApplicationCommand(ctx context.Context, s *discordgo.Session
 		}
 		respondEphemeral(s, i, msg)
 		_ = LogBotCommand(ctx, b.db, externalID, "registration auto-approve", true, enabled)
+	case "status":
+		if !CanRunCommand(perms, CommandGroupPlayer, state) {
+			b.logAndDeny(ctx, s, i, externalID, "status", "forbidden")
+			return
+		}
+		b.handleStatusCommand(ctx, s, i, externalID)
+	case "players":
+		if !CanRunCommand(perms, CommandGroupPlayer, state) {
+			b.logAndDeny(ctx, s, i, externalID, "players", "forbidden")
+			return
+		}
+		b.handlePlayersCommand(ctx, s, i, externalID)
+	case "broadcast":
+		if !CanRunCommand(perms, CommandGroupAdmin, state) {
+			b.logAndDeny(ctx, s, i, externalID, "broadcast", "forbidden")
+			return
+		}
+		message := ""
+		for _, opt := range data.Options {
+			if opt.Name == "message" {
+				message = opt.StringValue()
+			}
+		}
+		b.handleBroadcastCommand(ctx, s, i, externalID, message)
+	case "sync-roles":
+		if !CanRunCommand(perms, CommandGroupAdmin, state) {
+			b.logAndDeny(ctx, s, i, externalID, "sync-roles", "forbidden")
+			return
+		}
+		b.handleSyncRolesCommand(ctx, s, i, externalID)
+	case "notifications":
+		if !CanRunCommand(perms, CommandGroupPlayer, state) {
+			b.logAndDeny(ctx, s, i, externalID, "notifications", "forbidden")
+			return
+		}
+		if user == nil {
+			respondEphemeral(s, i, "You must be registered first.")
+			return
+		}
+		b.handleNotificationsCommand(ctx, s, i, externalID, user.ID, data)
 	default:
 		respondEphemeral(s, i, "Unknown command.")
 	}

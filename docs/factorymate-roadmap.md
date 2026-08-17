@@ -249,22 +249,41 @@ Build order:
 
 **Goal:** Unified Discord bot for onboarding, notifications, connection details, and mod list — per `docs/discord-bot-plan.md`.
 
-- [ ] Schema: external identity, `users.status`, connection details, registration audit, bot config
-- [ ] `internal/discord/` — gateway, slash command router
-- [ ] Refactor `DiscordProvider`: `Send` (channel) + `SendDirect` (DM); remove webhook HTTP
-- [ ] Notification targets UI: channel picker; drop webhook URL fields
-- [ ] `/register`, `/register user`, `/link`, `/set-player`, `/whoami`, `/help` (Appendix G copy + slash descriptions)
-- [ ] Registration approval: `auto_approve`, pending status, admin DM buttons, web queue
-- [ ] `/registration auto-approve` admin command
-- [ ] Pending player mapping + poller auto-link (`TryResolvePendingPlayers`)
-- [ ] Unmapped server players admin panel
-- [ ] Connection details API + `/connection`, `/connection set` + mandatory DM broadcast
-- [ ] FRM `getModList` + SMM profile export (`SMMProfileService` + ficsit.app) + `/mods` page/command
-- [ ] Settings → Discord + Connection; Users UI extensions
-- [ ] Deprecate primary web invite flow (keep break-glass)
-- [ ] Tests + `docs/development.md` + spec §5 update + log-redaction tests (§8.6)
+- [x] Schema: external identity, `users.status`, connection details, registration audit, bot config
+- [x] `internal/discord/` — gateway, slash command router
+- [x] Refactor `DiscordProvider`: `Send` (channel) + `SendDirect` (DM); remove webhook HTTP
+- [x] Notification targets UI: channel picker; drop webhook URL fields
+- [x] `/register`, `/register user`, `/link`, `/set-player`, `/whoami`, `/help` (Appendix G copy + slash descriptions)
+- [x] Registration approval: `auto_approve`, pending status, admin DM buttons, web queue
+- [x] `/registration auto-approve` admin command
+- [x] Pending player mapping + poller auto-link (`TryResolvePendingPlayers`)
+- [x] Unmapped server players admin panel
+- [x] Connection details API + `/connection`, `/connection set` + mandatory DM broadcast
+- [x] FRM `getModList` + SMM profile export (`SMMProfileService` + ficsit.app) + `/mods` page/command
+- [x] Settings → Discord + Connection; Users UI extensions
+- [x] Deprecate primary web invite flow (keep break-glass)
+- [x] Tests + `docs/development.md` + spec §5 update + log-redaction tests (§8.6)
 
 **DoD:** Discord `/register` onboarding works; bot posts game events to configured channels; `/mods` page and connection settings live; web invite is break-glass only; spec and docs updated.
+
+---
+
+## M16 — Notifications polish & admin commands (Phase 1 backend)
+
+**Goal:** Per-user DM routing for game events, notification preference APIs, and M16 Discord admin commands — per `docs/discord-bot-plan.md` §9, §11.2, §12.2, §13.
+
+- [ ] Migration 005: `user_notification_prefs` table; seed `notifications.dm_defaults_json` and `notifications.dm_player_personal_default`
+- [ ] Game-event DM fan-out: dispatcher `SendDirect` for users with category `dm_enabled`
+- [ ] Personal player event DMs: `player_joined` / `player_left` when event player matches linked user and `dm_player_personal=1`
+- [ ] API: `GET/PUT /api/account/notifications`, `GET/PUT /api/settings/notification-defaults` (admin)
+- [ ] Discord admin commands: `/status`, `/players`, `/broadcast`, `/sync-roles`, `/notifications`
+- [ ] Auto-link DM when poller resolves `pending_player_name` → `player_id`
+- [ ] Guild member role change listener (`/sync-roles` mapping)
+- [ ] Optional: `connection_details_changed` message type in `message_defaults.json` + seed
+- [ ] Tests: DM fan-out respects prefs; personal player DM; dispatcher regression
+- [ ] Phase 2 (frontend): Account → Notifications UI + Settings → Notifications → Defaults
+
+**DoD (backend):** Category DM fan-out and personal player DMs work; preference APIs return/update prefs; M16 slash commands respond; auto-link and role-sync paths covered by tests.
 
 ---
 

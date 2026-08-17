@@ -12,6 +12,9 @@ import (
 	"factorymate/internal/auth"
 )
 
+// OnPlayersAutoLinked is invoked after pending_player_name rows are auto-linked (M16).
+var OnPlayersAutoLinked func(ctx context.Context, links []auth.ResolvedPlayerLink) error
+
 type appSettings struct {
 	ServerName                        string
 	FRMHost                           string
@@ -144,7 +147,16 @@ func upsertPlayerState(ctx context.Context, db *sql.DB, p frm.Player, lastSeenAt
 	if err != nil {
 		return err
 	}
-	return auth.TryResolvePendingPlayers(ctx, db, p.ID, p.Name)
+	links, err := auth.TryResolvePendingPlayers(ctx, db, p.ID, p.Name)
+	if err != nil {
+		return err
+	}
+	if len(links) > 0 && OnPlayersAutoLinked != nil {
+		if err := OnPlayersAutoLinked(ctx, links); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func insertPlayerSessionEvent(ctx context.Context, db *sql.DB, playerID, playerName, eventType string, onlineCount int, now time.Time) error {

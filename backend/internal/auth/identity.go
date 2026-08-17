@@ -22,55 +22,76 @@ type MeUser struct {
 	User
 }
 
+// ResolvedPlayerLink describes a user whose pending_player_name was auto-linked.
+type ResolvedPlayerLink struct {
+	ExternalUserID string
+	PlayerName     string
+}
+
 // TryResolvePendingPlayers links users whose pending_player_name matches a server player.
-func TryResolvePendingPlayers(ctx context.Context, db *sql.DB, playerID, playerName string) error {
+func TryResolvePendingPlayers(ctx context.Context, db *sql.DB, playerID, playerName string) ([]ResolvedPlayerLink, error) {
 	playerID = strings.TrimSpace(playerID)
 	playerName = strings.TrimSpace(playerName)
 	if playerID == "" || playerName == "" {
-		return nil
+		return nil, nil
 	}
 
 	rows, err := db.QueryContext(ctx, `
-		SELECT id FROM users
+		SELECT id, external_user_id FROM users
 		WHERE pending_player_name IS NOT NULL
 			AND player_id IS NULL
 			AND LOWER(pending_player_name) = LOWER(?)`, playerName,
 	)
 	if err != nil {
-		return fmt.Errorf("query pending users: %w", err)
+		return nil, fmt.Errorf("query pending users: %w", err)
 	}
 
-	userIDs := make([]int64, 0)
+	type pendingUser struct {
+		id         int64
+		externalID sql.NullString
+	}
+	pending := make([]pendingUser, 0)
 	for rows.Next() {
-		var userID int64
-		if err := rows.Scan(&userID); err != nil {
+		var u pendingUser
+		if err := rows.Scan(&u.id, &u.externalID); err != nil {
 			rows.Close()
-			return fmt.Errorf("scan pending user: %w", err)
+			return nil, fmt.Errorf("scan pending user: %w", err)
 		}
-		userIDs = append(userIDs, userID)
+		pending = append(pending, u)
 	}
 	if err := rows.Close(); err != nil {
-		return err
+		return nil, err
 	}
 	if err := rows.Err(); err != nil {
-		return err
+		return nil, err
 	}
 
 	var owner int64
 	err = db.QueryRowContext(ctx, `SELECT id FROM users WHERE player_id = ?`, playerID).Scan(&owner)
 	if err == nil {
-		return nil
+		return nil, nil
 	}
 	if err != sql.ErrNoRows {
-		return fmt.Errorf("check player owner: %w", err)
+		return nil, fmt.Errorf("check player owner: %w", err)
 	}
 
-	for _, userID := range userIDs {
-		if _, err := db.ExecContext(ctx, `UPDATE users SET player_id = ? WHERE id = ? AND player_id IS NULL`, playerID, userID); err != nil {
-			return fmt.Errorf("auto-link player: %w", err)
+	linked := make([]ResolvedPlayerLink, 0)
+	for _, user := range pending {
+		res, err := db.ExecContext(ctx, `UPDATE users SET player_id = ? WHERE id = ? AND player_id IS NULL`, playerID, user.id)
+		if err != nil {
+			return nil, fmt.Errorf("auto-link player: %w", err)
 		}
+		n, _ := res.RowsAffected()
+		if n == 0 {
+			continue
+		}
+		link := ResolvedPlayerLink{PlayerName: playerName}
+		if user.externalID.Valid {
+			link.ExternalUserID = user.externalID.String
+		}
+		linked = append(linked, link)
 	}
-	return nil
+	return linked, nil
 }
 
 func loadExternalFields(platform, userID, username, displayName, linkedAt sql.NullString) ExternalFields {

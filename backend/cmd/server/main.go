@@ -123,6 +123,16 @@ func runPoller(ctx context.Context, database *sql.DB, phases *poller.ElevatorPha
 	dispatcher := notify.NewDispatcher(database, map[string]notify.Provider{
 		"discord": provider,
 	})
+	poller.OnPlayersAutoLinked = func(ctx context.Context, links []auth.ResolvedPlayerLink) error {
+		autoLinks := make([]notify.PlayerAutoLink, 0, len(links))
+		for _, link := range links {
+			autoLinks = append(autoLinks, notify.PlayerAutoLink{
+				ExternalUserID: link.ExternalUserID,
+				PlayerName:     link.PlayerName,
+			})
+		}
+		return dispatcher.NotifyPlayerAutoLinked(ctx, autoLinks)
+	}
 	onEvent := func(ctx context.Context, ev poller.Event) error {
 		return dispatcher.HandleEvent(ctx, ev.MessageTypeKey, ev.Variables)
 	}

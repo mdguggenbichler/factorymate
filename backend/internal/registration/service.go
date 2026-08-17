@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"factorymate/internal/auth"
+	"factorymate/internal/notifications"
 )
 
 // ExternalIdentity is a chat-platform user reference stored on users.
@@ -232,6 +233,10 @@ func (s *Service) Register(ctx context.Context, params RegisterParams) (Register
 		INSERT INTO registration_audit_log (user_id, external_user_id, action, created_at)
 		VALUES (?, ?, 'submitted', ?)`, userID, ext.UserID, now); err != nil {
 		return RegisterResult{}, fmt.Errorf("audit log: %w", err)
+	}
+
+	if err := notifications.NewService(s.db).SeedUserPrefs(ctx, tx, userID); err != nil {
+		return RegisterResult{}, fmt.Errorf("seed notification prefs: %w", err)
 	}
 
 	if err := tx.Commit(); err != nil {

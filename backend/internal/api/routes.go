@@ -20,6 +20,8 @@ func (h *Handler) Mount(r chi.Router) {
 			r.Use(h.auth.RequireActiveUser(writeError))
 
 			r.Put("/account/password", h.ChangePassword)
+			r.Get("/account/notifications", h.GetAccountNotifications)
+			r.Put("/account/notifications", h.PutAccountNotifications)
 
 			r.Get("/status", h.GetStatus)
 			r.Get("/players", h.GetPlayers)
@@ -70,6 +72,8 @@ func (h *Handler) Mount(r chi.Router) {
 				r.Get("/notification-log", h.GetNotificationLog)
 				r.Get("/settings", h.GetSettings)
 				r.Put("/settings", h.UpdateSettings)
+				r.Get("/settings/notification-defaults", h.GetNotificationDefaults)
+				r.Put("/settings/notification-defaults", h.PutNotificationDefaults)
 				r.Post("/settings/frm/test", h.TestFRMConnection)
 				r.Get("/users", h.ListUsers)
 				r.Put("/users/{id}", h.UpdateUser)

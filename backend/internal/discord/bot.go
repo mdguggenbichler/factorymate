@@ -81,8 +81,9 @@ func (b *Bot) Start(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("discord session: %w", err)
 	}
-	dg.Identify.Intents = discordgo.IntentsGuilds
+	dg.Identify.Intents = discordgo.IntentsGuilds | discordgo.IntentsGuildMembers
 	dg.AddHandler(b.handleInteraction)
+	dg.AddHandler(b.handleGuildMemberUpdate)
 
 	if err := dg.Open(); err != nil {
 		return fmt.Errorf("discord gateway: %w", err)

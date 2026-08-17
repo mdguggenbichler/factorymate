@@ -189,5 +189,21 @@
       "footer": "🏭 {ServerName} · {Timestamp}",
       "show_timestamp": true
     }
+  },
+  "connection_details_changed": {
+    "plain": "🔑 Connection details were updated for {ServerName}.",
+    "embed": {
+      "title": "🔑 Connection details updated",
+      "description": "Game host and join settings changed.",
+      "color": "#5865F2",
+      "fields": [
+        { "name": "🏭 Factory", "value": "{ServerName}", "inline": true },
+        { "name": "🌐 Host", "value": "{GameHost}", "inline": true },
+        { "name": "🔌 Port", "value": "{GamePort}", "inline": true },
+        { "name": "📝 Notes", "value": "{Notes}", "inline": false }
+      ],
+      "footer": "🏭 {ServerName} · {Timestamp}",
+      "show_timestamp": true
+    }
   }
 }

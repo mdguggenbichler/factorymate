@@ -35,6 +35,7 @@ var messageTypeCatalog = []messageTypeMeta{
 	{Key: "train_derailed", Label: "Train Derailed", Category: "vehicle", Variables: []string{"Timestamp", "ServerName", "TrainName", "StationName", "TrainStatus", "SelfDriving"}},
 	{Key: "vehicle_out_of_fuel", Label: "Vehicle Out of Fuel", Category: "vehicle", Variables: []string{"Timestamp", "ServerName", "VehicleType", "VehicleName", "Driver", "ForwardSpeed"}},
 	{Key: "vehicle_stuck", Label: "Vehicle Stuck", Category: "vehicle", Variables: []string{"Timestamp", "ServerName", "VehicleType", "VehicleName", "Driver", "ForwardSpeed"}},
+	{Key: "connection_details_changed", Label: "Connection Details Changed", Category: "server", Variables: []string{"Timestamp", "ServerName", "GameHost", "GamePort", "Notes"}},
 }
 
 // Seed inserts idempotent reference data required at startup.

@@ -7,18 +7,20 @@ import (
 	"factorymate/internal/connection"
 	"factorymate/internal/discord"
 	"factorymate/internal/mods"
+	"factorymate/internal/notifications"
 	"factorymate/internal/notify"
 	"factorymate/internal/registration"
 )
 
 type Handler struct {
-	db           *sql.DB
-	auth         *auth.Service
-	registration *registration.Service
-	connection   *connection.Service
-	mods         *mods.Service
-	dispatcher   *notify.Dispatcher
-	discord      *discord.Bot
+	db            *sql.DB
+	auth          *auth.Service
+	registration  *registration.Service
+	connection    *connection.Service
+	mods          *mods.Service
+	dispatcher    *notify.Dispatcher
+	discord       *discord.Bot
+	notifications *notifications.Service
 }
 
 func NewHandler(db *sql.DB, authSvc *auth.Service, bot *discord.Bot, regSvc *registration.Service, connSvc *connection.Service, modsSvc *mods.Service) *Handler {
@@ -37,12 +39,13 @@ func NewHandlerWithDiscordSession(db *sql.DB, authSvc *auth.Service, regSvc *reg
 func newHandler(db *sql.DB, authSvc *auth.Service, bot *discord.Bot, regSvc *registration.Service, connSvc *connection.Service, modsSvc *mods.Service, session notify.DiscordSession) *Handler {
 	provider := notify.NewDiscordProvider(session)
 	return &Handler{
-		db:           db,
-		auth:         authSvc,
-		registration: regSvc,
-		connection:   connSvc,
-		mods:         modsSvc,
-		discord:      bot,
+		db:            db,
+		auth:          authSvc,
+		registration:  regSvc,
+		connection:    connSvc,
+		mods:          modsSvc,
+		discord:       bot,
+		notifications: notifications.NewService(db),
 		dispatcher: notify.NewDispatcher(db, map[string]notify.Provider{
 			"discord": provider,
 		}),

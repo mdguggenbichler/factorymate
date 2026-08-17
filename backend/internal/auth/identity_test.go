@@ -30,7 +30,7 @@ func TestTryResolvePendingPlayers(t *testing.T) {
 		t.Fatalf("insert player: %v", err)
 	}
 
-	if err := auth.TryResolvePendingPlayers(ctx, database, "pid-1", "Guggi"); err != nil {
+	if _, err := auth.TryResolvePendingPlayers(ctx, database, "pid-1", "Guggi"); err != nil {
 		t.Fatalf("resolve pending: %v", err)
 	}
 
