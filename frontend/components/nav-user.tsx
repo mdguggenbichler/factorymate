@@ -25,7 +25,12 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar"
-import { CircleUserRoundIcon, EllipsisVerticalIcon, LogOutIcon } from "lucide-react"
+import {
+  BellIcon,
+  CircleUserRoundIcon,
+  EllipsisVerticalIcon,
+  LogOutIcon,
+} from "lucide-react"
 
 function initials(username: string): string {
   return username.slice(0, 2).toUpperCase()
@@ -99,6 +104,10 @@ export function NavUser({ user }: { user: User }) {
               <DropdownMenuItem render={<Link href="/account" />}>
                 <CircleUserRoundIcon />
                 {t("account")}
+              </DropdownMenuItem>
+              <DropdownMenuItem render={<Link href="/account/notifications" />}>
+                <BellIcon />
+                {t("accountNotifications")}
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />

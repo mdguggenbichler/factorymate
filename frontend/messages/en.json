@@ -56,11 +56,13 @@
     "settingsGeneral": "General",
     "settingsDiscord": "Discord",
     "settingsConnection": "Connection",
+    "settingsNotificationDefaults": "Notification Defaults",
     "settingsNotificationTargets": "Notification Targets",
     "settingsNotificationTemplates": "Message Templates",
     "settingsNotificationLog": "Notification Log",
     "settingsUsers": "Users",
     "account": "Account",
+    "accountNotifications": "Notifications",
     "logout": "Log out"
   },
   "auth": {
@@ -335,7 +337,53 @@
     "resolve": "Mark resolved",
     "resolveSuccess": "Diagnostic entry marked as resolved."
   },
+  "notifications": {
+    "categories": {
+      "server": {
+        "label": "Server status",
+        "description": "Direct messages when the game server goes online or offline."
+      },
+      "player": {
+        "label": "Players",
+        "description": "Direct messages when players join or leave the server."
+      },
+      "power": {
+        "label": "Power",
+        "description": "Direct messages for fuse trips and power restoration."
+      },
+      "progression": {
+        "label": "Progression",
+        "description": "Direct messages for milestones, hard drives, elevator phases, and research unlocks."
+      },
+      "vehicle": {
+        "label": "Vehicles",
+        "description": "Direct messages for derailed trains, out-of-fuel vehicles, and stuck vehicles."
+      }
+    },
+    "personalDm": {
+      "label": "Personal player events",
+      "description": "When your linked character joins or leaves, send a personal DM to you even if the Players category is off.",
+      "defaultLabel": "Personal player events (default)",
+      "defaultDescription": "Default for new users: send a personal DM when their linked character joins or leaves."
+    }
+  },
+  "account": {
+    "notifications": {
+      "title": "Notification preferences",
+      "description": "Choose which game events also reach you as Discord direct messages.",
+      "formTitle": "Direct message preferences",
+      "formDescription": "Channel notifications are configured by admins. These toggles only affect DMs sent to your linked Discord account.",
+      "saved": "Notification preferences saved."
+    }
+  },
   "settings": {
+    "notificationDefaults": {
+      "title": "Notification defaults",
+      "description": "Default DM preferences applied to newly registered users.",
+      "formTitle": "DM defaults for new users",
+      "formDescription": "Existing users keep their own preferences. Connection-detail DMs are always mandatory and are not controlled here.",
+      "saved": "Notification defaults saved."
+    },
     "general": {
       "title": "General settings",
       "description": "FRM connection details and polling intervals.",

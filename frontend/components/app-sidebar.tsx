@@ -128,6 +128,11 @@ export function AppSidebar({
       icon: <LinkIcon />,
     },
     {
+      title: t("settingsNotificationDefaults"),
+      url: "/settings/notifications/defaults",
+      icon: <Settings2Icon />,
+    },
+    {
       title: t("settingsNotificationTargets"),
       url: "/settings/notifications/targets",
       icon: <Settings2Icon />,
@@ -200,9 +205,11 @@ export function usePageTitle(): string {
     "/elevator": t("elevator"),
     "/mods": t("mods"),
     "/account": t("account"),
+    "/account/notifications": t("accountNotifications"),
     "/settings/general": t("settingsGeneral"),
     "/settings/discord": t("settingsDiscord"),
     "/settings/connection": t("settingsConnection"),
+    "/settings/notifications/defaults": t("settingsNotificationDefaults"),
     "/settings/notifications/targets": t("settingsNotificationTargets"),
     "/settings/notifications/templates": t("settingsNotificationTemplates"),
     "/settings/notifications/log": t("settingsNotificationLog"),

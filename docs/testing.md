@@ -88,6 +88,19 @@ The Discord bot runs inside the Go backend process. CI does **not** require a li
 | Log redaction | Assert `notification_log` and `bot_command_log` never contain `game_password` |
 | Dispatcher regression | Existing `dispatch_test.go` with mock session instead of httptest webhook |
 
+### DM fan-out and preferences (M16)
+
+Game-event dispatch sends channel posts (admin-configured targets) **and** optional DMs per user prefs. Tests live in `backend/internal/notify/dispatch_dm_test.go`:
+
+| Test | Asserts |
+| --- | --- |
+| `TestDispatcher_DMFanOutRespectsPrefs` | User with `power` DM enabled receives fuse-trip DM; user with `power` off does not; channel send still occurs |
+| `TestDispatcher_PersonalPlayerDM` | User with `dm_player_personal` and linked player name receives personal join/leave DM |
+
+Prefs are stored in `user_notification_prefs` (per category) and `users.dm_player_personal`. New users inherit admin defaults from `app_settings` (`notifications.dm_defaults_json`, `notifications.dm_player_personal_default`). Frontend: `/account/notifications` (all active users) and `/settings/notifications/defaults` (admin).
+
+Connection-detail DMs bypass category prefs — see `ConnectionDetailsService` tests in `backend/internal/connection/`.
+
 ### Optional integration test guild
 
 Configure CI secrets:
@@ -103,8 +116,11 @@ Run tagged integration tests against a private test guild when validating slash 
 
 1. Settings → Discord — verify bot status badge and invite URL load
 2. Settings → Notifications → Targets — channel picker populated; legacy webhook banner if old targets exist
-3. Settings → Users — pending approval queue and unmapped players panels
-4. `/mods` — mod table, download SMM profile, admin refresh
+3. Settings → Notifications → Defaults — category toggles load and save
+4. Settings → Notifications → Templates — `connection_details_changed` appears in message type list when seeded
+5. Account → Notifications (user menu) — per-user DM toggles load and save
+6. Settings → Users — pending approval queue and unmapped players panels
+7. `/mods` — mod table, download SMM profile, admin refresh
 
 ## FRM client testing (M2, M3)
 

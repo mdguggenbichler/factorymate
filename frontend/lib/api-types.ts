@@ -476,6 +476,27 @@ export type NotificationLogEntry = {
 
 export type NotificationLogResponse = PaginatedResponse<NotificationLogEntry>
 
+export const NOTIFICATION_DM_CATEGORIES = [
+  "server",
+  "player",
+  "power",
+  "progression",
+  "vehicle",
+] as const
+
+export type NotificationDMCategory =
+  (typeof NOTIFICATION_DM_CATEGORIES)[number]
+
+export type UserNotificationPrefs = {
+  categories: Record<string, boolean>
+  dmPlayerPersonal: boolean
+}
+
+export type AdminNotificationDefaults = {
+  categories: Record<string, boolean>
+  dmPlayerPersonalDefault: boolean
+}
+
 export type AppUser = {
   id: number
   username: string
