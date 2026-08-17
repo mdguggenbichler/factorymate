@@ -1,0 +1,74 @@
+name: Container image
+
+on:
+  workflow_call:
+    inputs:
+      tags:
+        description: Comma-separated image tags (e.g. nightly,abc1234 or v1.0.0,latest)
+        required: true
+        type: string
+      push:
+        description: Push image to GHCR
+        required: false
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-and-push:
+    name: Build and push
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        if: inputs.push
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Resolve image tags
+        id: tags
+        env:
+          INPUT_TAGS: ${{ inputs.tags }}
+        run: |
+          image="ghcr.io/$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')"
+          resolved=()
+          IFS=',' read -ra parts <<< "${INPUT_TAGS}"
+          for part in "${parts[@]}"; do
+            tag="$(echo "${part}" | xargs)"
+            if [[ -z "${tag}" ]]; then
+              continue
+            fi
+            if [[ "${tag}" =~ ^[0-9a-fA-F]{40}$ ]]; then
+              tag="${tag:0:7}"
+            fi
+            resolved+=("${image}:${tag}")
+          done
+          if [ "${#resolved[@]}" -eq 0 ]; then
+            echo "::error::No image tags resolved from input: ${INPUT_TAGS}"
+            exit 1
+          fi
+          joined="$(IFS=','; echo "${resolved[*]}")"
+          echo "value=${joined}" >> "${GITHUB_OUTPUT}"
+          echo "Resolved tags: ${joined}"
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64
+          push: ${{ inputs.push }}
+          tags: ${{ steps.tags.outputs.value }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

@@ -215,6 +215,11 @@ export type ResearchCostItem = {
   amount: number
 }
 
+export type ResearchCoordinate = {
+  x: number
+  y: number
+}
+
 export type ResearchNode = {
   id: string
   name: string
@@ -222,6 +227,8 @@ export type ResearchNode = {
   state: string
   techTier: number | null
   cost: ResearchCostItem[]
+  coordinates: ResearchCoordinate | null
+  parents: ResearchCoordinate[]
   updatedAt: string
 }
 
@@ -336,6 +343,8 @@ export type EmbedTemplate = {
   description: string
   color: string
   fields: EmbedField[]
+  footer?: string
+  show_timestamp?: boolean
 }
 
 export type MessageTemplate = {
@@ -374,11 +383,38 @@ export type AppUser = {
   id: number
   username: string
   role: string
+  status: string
   createdAt: string
+  playerId?: string | null
+  playerName?: string | null
 }
 
 export type UsersResponse = {
   users: AppUser[]
+}
+
+export type Invite = {
+  id: number
+  token: string
+  role: string
+  createdBy: number
+  createdAt: string
+  expiresAt: string
+  status: string
+  invitePath: string
+  acceptedAt?: string
+  acceptedByUserId?: number
+  acceptedUsername?: string
+  revokedAt?: string
+}
+
+export type InvitesResponse = {
+  invites: Invite[]
+}
+
+export type FRMTestResponse = {
+  sessionName: string
+  reachable: boolean
 }
 
 export type RenderedPreview = {

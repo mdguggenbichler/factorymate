@@ -4,12 +4,16 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
 
 	"factorymate/internal/template"
 )
+
+// ErrNoTargets is returned when a test send has no assigned enabled targets.
+var ErrNoTargets = errors.New("no targets assigned")
 
 // Dispatcher routes detected poller events to notification providers (spec §5.3).
 type Dispatcher struct {
@@ -50,11 +54,31 @@ func (d *Dispatcher) HandleEvent(ctx context.Context, messageTypeKey string, var
 		return err
 	}
 
-	rendered := template.Render(tmpl, vars)
+	rendered := template.Render(tmpl, d.mergeSystemVariables(ctx, vars))
 	for _, target := range targets {
-		d.dispatchToTarget(ctx, messageTypeKey, target, rendered)
+		_ = d.dispatchToTarget(ctx, messageTypeKey, target, rendered)
 	}
 	return nil
+}
+
+// SendRenderedTest sends a pre-rendered message to all assigned enabled targets.
+// Unlike HandleEvent, it does not check message_types.enabled.
+func (d *Dispatcher) SendRenderedTest(ctx context.Context, messageTypeKey string, rendered template.RenderedMessage) error {
+	targets, err := d.loadTargets(ctx, messageTypeKey)
+	if err != nil {
+		return err
+	}
+	if len(targets) == 0 {
+		return ErrNoTargets
+	}
+
+	var firstErr error
+	for _, target := range targets {
+		if err := d.dispatchToTarget(ctx, messageTypeKey, target, rendered); err != nil && firstErr == nil {
+			firstErr = err
+		}
+	}
+	return firstErr
 }
 
 func (d *Dispatcher) loadMessageType(ctx context.Context, key string) (bool, string, error) {
@@ -116,18 +140,20 @@ func (d *Dispatcher) loadEffectiveTemplate(ctx context.Context, key, defaultJSON
 	return defaults, nil
 }
 
-func (d *Dispatcher) dispatchToTarget(ctx context.Context, messageTypeKey string, target NotificationTarget, rendered template.RenderedMessage) {
+func (d *Dispatcher) dispatchToTarget(ctx context.Context, messageTypeKey string, target NotificationTarget, rendered template.RenderedMessage) error {
 	msg := providerMessage(target.ProviderType, rendered)
 	preview := renderedPreview(target.ProviderType, rendered)
 
 	provider, ok := d.Providers[target.ProviderType]
 	if !ok {
-		d.recordLog(ctx, messageTypeKey, target.ID, preview, false, fmt.Errorf("unknown provider type %q", target.ProviderType))
-		return
+		err := fmt.Errorf("unknown provider type %q", target.ProviderType)
+		d.recordLog(ctx, messageTypeKey, target.ID, preview, false, err)
+		return err
 	}
 
 	sendErr := provider.Send(ctx, target, msg)
 	d.recordLog(ctx, messageTypeKey, target.ID, preview, sendErr == nil, sendErr)
+	return sendErr
 }
 
 func providerMessage(providerType string, rendered template.RenderedMessage) RenderedMessage {
@@ -145,6 +171,8 @@ func toNotifyEmbed(embed *template.DiscordEmbed) *DiscordEmbed {
 		Title:       embed.Title,
 		Description: embed.Description,
 		Color:       embed.Color,
+		Footer:      embed.Footer,
+		Timestamp:   embed.Timestamp,
 	}
 	for _, f := range embed.Fields {
 		out.Fields = append(out.Fields, DiscordEmbedField{
@@ -154,6 +182,35 @@ func toNotifyEmbed(embed *template.DiscordEmbed) *DiscordEmbed {
 		})
 	}
 	return out
+}
+
+func (d *Dispatcher) mergeSystemVariables(ctx context.Context, vars map[string]string) map[string]string {
+	now := d.Now().UTC()
+	out := make(map[string]string, len(vars)+3)
+	for k, v := range vars {
+		out[k] = v
+	}
+	out["Timestamp"] = formatDispatchTimestamp(now)
+	out["TimestampISO"] = now.Format(time.RFC3339)
+	if out["ServerName"] == "" {
+		if name := d.loadServerName(ctx); name != "" {
+			out["ServerName"] = name
+		}
+	}
+	return out
+}
+
+func (d *Dispatcher) loadServerName(ctx context.Context) string {
+	var name string
+	err := d.DB.QueryRowContext(ctx, `SELECT server_name FROM app_settings WHERE id = 1`).Scan(&name)
+	if err != nil {
+		return ""
+	}
+	return name
+}
+
+func formatDispatchTimestamp(t time.Time) string {
+	return t.Format("Jan 2, 2006 · 15:04 UTC")
 }
 
 func renderedPreview(providerType string, rendered template.RenderedMessage) string {

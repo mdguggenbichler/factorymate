@@ -2,23 +2,10 @@
 
 import { useTranslations } from "next-intl"
 
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion"
+import { ResearchTreeCanvas } from "@/components/research/research-tree-canvas"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
-import { formatNumber } from "@/lib/format"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type { ResearchTree } from "@/lib/api-types"
 
 type ResearchViewProps = {
@@ -42,63 +29,24 @@ export function ResearchView({ trees }: ResearchViewProps) {
           </CardContent>
         </Card>
       ) : (
-        <Accordion multiple className="space-y-2">
+        <Tabs defaultValue={trees[0].name}>
+          <TabsList className="h-auto flex-wrap">
+            {trees.map((tree) => (
+              <TabsTrigger key={tree.name} value={tree.name} className="gap-2">
+                <span>{tree.name}</span>
+                <Badge variant="outline" className="px-1.5 py-0 text-[10px]">
+                  {t("nodeCount", { count: tree.nodes.length })}
+                </Badge>
+              </TabsTrigger>
+            ))}
+          </TabsList>
+
           {trees.map((tree) => (
-            <AccordionItem
-              key={tree.name}
-              value={tree.name}
-              className="rounded-lg border px-4"
-            >
-              <AccordionTrigger>
-                <div className="flex items-center gap-2">
-                  <span>{tree.name}</span>
-                  <Badge variant="outline">
-                    {t("nodeCount", { count: tree.nodes.length })}
-                  </Badge>
-                </div>
-              </AccordionTrigger>
-              <AccordionContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>{t("columns.name")}</TableHead>
-                      <TableHead>{t("columns.state")}</TableHead>
-                      <TableHead>{t("columns.tier")}</TableHead>
-                      <TableHead>{t("columns.cost")}</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {tree.nodes.map((node) => (
-                      <TableRow key={node.id}>
-                        <TableCell className="font-medium">{node.name}</TableCell>
-                        <TableCell>
-                          <Badge variant="outline">{node.state}</Badge>
-                        </TableCell>
-                        <TableCell>{node.techTier ?? "—"}</TableCell>
-                        <TableCell>
-                          {node.cost.length === 0 ? (
-                            "—"
-                          ) : (
-                            <div className="flex flex-wrap gap-1">
-                              {node.cost.map((item) => (
-                                <Badge key={`${node.id}-${item.name}`} variant="secondary">
-                                  {t("costItem", {
-                                    name: item.name,
-                                    amount: formatNumber(item.amount, 0),
-                                  })}
-                                </Badge>
-                              ))}
-                            </div>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </AccordionContent>
-            </AccordionItem>
+            <TabsContent key={tree.name} value={tree.name}>
+              <ResearchTreeCanvas nodes={tree.nodes} treeName={tree.name} />
+            </TabsContent>
           ))}
-        </Accordion>
+        </Tabs>
       )}
     </div>
   )

@@ -15,7 +15,7 @@ It replaces an earlier n8n-based polling workflow with a single self-contained G
 ### 1.1 Goals
 
 - Reliable, self-hosted polling of FRM with correct diff/edge-triggered event detection (no duplicate or missed notifications across restarts).
-- Rich, well-formatted Discord notifications (embeds with color, fields; footer/timestamp deferred — §10) — not limited to plain text.
+- Rich, well-formatted Discord notifications (embeds with color, fields, footer, and native timestamp — §5.4) — not limited to plain text.
 - A central place to configure **where** notifications go (Notification Targets) and **which** message types go **where** (assignment), decoupled from message formatting.
 - A templating system so operators get sensible default messages out of the box, but can edit the wording/format per message type without touching code.
 - A small dashboard, protected by login, that can be shared with all group members — not just the admin — covering player status, power status, production stats (produced vs. consumed per item, over time, plus per-machine detail), the AWESOME Sink, drones, Lizard Doggos, milestones, M.A.M. research, vehicles, and Space Elevator progress.
@@ -94,7 +94,7 @@ It replaces an earlier n8n-based polling workflow with a single self-contained G
 | Backend language | Go | Single static binary, easy Docker image, good HTTP + concurrency primitives for the poller loop |
 | Backend framework | net/http + **chi** router | Lightweight REST API — chi is the chosen router for v1 |
 | Database | SQLite (`modernc.org/sqlite`, pure Go, no CGO) | Sufficient for single-server scale; simplifies deployment (no separate DB container) |
-| Notification delivery | **Custom `Provider` interface**, no third-party notification library | Full control over Discord embed structure (title, description, color, fields; footer/timestamp deferred v1). Discord is the primary/only provider in v1; interface is designed so ntfy/Telegram/Slack providers can be added later without touching the dispatcher or templating system. |
+| Notification delivery | **Custom `Provider` interface**, no third-party notification library | Full control over Discord embed structure (title, description, color, fields, footer, timestamp). Discord is the primary/only provider in v1; interface is designed so ntfy/Telegram/Slack providers can be added later without touching the dispatcher or templating system. |
 | Templating | Custom `{VarName}` substitution (plain + structured embed model) — see §5.4 | Two render paths: plain string, or structured embed object |
 | Frontend framework | Next.js (App Router) | |
 | Frontend i18n | **next-intl** | All UI strings via locale files — see §8.2; English only in v1 |
@@ -130,7 +130,8 @@ type DiscordEmbed struct {
     Description string
     Color       string // hex, e.g. "#57F287"
     Fields      []DiscordEmbedField
-    // Footer and timestamp are deferred for v1 (§10) — Discord provider may omit them
+    Footer      string // rendered footer text (optional)
+    Timestamp   string // ISO 8601 for Discord native timestamp (optional)
 }
 
 type DiscordEmbedField struct {
@@ -171,8 +172,24 @@ CREATE TABLE users (
     username TEXT UNIQUE NOT NULL,
     password_hash TEXT NOT NULL,
     role TEXT NOT NULL CHECK (role IN ('admin', 'viewer')),
+    player_id TEXT REFERENCES player_state(player_id),  -- optional admin mapping to game player
     created_at TEXT NOT NULL
 );
+
+CREATE TABLE invites (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    token TEXT NOT NULL UNIQUE,
+    role TEXT NOT NULL CHECK (role IN ('admin', 'viewer')),
+    created_by INTEGER NOT NULL REFERENCES users(id),
+    created_at TEXT NOT NULL,
+    expires_at TEXT NOT NULL,
+    accepted_at TEXT,
+    accepted_by_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    revoked_at TEXT
+);
+CREATE INDEX idx_invites_token ON invites(token);
+CREATE INDEX idx_invites_pending ON invites(accepted_at, revoked_at, expires_at);
+CREATE INDEX idx_users_player_id ON users(player_id);
 
 -- Server-side session store (SQLite — sessions survive process restarts)
 CREATE TABLE sessions (
@@ -195,9 +212,8 @@ CREATE TABLE notification_targets (
 );
 
 -- Fixed catalog of message types (seeded, not user-created in v1).
--- Startup seeding only INSERTs keys missing from the table (new message
--- types introduced by a later app version); it never overwrites `enabled`
--- on an existing row, so an admin's on/off choice survives upgrades.
+-- Startup seeding INSERTs new keys and upserts default_template_json and
+-- variables_json on every startup; `enabled` is preserved on existing rows.
 CREATE TABLE message_types (
     key TEXT PRIMARY KEY,               -- e.g. 'player_joined'
     label TEXT NOT NULL,                -- human readable, e.g. "Player Joined"
@@ -477,7 +493,7 @@ CREATE INDEX idx_circuit_snapshots_circuit_time ON circuit_snapshots (circuit_id
 -- App-level configuration (single row)
 CREATE TABLE app_settings (
     id INTEGER PRIMARY KEY CHECK (id = 1),
-    server_name TEXT NOT NULL DEFAULT 'Satisfactory Server',  -- free-text label, used as {ServerName} in templates
+    server_name TEXT NOT NULL DEFAULT 'Satisfactory Server',  -- auto-synced from FRM getSessionInfo.SessionName; cached for {ServerName} in templates
     frm_host TEXT NOT NULL DEFAULT '',
     frm_port INTEGER NOT NULL DEFAULT 8080,
     frm_auth_token TEXT,                -- optional; sent as X-FRM-Authorization when set (see §4.1)
@@ -506,6 +522,8 @@ Two separate cadences: the **fast poll** drives notification/event detection (§
 | `GET /getResearchTrees` | M.A.M. research tree nodes → `research_node_state`, drives `research_unlocked` |
 | `GET /getTrains` | All trains — derailment/self-driving status → `train_state`, drives `train_derailed` |
 | `GET /getVehicles` | All wheeled vehicles (Explorer/Tractor/Truck/Factory Cart in one call, same aggregation pattern as `getFactory`) → `vehicle_state`, drives `vehicle_out_of_fuel`/`vehicle_stuck` |
+
+**Server display name** (not part of fast/slow poll entity tables): when FRM is reachable and `frm_host` is set, FactoryMate calls `GET /getSessionInfo` and caches `SessionName` into `app_settings.server_name`. Also fetched on `PUT /api/settings` (when host is set) and via `POST /api/settings/frm/test` for admin preview.
 
 **Slow poll** (every `production_snapshot_interval_seconds`, default 5 min):
 
@@ -670,10 +688,14 @@ When M3 emits `(message_type_key, variables map[string]string)`, populate variab
 
 | Message type | Variable | Source |
 |---|---|---|
-| `server_online`, `server_offline` | `{ServerName}` | `app_settings.server_name` |
+| **all types** | `{Timestamp}` | Dispatch time (UTC), formatted e.g. `Aug 17, 2026 · 14:37 UTC` — injected at send, not from FRM |
+| **all types** | `{ServerName}` | `app_settings.server_name` (also injected at dispatch when absent from event vars) |
+| `server_online`, `server_offline` | `{InGameTime}` | FRM `getSessionInfo`: `Day {PassedDays}, {Hours}:{Minutes}` (zero-padded hours/minutes) |
 | `player_joined`, `player_left` | `{PlayerName}` | FRM `getPlayer.Name` for the transitioning player |
-| `player_joined`, `player_left` | `{OnlineCount}` | Count of players with `Online == true` **after** applying this poll's player upserts |
+| `player_joined`, `player_left` | `{OnlineCount}` | Count of players with `Online == true` **after** applying this poll's player upserts (integer string; templates add "players online") |
 | `fuse_tripped`, `power_restored` | `{CircuitID}` | FRM `getPower.CircuitGroupID` as string |
+| `fuse_tripped`, `power_restored` | `{PowerProduction}`, `{PowerConsumed}`, `{PowerCapacity}` | FRM circuit at event time, formatted MW |
+| `fuse_tripped`, `power_restored` | `{BatteryPercent}`, `{BatteryTimeEmpty}` | FRM circuit when `BatteryCapacity > 0`; omitted (empty) when no batteries |
 | `milestone_unlocked` | `{SchematicName}` | FRM `getSchematics.Name` |
 | `milestone_unlocked` | `{TechTier}` | FRM `getSchematics.TechTier` as string |
 | `milestone_unlocked` | `{RecipeNames}` | Comma-joined `Recipes[].Name` |
@@ -681,13 +703,19 @@ When M3 emits `(message_type_key, variables map[string]string)`, populate variab
 | `hard_drive_ready` | `{RecipeOptions}` | Newline-joined `Recipes[].Name` |
 | `elevator_phase_complete` | `{ElevatorName}` | FRM `getSpaceElevator.Name` |
 | `elevator_phase_complete` | `{PhaseNumber}` | `elevator_state.phase_number` as string; empty if NULL |
+| `elevator_phase_complete` | `{PhaseRequirements}` | Newline-joined `CurrentPhase[]` (`Name: RemainingCost/TotalCost`) |
 | `research_unlocked` | `{NodeName}` | FRM node `Name` |
 | `research_unlocked` | `{TreeName}` | Parent tree `Name` |
 | `research_unlocked` | `{TechTier}` | Node `TechTier` as string |
+| `research_unlocked` | `{ResearchCost}` | Newline-joined node `Cost[]` (`Name × Amount`) |
 | `train_derailed` | `{TrainName}` | FRM `getTrains.Name` |
 | `train_derailed` | `{StationName}` | FRM `getTrains.TrainStation` (empty string if absent) |
+| `train_derailed` | `{TrainStatus}` | FRM `getTrains.Status` |
+| `train_derailed` | `{SelfDriving}` | Humanized FRM `getTrains.SelfDriving` code |
 | `vehicle_out_of_fuel`, `vehicle_stuck` | `{VehicleType}` | FRM `getVehicles.VehicleType` |
-| `vehicle_out_of_fuel`, `vehicle_stuck` | `{VehicleName}` | Same as `{VehicleType}` for v1 (`vehicle_state.display_name`) |
+| `vehicle_out_of_fuel`, `vehicle_stuck` | `{VehicleName}` | FRM `Name` when set, else `VehicleType` |
+| `vehicle_out_of_fuel`, `vehicle_stuck` | `{Driver}` | FRM `Driver`, or `—` if empty |
+| `vehicle_out_of_fuel`, `vehicle_stuck` | `{ForwardSpeed}` | FRM `ForwardSpeed` as km/h, one decimal |
 
 **Event history persistence (M3):** On `player_joined` / `player_left`, INSERT into `player_session_events`. On `fuse_tripped` / `power_restored`, INSERT into `power_circuit_events`. These run regardless of `message_types.enabled`. Backed by `/api/players/history` and `/api/power/history` — not `notification_log`.
 
@@ -729,19 +757,19 @@ Fixed, seeded set of message types (not user-creatable in v1 — new event types
 
 | Key | Label | Category | Available Template Variables |
 |---|---|---|---|
-| `server_online` | Server Online | server | `{ServerName}` |
-| `server_offline` | Server Offline | server | `{ServerName}` |
-| `player_joined` | Player Joined | player | `{PlayerName}`, `{OnlineCount}` |
-| `player_left` | Player Left | player | `{PlayerName}`, `{OnlineCount}` |
-| `fuse_tripped` | Fuse Tripped | power | `{CircuitID}` |
-| `power_restored` | Power Restored | power | `{CircuitID}` |
-| `milestone_unlocked` | Milestone Unlocked | progression | `{SchematicName}`, `{TechTier}`, `{RecipeNames}` (comma-joined) |
-| `hard_drive_ready` | Hard Drive Ready | progression | `{SchematicName}`, `{RecipeOptions}` (newline-joined list) |
-| `elevator_phase_complete` | Elevator Phase Complete | progression | `{ElevatorName}`, `{PhaseNumber}` (omitted from rendering if unknown — see §4.2) |
-| `research_unlocked` | Research Unlocked | progression | `{NodeName}`, `{TreeName}`, `{TechTier}` |
-| `train_derailed` | Train Derailed | vehicle | `{TrainName}`, `{StationName}` |
-| `vehicle_out_of_fuel` | Vehicle Out of Fuel | vehicle | `{VehicleType}`, `{VehicleName}` (same value as VehicleType in v1) |
-| `vehicle_stuck` | Vehicle Stuck | vehicle | `{VehicleType}`, `{VehicleName}` (same value as VehicleType in v1) |
+| `server_online` | Server Online | server | `{Timestamp}`, `{ServerName}`, `{InGameTime}` |
+| `server_offline` | Server Offline | server | `{Timestamp}`, `{ServerName}`, `{InGameTime}` |
+| `player_joined` | Player Joined | player | `{Timestamp}`, `{ServerName}`, `{PlayerName}`, `{OnlineCount}` |
+| `player_left` | Player Disconnected | player | `{Timestamp}`, `{ServerName}`, `{PlayerName}`, `{OnlineCount}` |
+| `fuse_tripped` | Fuse Tripped | power | `{Timestamp}`, `{ServerName}`, `{CircuitID}`, `{PowerProduction}`, `{PowerConsumed}`, `{PowerCapacity}`, `{BatteryPercent}`, `{BatteryTimeEmpty}` |
+| `power_restored` | Power Restored | power | `{Timestamp}`, `{ServerName}`, `{CircuitID}`, `{PowerProduction}`, `{PowerConsumed}`, `{PowerCapacity}`, `{BatteryPercent}`, `{BatteryTimeEmpty}` |
+| `milestone_unlocked` | Milestone Unlocked | progression | `{Timestamp}`, `{ServerName}`, `{SchematicName}`, `{TechTier}`, `{RecipeNames}` (comma-joined) |
+| `hard_drive_ready` | Hard Drive Ready | progression | `{Timestamp}`, `{ServerName}`, `{SchematicName}`, `{RecipeOptions}` (newline-joined list) |
+| `elevator_phase_complete` | Elevator Phase Complete | progression | `{Timestamp}`, `{ServerName}`, `{ElevatorName}`, `{PhaseNumber}` (omitted if unknown), `{PhaseRequirements}` |
+| `research_unlocked` | Research Unlocked | progression | `{Timestamp}`, `{ServerName}`, `{NodeName}`, `{TreeName}`, `{TechTier}`, `{ResearchCost}` |
+| `train_derailed` | Train Derailed | vehicle | `{Timestamp}`, `{ServerName}`, `{TrainName}`, `{StationName}`, `{TrainStatus}`, `{SelfDriving}` |
+| `vehicle_out_of_fuel` | Vehicle Out of Fuel | vehicle | `{Timestamp}`, `{ServerName}`, `{VehicleType}`, `{VehicleName}`, `{Driver}`, `{ForwardSpeed}` |
+| `vehicle_stuck` | Vehicle Stuck | vehicle | `{Timestamp}`, `{ServerName}`, `{VehicleType}`, `{VehicleName}`, `{Driver}`, `{ForwardSpeed}` |
 
 Each row's `variables_json` in the DB is a **JSON array of strings** matching the variable names in the table above, e.g. `["PlayerName","OnlineCount"]` for `player_joined`. Seeded from §5.2 at M1.
 
@@ -769,33 +797,49 @@ Variable substitution uses a **custom `{VarName}` syntax** (not Go `text/templat
 | power (restored) / progression | `#FEE75C` | gold/yellow |
 | vehicle | `#9B59B6` | purple |
 
+**Emoji lexicon** (default templates — anchor emoji in embed title; state conveyed by wording + color, not by swapping the anchor):
+
+| Category | Anchor | Message types | Title pattern |
+|---|---|---|---|
+| server | 🌐 | `server_online`, `server_offline` | `🌐 Server is back online` / `🌐 Server went offline` |
+| player | 👤 | `player_joined`, `player_left` | `👤 A player joined the server` / `👤 A player disconnected` |
+| power | ⚡ | `fuse_tripped`, `power_restored` | Always ⚡ — tripped vs restored differentiated by title wording and color |
+| progression | 🏆 / 💾 / 🚀 / 🔬 | milestone, hard drive, elevator, research | Per-type anchor (milestone 🏆, hard drive 💾, elevator 🚀, research 🔬) |
+| vehicle | 🚂 / ⛽ / 🛑 | train, fuel, stuck | Train 🚂, fuel ⛽, stuck 🛑 |
+
+Field labels use supporting emojis (e.g. power: 🔌 Circuit, 📊 Demand, ⚡ Production, 🔋 Batteries).
+
 Two render paths exist, selected automatically by the target's `provider_type` at send time:
 
 **A. Plain-text render** (used by any future provider that only accepts a message string, e.g. ntfy, Telegram)
 ```
-🟢 **{PlayerName}** has entered the factory. ({OnlineCount} online)
+👤 **{PlayerName}** joined the server. ({OnlineCount} players online)
 ```
 
 **B. Structured embed render** (used when `provider_type == "discord"`)
 ```json
 {
-  "title": "🟢 NEW PLAYER DETECTED",
-  "description": "**{PlayerName}** has entered the factory.",
+  "title": "👤 A player joined the server",
+  "description": "",
   "color": "#57F287",
   "fields": [
-    { "name": "Players online", "value": "{OnlineCount}", "inline": true }
-  ]
+    { "name": "👤 Player", "value": "{PlayerName}", "inline": true },
+    { "name": "🏭 Factory", "value": "{ServerName}", "inline": true },
+    { "name": "👥 Online", "value": "{OnlineCount} players online", "inline": true }
+  ],
+  "footer": "🏭 {ServerName} · {Timestamp}",
+  "show_timestamp": true
 }
 ```
-`title`, `description`, each field's `name`/`value`, and `color` are all independently editable text with `{VarName}` interpolation. `color` accepts a hex string; the preset palette above is offered in the UI alongside a free-form color picker.
+`title`, `description`, each field's `name`/`value`, `color`, `footer`, and `show_timestamp` are independently editable. `footer` supports `{VarName}` interpolation. When `show_timestamp` is true, Discord renders a native ISO timestamp on the right side of the footer row. `color` accepts a hex string; the preset palette above is offered in the UI alongside a free-form color picker.
 
-**Defaults:** Every message type ships with built-in defaults in `backend/data/message_defaults.json` (canonical source) and is copied into `message_types.default_template_json` at seed time (M1). Shape: `{ "plain": "...", "embed": { "title": ..., "description": ..., "color": ..., "fields": [...] } }`. Seeded defaults are never mutated in place.
+**Defaults:** Every message type ships with built-in defaults in `backend/data/message_defaults.json` (canonical source) and is copied into `message_types.default_template_json` at seed time. On each startup, seed upserts `default_template_json` and `variables_json` while preserving `enabled`. Shape: `{ "plain": "...", "embed": { "title": ..., "description": ..., "color": ..., "fields": [...], "footer": "...", "show_timestamp": true|false } }`.
 
 **Overrides:** `message_templates.template_json` contains **only overridden keys** — e.g. `{"embed": {...}}` when only the embed variant is customized. An absent key falls back to `default_template_json` for that variant. `PUT /api/message-types/:key/template` (§7) accepts a partial body of the same shape (`{ "plain": "..." }`, `{ "embed": {...} }`, or both) and merges it into the existing override row (creating one if absent), so an admin can customize just the `embed` variant while leaving `plain` unset — matching the independent-override design here. `POST .../template/reset?variant=embed` removes only the `embed` key; deletes the entire row if both keys would be absent.
 
 **Optional variables:** When a variable value is empty (e.g. `{PhaseNumber}` when unknown), the renderer substitutes an empty string. Embed fields whose rendered `value` is empty are omitted from the Discord payload. Plain templates should phrase around optional variables (e.g. "Phase {PhaseNumber} complete" → "Phase  complete" if empty — prefer templates that work without optional vars, or omit the field in embed defaults).
 
-**Validation:** On save, render against §5.4.1 sample values and reject if unknown variables, invalid JSON shape, or Discord limits exceeded (title ≤256 chars, description ≤4096 chars, ≤25 fields, field name ≤256 / value ≤1024 chars).
+**Validation:** On save, render against §5.4.1 sample values and reject if unknown variables, invalid JSON shape, or Discord limits exceeded (title ≤256 chars, description ≤4096 chars, footer ≤2048 chars, ≤25 fields, field name ≤256 / value ≤1024 chars).
 
 **Live preview:** The template editor renders a live preview using sample data as the operator types.
 
@@ -803,15 +847,16 @@ Two render paths exist, selected automatically by the target's `provider_type` a
 
 | Message type | Sample variables |
 |---|---|
-| `server_online` / `server_offline` | `ServerName` = "GuggiRaid Factory" |
-| `player_joined` / `player_left` | `PlayerName` = "Guggi", `OnlineCount` = "3" |
-| `fuse_tripped` / `power_restored` | `CircuitID` = "1" |
-| `milestone_unlocked` | `SchematicName` = "Oil Processing", `TechTier` = "5", `RecipeNames` = "Plastic, Rubber" |
-| `hard_drive_ready` | `SchematicName` = "Hard Drive (MAM)", `RecipeOptions` = "Steel Screw\nCopper Sheet" |
-| `elevator_phase_complete` | `ElevatorName` = "Space Elevator", `PhaseNumber` = "2" |
-| `research_unlocked` | `NodeName` = "Oil Processing", `TreeName` = "MAM", `TechTier` = "5" |
-| `train_derailed` | `TrainName` = "Train 1", `StationName` = "Main Station" |
-| `vehicle_out_of_fuel` / `vehicle_stuck` | `VehicleType` = "Explorer", `VehicleName` = "Explorer" |
+| **all types** | `Timestamp` = `Aug 17, 2026 · 14:37 UTC`, `ServerName` = `CBC | Conveyor Belt Cult` |
+| `server_online` / `server_offline` | `InGameTime` = `Day 42, 14:37` |
+| `player_joined` / `player_left` | `PlayerName` = `Michael`, `OnlineCount` = `4` |
+| `fuse_tripped` / `power_restored` | `CircuitID` = `1`, `PowerProduction` = `120`, `PowerConsumed` = `95`, `PowerCapacity` = `100`, `BatteryPercent` = `68`, `BatteryTimeEmpty` = `2h 15m` |
+| `milestone_unlocked` | `SchematicName` = `Oil Processing`, `TechTier` = `5`, `RecipeNames` = `Plastic, Rubber` |
+| `hard_drive_ready` | `SchematicName` = `Hard Drive (MAM)`, `RecipeOptions` = `Steel Screw\nCopper Sheet` |
+| `elevator_phase_complete` | `ElevatorName` = `Space Elevator`, `PhaseNumber` = `2`, `PhaseRequirements` = `Smart Plating: 0/250\nVersatile Framework: 0/500` |
+| `research_unlocked` | `NodeName` = `Oil Processing`, `TreeName` = `MAM`, `TechTier` = `5`, `ResearchCost` = `Copper Sheet × 10\nCable × 15` |
+| `train_derailed` | `TrainName` = `Train 1`, `StationName` = `Main Station`, `TrainStatus` = `Self-Driving`, `SelfDriving` = `No error` |
+| `vehicle_out_of_fuel` / `vehicle_stuck` | `VehicleType` = `Explorer`, `VehicleName` = `Tractor`, `Driver` = `Michael`, `ForwardSpeed` = `0.0 km/h` |
 
 ### 5.5 Default template catalog
 
@@ -828,7 +873,7 @@ All 13 message types: see `backend/data/message_defaults.json`. M1 seed reads th
   - **admin** — full access: settings, notification targets, message templates, target assignment, user management.
   - **viewer** — read-only access to all dashboard pages (status, players, production, power, resource sink, drones, doggos, milestones, research, vehicles, elevator); no access to settings/templates/targets/users pages (these routes 403 for viewers, and are hidden from navigation).
 - First-run: if the `users` table is empty, the app serves a one-time setup page to create the first admin account instead of the login page.
-- No self-service registration — admins create additional user accounts (viewer or admin) from the Users page.
+- Additional accounts are created via **invite links** only: admins generate single-use links (preset role, 7-day TTL); invitees set their own username and password at `/invite/:token`. No admin-set passwords.
 
 ---
 
@@ -845,6 +890,8 @@ All endpoints under `/api`, JSON in/out, session-cookie authenticated unless not
 | GET | `/healthz` | none | Liveness probe — `200 {"status":"ok"}`; no DB or FRM check |
 | POST | `/api/auth/setup` | none (only when no users exist) | Create first admin account |
 | POST | `/api/auth/login` | none | Login, sets session cookie |
+| GET | `/api/invites/:token` | none | Validate invite; return `{ role, expiresAt, status }` if pending |
+| POST | `/api/invites/:token/accept` | none | `{ username, password }` — create account, mark invite accepted, set session cookie |
 | POST | `/api/auth/logout` | session | Clear session |
 | GET | `/api/auth/me` | session | Current user + role |
 | PUT | `/api/account/password` | session | Change the current user's own password (any role — this is distinct from `/api/users/:id`, which is admin-only and manages *other* users) |
@@ -880,12 +927,15 @@ All endpoints under `/api`, JSON in/out, session-cookie authenticated unless not
 | POST | `/api/message-types/:key/template/preview` | admin | Render given (unsaved) template against sample data, return rendered result for live preview |
 | PUT | `/api/message-types/:key/targets` | admin | Replace target assignment set for this message type |
 | GET | `/api/notification-log?type=&target=&limit=&offset=` | admin | Recent sent-notification audit log (`notification_log`), paginated. Query with a LEFT JOIN on `notification_targets` (not INNER JOIN) so rows whose `target_id` no longer exists are still returned; `target_id` has no FK (§3). |
-| GET | `/api/settings` | admin | App settings (FRM host/port, poll intervals, retention) |
-| PUT | `/api/settings` | admin | Update app settings |
-| GET | `/api/users` | admin | List users |
-| POST | `/api/users` | admin | Create user |
-| PUT | `/api/users/:id` | admin | Update user (role, password reset) |
-| DELETE | `/api/users/:id` | admin | Delete user |
+| GET | `/api/settings` | admin | App settings (FRM host/port, poll intervals, retention, cached serverName) |
+| PUT | `/api/settings` | admin | Update app settings; when `frmHost` is set, probes FRM `getSessionInfo` and updates `serverName` |
+| POST | `/api/settings/frm/test` | admin | `{ frmHost, frmPort, frmAuthToken? }` → `{ sessionName, reachable: true }` (preview only) |
+| GET | `/api/users` | admin | List users (includes `status`, optional `playerId`/`playerName`) |
+| PUT | `/api/users/:id` | admin | Update user (`role?`, `password?`, `playerId?` — `null` clears mapping) |
+| DELETE | `/api/users/:id` | admin | Delete user (cannot delete last admin) |
+| POST | `/api/invites` | admin | `{ role }` → invite with `invitePath`, `token`, `expiresAt` |
+| GET | `/api/invites` | admin | List invites with derived status |
+| DELETE | `/api/invites/:id` | admin | Revoke pending invite |
 
 ### 7.1 Response schemas
 
@@ -979,9 +1029,11 @@ JSON field names use **camelCase** in API responses; DB columns remain snake_cas
 | `PUT /api/message-types/:key/template` | Partial `{ "plain"?: "...", "embed"?: { title, description, color, fields } }` — merge into the existing override; omitted variants are left unchanged (not a full replace; see §5.4, §7) |
 | `POST /api/message-types/:key/template/preview` | `{ "variant", "template" }` |
 | `PUT /api/message-types/:key/targets` | `{ "targetIds": [1, 2, ...] }` |
-| `PUT /api/settings` | subset of settings fields from `GET /api/settings` |
-| `POST /api/users` | `{ "username", "password", "role": "admin" \| "viewer" }` |
-| `PUT /api/users/:id` | `{ "role"?, "password"? }` |
+| `PUT /api/settings` | subset of settings fields from `GET /api/settings` (excluding `serverName` — read-only, auto-synced) |
+| `POST /api/settings/frm/test` | `{ "frmHost", "frmPort", "frmAuthToken"? }` |
+| `POST /api/invites` | `{ "role": "admin" \| "viewer" }` |
+| `POST /api/invites/:token/accept` | `{ "username", "password" }` |
+| `PUT /api/users/:id` | `{ "role"?, "password"?, "playerId"? }` (`playerId: null` clears mapping) |
 
 ---
 
@@ -991,6 +1043,7 @@ JSON field names use **camelCase** in API responses; DB columns remain snake_cas
 |---|---|---|---|
 | `/setup` | public, only if no users exist | First-run: create initial admin account | Form (username, password, confirm) |
 | `/login` | public | Login | Form (username, password) |
+| `/invite/:token` | public | Accept invite — set username/password, preset role from invite | Form (username, password, confirm) |
 | `/` (Dashboard Overview) | viewer, admin | At-a-glance status from `GET /api/status` (server badge, players, fuse warnings, latest milestone, elevator progress) | Status cards, badge, progress bar |
 | `/players` | viewer, admin | Full player roster (online/offline), last-seen timestamps, join/leave history timeline | Table, timeline list |
 | `/production` | viewer, admin | Two views, mirroring FRM's own web UI which this was modeled after: **Overall** — a table of every tracked item (name, `ProdPerMin` label, prod/cons %, current/max produced, current/max consumed, from `prod_stats_state`); clicking a row expands a historical trend chart for that item below the table, backed by `production_snapshots`. **Detailed** — a table of every producer machine (building type, recipe, manufacturing speed %, producing/paused status, from `factory_machine_state`); clicking a row expands that machine's full ingredient/output breakdown. | Recharts line chart (on row expand), item combobox, date-range picker, `Table` for both views, `Tabs` to switch between them |
@@ -1005,8 +1058,8 @@ JSON field names use **camelCase** in API responses; DB columns remain snake_cas
 | `/settings/notifications/targets` | admin only | CRUD for Notification Targets, per-target "Send test" button | Data table, dialog forms |
 | `/settings/notifications/templates` | admin only | List of message types; selecting one opens the template editor (plain-text + embed fields, variable picker, live preview, target assignment checkboxes for that type, reset-to-default) | Data table + detail panel, live preview card |
 | `/settings/notifications/log` | admin only | Recent sent notifications with success/failure status | Data table |
-| `/settings/general` | admin only | Server display name (used as `{ServerName}` in templates), FRM host/port, poll interval, production snapshot interval/retention | Form |
-| `/settings/users` | admin only | User management (create/edit role/reset password/delete) | Data table, dialog forms |
+| `/settings/general` | admin only | FRM host/port/token, poll interval, production snapshot interval/retention; server display name shown read-only (auto-fetched from FRM) | Form, test-connection button |
+| `/settings/users` | admin only | User management: invite links, state column, promote to admin, optional player mapping, edit/delete | Data table, dialog forms |
 | `/account` | viewer, admin | Change own password | Form |
 
 Navigation: a persistent sidebar (shadcn `Sidebar` pattern) with the dashboard pages always visible to both roles, and a "Settings" section only rendered/routable for admins.
@@ -1031,7 +1084,7 @@ Concrete shadcn/ui components — and, where one exists, a full shadcn **block**
 | `/vehicles` | — | `Tabs` (Trains / Wheeled Vehicles), `Table` (both groups), `Badge` (derailed/fuel-empty/stuck states) | None |
 | `/elevator` | — | `Card`, `Progress` (per required item), `Alert` (destructive variant, admin-only unresolved diagnostics) | None |
 | `/settings/notifications/targets` | — | `Table`, `Dialog` (create/edit form), `AlertDialog` (delete confirmation — important given cascade-delete warning in §5.1), `Form`, `Input`, `Select` (provider type), `Switch` (enabled) | None |
-| `/settings/notifications/templates` | — | `Table`/list (left pane, with `Switch` per row for `enabled`), `Tabs` (Plain / Embed sub-editor), `Textarea` (plain template, embed description), `Input` (embed title), `Command`+`Popover` (variable-insert picker), `Checkbox`/`Toggle Group` (target assignment), `Card`+`Separator` (embed live-preview) | **Three real gaps here, no stock component:** (1) a repeatable "Fields" array editor for embed fields (build with `react-hook-form`'s `useFieldArray` + `Input` pairs + an "Add field" `Button`); (2) a hex color picker (shadcn has none — pair a `Popover` with a small custom swatch grid, or a plain `Input type="color"`); (3) the Discord-embed-style preview card itself (colored left border, title/description/fields layout) is a custom composition of `Card`+`Separator`, not a stock look |
+| `/settings/notifications/templates` | — | `Table`/list (left pane, with `Switch` per row for `enabled`), `Tabs` (Plain / Embed sub-editor), `Textarea` (plain template, embed description), `Input` (embed title, footer), `Switch` (show timestamp), `Command`+`Popover` (variable-insert picker), `Checkbox`/`Toggle Group` (target assignment), `Card`+`Separator` (embed live-preview with footer row) | **Three real gaps here, no stock component:** (1) a repeatable "Fields" array editor for embed fields (build with `react-hook-form`'s `useFieldArray` + `Input` pairs + an "Add field" `Button`); (2) a hex color picker (shadcn has none — pair a `Popover` with a small custom swatch grid, or a plain `Input type="color"`); (3) the Discord-embed-style preview card itself (colored left border, title/description/fields/footer layout) is a custom composition of `Card`+`Separator`, not a stock look |
 | `/settings/notifications/log` | — | `Table`, `Badge` (success/fail) | When a log row's `target_id` no longer resolves to a `notification_targets` row (target was deleted; `target_id` has no FK, §3), render "Deleted target" (or similar) instead of crashing or showing a blank. `GET /api/notification-log` LEFT JOINs so these rows are present (§7). |
 | `/settings/general` | — | `Form`, `Input`, `Label` | None |
 | `/settings/users` | — | `Table`, `Dialog`, `AlertDialog`, `Select` (role) | None |
@@ -1109,4 +1162,4 @@ Everything below was genuinely open earlier in this project's design discussion 
 - **Per-message-type polling cadence** (e.g. faster polling for player join/leave than for schematics): **decided against for v1.** A single shared `poll_interval_seconds` (default 20s, §4.1) is well under any latency the group would notice for a 5–6 player casual server, and per-type scheduling would meaningfully complicate M3's poll loop for no observed benefit.
 - **Confirming Phases 3–5's Space Elevator ClassName mapping against live data**: not a decision to make, just not yet possible — the group hasn't reached those phases. The self-correcting `elevator_phase_unknown_log` mechanism (§4.2) closes this automatically as the save progresses; no action needed until an entry actually appears there.
 - **Additional UI languages** (German, etc.): **deferred for v1.** i18n infrastructure ships with English only (§8.2); adding locales is additive (`messages/de.json` + switcher) once the group wants it.
-- **Discord embed footer/timestamp:** deferred for v1 — v1 embeds use title, description, color, and fields only (§2.3).
+- **Discord embed footer/timestamp:** implemented in v1 — embed model includes `footer` (interpolated text) and `show_timestamp` (Discord native ISO timestamp). Footer icon URL is not supported in v1.

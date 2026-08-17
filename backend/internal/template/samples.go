@@ -4,69 +4,105 @@ package template
 func SampleVariables(messageTypeKey string) map[string]string {
 	switch messageTypeKey {
 	case "server_online", "server_offline":
-		return map[string]string{"ServerName": "GuggiRaid Factory"}
+		return withSystemVars(map[string]string{
+			"ServerName": "CBC | Conveyor Belt Cult",
+			"InGameTime": "Day 42, 14:37",
+		})
 	case "player_joined", "player_left":
-		return map[string]string{"PlayerName": "Guggi", "OnlineCount": "3"}
+		return withSystemVars(map[string]string{
+			"PlayerName":  "Michael",
+			"OnlineCount": "4",
+		})
 	case "fuse_tripped", "power_restored":
-		return map[string]string{"CircuitID": "1"}
+		return withSystemVars(map[string]string{
+			"CircuitID":         "1",
+			"PowerProduction":   "120",
+			"PowerConsumed":     "95",
+			"PowerCapacity":     "100",
+			"BatteryPercent":    "68",
+			"BatteryTimeEmpty":  "2h 15m",
+		})
 	case "milestone_unlocked":
-		return map[string]string{
+		return withSystemVars(map[string]string{
 			"SchematicName": "Oil Processing",
 			"TechTier":      "5",
 			"RecipeNames":   "Plastic, Rubber",
-		}
+		})
 	case "hard_drive_ready":
-		return map[string]string{
+		return withSystemVars(map[string]string{
 			"SchematicName": "Hard Drive (MAM)",
 			"RecipeOptions": "Steel Screw\nCopper Sheet",
-		}
+		})
 	case "elevator_phase_complete":
-		return map[string]string{
-			"ElevatorName": "Space Elevator",
-			"PhaseNumber":  "2",
-		}
+		return withSystemVars(map[string]string{
+			"ElevatorName":      "Space Elevator",
+			"PhaseNumber":       "2",
+			"PhaseRequirements": "Smart Plating: 0/250\nVersatile Framework: 0/500",
+		})
 	case "research_unlocked":
-		return map[string]string{
-			"NodeName": "Oil Processing",
-			"TreeName": "MAM",
-			"TechTier": "5",
-		}
+		return withSystemVars(map[string]string{
+			"NodeName":     "Oil Processing",
+			"TreeName":     "MAM",
+			"TechTier":     "5",
+			"ResearchCost": "Copper Sheet × 10\nCable × 15",
+		})
 	case "train_derailed":
-		return map[string]string{
+		return withSystemVars(map[string]string{
 			"TrainName":   "Train 1",
 			"StationName": "Main Station",
-		}
+			"TrainStatus": "Self-Driving",
+			"SelfDriving": "No error",
+		})
 	case "vehicle_out_of_fuel", "vehicle_stuck":
-		return map[string]string{
-			"VehicleType": "Explorer",
-			"VehicleName": "Explorer",
-		}
+		return withSystemVars(map[string]string{
+			"VehicleType":  "Explorer",
+			"VehicleName":  "Tractor",
+			"Driver":       "Michael",
+			"ForwardSpeed": "0.0 km/h",
+		})
 	default:
-		return map[string]string{}
+		return withSystemVars(map[string]string{})
 	}
+}
+
+func withSystemVars(vars map[string]string) map[string]string {
+	out := make(map[string]string, len(vars)+3)
+	for k, v := range vars {
+		out[k] = v
+	}
+	if _, ok := out["ServerName"]; !ok {
+		out["ServerName"] = "CBC | Conveyor Belt Cult"
+	}
+	out["Timestamp"] = "Aug 17, 2026 · 14:37 UTC"
+	out["TimestampISO"] = "2026-08-17T14:37:00Z"
+	return out
 }
 
 // AllowedVariables returns the catalog variables for a message type (spec §5.2).
 func AllowedVariables(messageTypeKey string) []string {
+	system := []string{"Timestamp", "ServerName"}
 	switch messageTypeKey {
 	case "server_online", "server_offline":
-		return []string{"ServerName"}
+		return append(system, "InGameTime")
 	case "player_joined", "player_left":
-		return []string{"PlayerName", "OnlineCount"}
+		return append(system, "PlayerName", "OnlineCount")
 	case "fuse_tripped", "power_restored":
-		return []string{"CircuitID"}
+		return append(system,
+			"CircuitID", "PowerProduction", "PowerConsumed", "PowerCapacity",
+			"BatteryPercent", "BatteryTimeEmpty",
+		)
 	case "milestone_unlocked":
-		return []string{"SchematicName", "TechTier", "RecipeNames"}
+		return append(system, "SchematicName", "TechTier", "RecipeNames")
 	case "hard_drive_ready":
-		return []string{"SchematicName", "RecipeOptions"}
+		return append(system, "SchematicName", "RecipeOptions")
 	case "elevator_phase_complete":
-		return []string{"ElevatorName", "PhaseNumber"}
+		return append(system, "ElevatorName", "PhaseNumber", "PhaseRequirements")
 	case "research_unlocked":
-		return []string{"NodeName", "TreeName", "TechTier"}
+		return append(system, "NodeName", "TreeName", "TechTier", "ResearchCost")
 	case "train_derailed":
-		return []string{"TrainName", "StationName"}
+		return append(system, "TrainName", "StationName", "TrainStatus", "SelfDriving")
 	case "vehicle_out_of_fuel", "vehicle_stuck":
-		return []string{"VehicleType", "VehicleName"}
+		return append(system, "VehicleType", "VehicleName", "Driver", "ForwardSpeed")
 	default:
 		return nil
 	}

@@ -21,6 +21,13 @@ func RenderEmbed(embed *EmbedTemplate, vars map[string]string) *DiscordEmbed {
 		Title:       Substitute(embed.Title, vars),
 		Description: Substitute(embed.Description, vars),
 		Color:       Substitute(embed.Color, vars),
+		Footer:      Substitute(embed.Footer, vars),
+	}
+
+	if embed.ShowTimestamp {
+		if iso, ok := vars["TimestampISO"]; ok {
+			out.Timestamp = iso
+		}
 	}
 
 	for _, f := range embed.Fields {

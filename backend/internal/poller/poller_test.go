@@ -49,7 +49,7 @@ func TestFirstPollBaselineNoEvents(t *testing.T) {
 	assertPlayerBaseline(t, ctx, database, "player-1", true)
 	assertCircuitBaseline(t, ctx, database, 1, true)
 	assertSchematicBaseline(t, ctx, database, "milestone-1", true)
-	assertResearchBaseline(t, ctx, database, "node-1", "Purchased")
+	assertResearchBaseline(t, ctx, database, "node-1", "Purchased", 4, 0, "[]")
 	assertElevatorPhase(t, ctx, database, "elevator-1", 2)
 }
 
@@ -319,6 +319,119 @@ func TestVehicleStuckDebounce(t *testing.T) {
 	}
 }
 
+func TestPlayerLeftEvent(t *testing.T) {
+	t.Chdir("../..")
+
+	ctx := context.Background()
+	database := openTestDB(t)
+	defer database.Close()
+
+	if err := db.Init(ctx, database, db.SeedConfig{}); err != nil {
+		t.Fatalf("init: %v", err)
+	}
+
+	phases, _ := poller.LoadElevatorPhases("data/elevator_phases.json")
+	engine := &poller.Engine{DB: database, ElevatorPhases: phases}
+	now := time.Date(2026, 8, 17, 12, 0, 0, 0, time.UTC)
+
+	join := frm.FastPollResult{
+		Players: []frm.Player{{ID: "p1", Name: "Michael", Online: true}},
+	}
+	if _, err := engine.PollOnce(ctx, join, now); err != nil {
+		t.Fatalf("join baseline: %v", err)
+	}
+
+	leave := frm.FastPollResult{
+		Players: []frm.Player{{ID: "p1", Name: "Michael", Online: false}},
+	}
+	events, err := engine.PollOnce(ctx, leave, now.Add(20*time.Second))
+	if err != nil {
+		t.Fatalf("leave poll: %v", err)
+	}
+	if len(events) != 1 || events[0].MessageTypeKey != "player_left" {
+		t.Fatalf("expected player_left, got %+v", events)
+	}
+	vars := events[0].Variables
+	if vars["PlayerName"] != "Michael" {
+		t.Fatalf("PlayerName = %q", vars["PlayerName"])
+	}
+	if vars["OnlineCount"] != "0" {
+		t.Fatalf("OnlineCount = %q, want 0", vars["OnlineCount"])
+	}
+	if vars["ServerName"] == "" {
+		t.Fatal("ServerName should be set")
+	}
+}
+
+func TestPowerEventVariables(t *testing.T) {
+	t.Chdir("../..")
+
+	ctx := context.Background()
+	database := openTestDB(t)
+	defer database.Close()
+
+	if err := db.Init(ctx, database, db.SeedConfig{}); err != nil {
+		t.Fatalf("init: %v", err)
+	}
+
+	phases, _ := poller.LoadElevatorPhases("data/elevator_phases.json")
+	engine := &poller.Engine{DB: database, ElevatorPhases: phases}
+	now := time.Date(2026, 8, 17, 12, 0, 0, 0, time.UTC)
+
+	baseline := frm.FastPollResult{
+		Power: []frm.Circuit{{
+			CircuitGroupID:   1,
+			FuseTriggered:    false,
+			PowerProduction:  100,
+			PowerConsumed:    80,
+			PowerCapacity:    90,
+			BatteryCapacity:  500,
+			BatteryPercent:   75,
+			BatteryTimeEmpty: "1h 30m",
+		}},
+	}
+	if _, err := engine.PollOnce(ctx, baseline, now); err != nil {
+		t.Fatalf("baseline poll: %v", err)
+	}
+
+	tripped := frm.FastPollResult{
+		Power: []frm.Circuit{{
+			CircuitGroupID:   1,
+			FuseTriggered:    true,
+			PowerProduction:  100,
+			PowerConsumed:    80,
+			PowerCapacity:    90,
+			BatteryCapacity:  500,
+			BatteryPercent:   75,
+			BatteryTimeEmpty: "1h 30m",
+		}},
+	}
+	events, err := engine.PollOnce(ctx, tripped, now.Add(20*time.Second))
+	if err != nil {
+		t.Fatalf("tripped poll: %v", err)
+	}
+	if len(events) != 1 || events[0].MessageTypeKey != "fuse_tripped" {
+		t.Fatalf("expected fuse_tripped, got %+v", events)
+	}
+
+	vars := events[0].Variables
+	if vars["CircuitID"] != "1" {
+		t.Fatalf("CircuitID = %q", vars["CircuitID"])
+	}
+	if vars["PowerProduction"] != "100" {
+		t.Fatalf("PowerProduction = %q", vars["PowerProduction"])
+	}
+	if vars["PowerConsumed"] != "80" {
+		t.Fatalf("PowerConsumed = %q", vars["PowerConsumed"])
+	}
+	if vars["BatteryPercent"] != "75" {
+		t.Fatalf("BatteryPercent = %q", vars["BatteryPercent"])
+	}
+	if vars["BatteryTimeEmpty"] != "1h 30m" {
+		t.Fatalf("BatteryTimeEmpty = %q", vars["BatteryTimeEmpty"])
+	}
+}
+
 var errUnreachable = &fixtureError{msg: "connection refused"}
 
 type fixtureError struct{ msg string }
@@ -353,6 +466,8 @@ func firstObservationFixture(t *testing.T) frm.FastPollResult {
 			Name: "Test Tree",
 			Nodes: []frm.ResearchNode{{
 				ID: "node-1", Name: "Test Node", State: "Purchased", TechTier: 2,
+				Coordinates: frm.ResearchCoordinate{X: 4, Y: 0},
+				Parents:     []frm.ResearchCoordinate{},
 			}},
 		}},
 		Trains: []frm.Train{{
@@ -428,16 +543,24 @@ func assertSchematicBaseline(t *testing.T, ctx context.Context, database *sql.DB
 	}
 }
 
-func assertResearchBaseline(t *testing.T, ctx context.Context, database *sql.DB, id, wantState string) {
+func assertResearchBaseline(t *testing.T, ctx context.Context, database *sql.DB, id, wantState string, wantX, wantY int, wantParentsJSON string) {
 	t.Helper()
 	var state string
+	var coordX, coordY int
+	var parentsJSON string
 	if err := database.QueryRowContext(ctx,
-		`SELECT state FROM research_node_state WHERE node_id = ?`, id,
-	).Scan(&state); err != nil {
+		`SELECT state, coord_x, coord_y, parents_json FROM research_node_state WHERE node_id = ?`, id,
+	).Scan(&state, &coordX, &coordY, &parentsJSON); err != nil {
 		t.Fatalf("research_node_state: %v", err)
 	}
 	if state != wantState {
 		t.Fatalf("node %s state = %q, want %q", id, state, wantState)
+	}
+	if coordX != wantX || coordY != wantY {
+		t.Fatalf("node %s coords = (%d,%d), want (%d,%d)", id, coordX, coordY, wantX, wantY)
+	}
+	if parentsJSON != wantParentsJSON {
+		t.Fatalf("node %s parents_json = %q, want %q", id, parentsJSON, wantParentsJSON)
 	}
 }
 

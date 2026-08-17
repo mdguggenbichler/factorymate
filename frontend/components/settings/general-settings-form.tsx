@@ -15,7 +15,7 @@ import {
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { apiFetch } from "@/lib/api"
-import type { AppSettings } from "@/lib/api-types"
+import type { AppSettings, FRMTestResponse } from "@/lib/api-types"
 
 type GeneralSettingsFormProps = {
   initialSettings: AppSettings
@@ -26,6 +26,29 @@ export function GeneralSettingsForm({ initialSettings }: GeneralSettingsFormProp
   const tCommon = useTranslations("common")
   const [settings, setSettings] = useState(initialSettings)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isTesting, setIsTesting] = useState(false)
+  const [testedSessionName, setTestedSessionName] = useState<string | null>(null)
+
+  async function handleTestConnection() {
+    setIsTesting(true)
+    try {
+      const result = await apiFetch<FRMTestResponse>("/settings/frm/test", {
+        method: "POST",
+        body: JSON.stringify({
+          frmHost: settings.frmHost,
+          frmPort: Number(settings.frmPort),
+          frmAuthToken: settings.frmAuthToken,
+        }),
+      })
+      setTestedSessionName(result.sessionName)
+      toast.success(t("connectionOk"))
+    } catch {
+      setTestedSessionName(null)
+      toast.error(t("connectionFailed"))
+    } finally {
+      setIsTesting(false)
+    }
+  }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -35,7 +58,6 @@ export function GeneralSettingsForm({ initialSettings }: GeneralSettingsFormProp
       const updated = await apiFetch<AppSettings>("/settings", {
         method: "PUT",
         body: JSON.stringify({
-          serverName: settings.serverName,
           frmHost: settings.frmHost,
           frmPort: Number(settings.frmPort),
           frmAuthToken: settings.frmAuthToken,
@@ -49,6 +71,7 @@ export function GeneralSettingsForm({ initialSettings }: GeneralSettingsFormProp
         }),
       })
       setSettings(updated)
+      setTestedSessionName(null)
       toast.success(t("saved"))
     } catch {
       toast.error(tCommon("error"))
@@ -56,6 +79,8 @@ export function GeneralSettingsForm({ initialSettings }: GeneralSettingsFormProp
       setIsSubmitting(false)
     }
   }
+
+  const displayServerName = testedSessionName ?? settings.serverName
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
@@ -76,15 +101,13 @@ export function GeneralSettingsForm({ initialSettings }: GeneralSettingsFormProp
                 <FieldLabel htmlFor="server-name">{t("serverName")}</FieldLabel>
                 <Input
                   id="server-name"
-                  value={settings.serverName}
-                  onChange={(event) =>
-                    setSettings((current) => ({
-                      ...current,
-                      serverName: event.target.value,
-                    }))
-                  }
-                  required
+                  value={displayServerName}
+                  readOnly
+                  className="bg-muted"
                 />
+                <p className="text-sm text-muted-foreground">
+                  {t("serverNameHint")}
+                </p>
               </Field>
               <Field>
                 <FieldLabel htmlFor="frm-host">{t("frmHost")}</FieldLabel>
@@ -133,6 +156,16 @@ export function GeneralSettingsForm({ initialSettings }: GeneralSettingsFormProp
                 <p className="text-sm text-muted-foreground">
                   {t("frmAuthTokenHint")}
                 </p>
+              </Field>
+              <Field>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={isTesting || !settings.frmHost}
+                  onClick={() => void handleTestConnection()}
+                >
+                  {t("testConnection")}
+                </Button>
               </Field>
               <Field>
                 <FieldLabel htmlFor="poll-interval">

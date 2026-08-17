@@ -4,7 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
-	"strconv"
+	"strings"
 	"time"
 
 	"factorymate/internal/frm"
@@ -25,6 +25,16 @@ func (e *Engine) PollOnce(ctx context.Context, result frm.FastPollResult, now ti
 
 	reachable := result.Reachable()
 	var events []Event
+	var session sessionSnapshot
+
+	if reachable && strings.TrimSpace(settings.FRMHost) != "" {
+		if snap, err := syncSessionFromFRM(ctx, e.DB, settings); err == nil {
+			session = snap
+			if snap.ServerName != "" {
+				settings.ServerName = snap.ServerName
+			}
+		}
+	}
 
 	serverPrev, err := loadServerState(ctx, e.DB)
 	if err != nil {
@@ -32,19 +42,19 @@ func (e *Engine) PollOnce(ctx context.Context, result frm.FastPollResult, now ti
 	}
 
 	if reachable {
-		serverEvents := e.handleServerReachable(serverPrev, settings.ServerName)
+		serverEvents := e.handleServerReachable(serverPrev, settings.ServerName, session.InGameTime)
 		events = append(events, serverEvents...)
 		if err := upsertServerState(ctx, e.DB, true, now); err != nil {
 			return nil, err
 		}
 
-		playerEvents, err := e.processPlayers(ctx, result.Players, now)
+		playerEvents, err := e.processPlayers(ctx, result.Players, settings.ServerName, now)
 		if err != nil {
 			return nil, err
 		}
 		events = append(events, playerEvents...)
 
-		circuitEvents, err := e.processCircuits(ctx, result.Power, now)
+		circuitEvents, err := e.processCircuits(ctx, result.Power, settings.ServerName, now)
 		if err != nil {
 			return nil, err
 		}
@@ -82,9 +92,13 @@ func (e *Engine) PollOnce(ctx context.Context, result frm.FastPollResult, now ti
 	} else {
 		// Unreachable: only server_offline transition; leave entity state untouched (§4.2).
 		if serverPrev.Exists && serverPrev.ServerOnline.Valid && serverPrev.ServerOnline.Bool {
+			vars := map[string]string{"ServerName": settings.ServerName}
+			if session.InGameTime != "" {
+				vars["InGameTime"] = session.InGameTime
+			}
 			events = append(events, Event{
 				MessageTypeKey: "server_offline",
-				Variables:      map[string]string{"ServerName": settings.ServerName},
+				Variables:      vars,
 			})
 		}
 		if !serverPrev.Exists || !serverPrev.ServerOnline.Valid {
@@ -102,20 +116,24 @@ func (e *Engine) PollOnce(ctx context.Context, result frm.FastPollResult, now ti
 	return events, nil
 }
 
-func (e *Engine) handleServerReachable(prev serverStateRow, serverName string) []Event {
+func (e *Engine) handleServerReachable(prev serverStateRow, serverName, inGameTime string) []Event {
 	if !prev.Exists || !prev.ServerOnline.Valid {
 		return nil // First Observation — set true silently, no server_online event.
 	}
 	if !prev.ServerOnline.Bool {
+		vars := map[string]string{"ServerName": serverName}
+		if inGameTime != "" {
+			vars["InGameTime"] = inGameTime
+		}
 		return []Event{{
 			MessageTypeKey: "server_online",
-			Variables:      map[string]string{"ServerName": serverName},
+			Variables:      vars,
 		}}
 	}
 	return nil
 }
 
-func (e *Engine) processPlayers(ctx context.Context, players []frm.Player, now time.Time) ([]Event, error) {
+func (e *Engine) processPlayers(ctx context.Context, players []frm.Player, serverName string, now time.Time) ([]Event, error) {
 	onlineCount := countOnlinePlayers(players)
 	var events []Event
 
@@ -139,6 +157,7 @@ func (e *Engine) processPlayers(ctx context.Context, players []frm.Player, now t
 				Variables: map[string]string{
 					"PlayerName":  p.Name,
 					"OnlineCount": intToString(onlineCount),
+					"ServerName":  serverName,
 				},
 			})
 			if err := insertPlayerSessionEvent(ctx, e.DB, p.ID, p.Name, "joined", onlineCount, now); err != nil {
@@ -152,6 +171,7 @@ func (e *Engine) processPlayers(ctx context.Context, players []frm.Player, now t
 				Variables: map[string]string{
 					"PlayerName":  p.Name,
 					"OnlineCount": intToString(onlineCount),
+					"ServerName":  serverName,
 				},
 			})
 			if err := insertPlayerSessionEvent(ctx, e.DB, p.ID, p.Name, "left", onlineCount, now); err != nil {
@@ -166,7 +186,7 @@ func (e *Engine) processPlayers(ctx context.Context, players []frm.Player, now t
 	return events, nil
 }
 
-func (e *Engine) processCircuits(ctx context.Context, circuits []frm.Circuit, now time.Time) ([]Event, error) {
+func (e *Engine) processCircuits(ctx context.Context, circuits []frm.Circuit, serverName string, now time.Time) ([]Event, error) {
 	var events []Event
 	for _, c := range circuits {
 		prev, err := loadCircuitState(ctx, e.DB, c.CircuitGroupID)
@@ -181,11 +201,10 @@ func (e *Engine) processCircuits(ctx context.Context, circuits []frm.Circuit, no
 			continue
 		}
 
-		circuitID := strconv.Itoa(c.CircuitGroupID)
 		if !prev.Tripped && c.FuseTriggered {
 			events = append(events, Event{
 				MessageTypeKey: "fuse_tripped",
-				Variables:      map[string]string{"CircuitID": circuitID},
+				Variables:      powerEventVars(c, serverName),
 			})
 			if err := insertPowerCircuitEvent(ctx, e.DB, c.CircuitGroupID, "fuse_tripped", now); err != nil {
 				return nil, err
@@ -193,7 +212,7 @@ func (e *Engine) processCircuits(ctx context.Context, circuits []frm.Circuit, no
 		} else if prev.Tripped && !c.FuseTriggered {
 			events = append(events, Event{
 				MessageTypeKey: "power_restored",
-				Variables:      map[string]string{"CircuitID": circuitID},
+				Variables:      powerEventVars(c, serverName),
 			})
 			if err := insertPowerCircuitEvent(ctx, e.DB, c.CircuitGroupID, "power_restored", now); err != nil {
 				return nil, err
@@ -293,6 +312,9 @@ func (e *Engine) processElevators(ctx context.Context, elevators []frm.Elevator,
 			if phaseNumber != nil {
 				vars["PhaseNumber"] = intToString(*phaseNumber)
 			}
+			if len(el.CurrentPhase) > 0 {
+				vars["PhaseRequirements"] = formatPhaseRequirements(el.CurrentPhase)
+			}
 			events = append(events, Event{
 				MessageTypeKey: "elevator_phase_complete",
 				Variables:      vars,
@@ -326,9 +348,10 @@ func (e *Engine) processResearch(ctx context.Context, trees []frm.ResearchTree, 
 				events = append(events, Event{
 					MessageTypeKey: "research_unlocked",
 					Variables: map[string]string{
-						"NodeName": node.Name,
-						"TreeName": tree.Name,
-						"TechTier": intToString(node.TechTier),
+						"NodeName":     node.Name,
+						"TreeName":     tree.Name,
+						"TechTier":     intToString(node.TechTier),
+						"ResearchCost": formatResearchCost(node.Cost),
 					},
 				})
 			}
@@ -362,6 +385,8 @@ func (e *Engine) processTrains(ctx context.Context, trains []frm.Train, now time
 				Variables: map[string]string{
 					"TrainName":   t.Name,
 					"StationName": t.TrainStation,
+					"TrainStatus": t.Status,
+					"SelfDriving": humanizeTrainError(t.SelfDriving),
 				},
 			})
 		}
@@ -403,8 +428,10 @@ func (e *Engine) processVehicles(ctx context.Context, vehicles []frm.Vehicle, po
 			events = append(events, Event{
 				MessageTypeKey: "vehicle_out_of_fuel",
 				Variables: map[string]string{
-					"VehicleType": vtype,
-					"VehicleName": vtype,
+					"VehicleType":  vtype,
+					"VehicleName":  v.DisplayName(),
+					"Driver":       formatDriver(v.Driver),
+					"ForwardSpeed": formatForwardSpeed(v.ForwardSpeed),
 				},
 			})
 		}
@@ -414,8 +441,10 @@ func (e *Engine) processVehicles(ctx context.Context, vehicles []frm.Vehicle, po
 			events = append(events, Event{
 				MessageTypeKey: "vehicle_stuck",
 				Variables: map[string]string{
-					"VehicleType": vtype,
-					"VehicleName": vtype,
+					"VehicleType":  vtype,
+					"VehicleName":  v.DisplayName(),
+					"Driver":       formatDriver(v.Driver),
+					"ForwardSpeed": formatForwardSpeed(v.ForwardSpeed),
 				},
 			})
 		}

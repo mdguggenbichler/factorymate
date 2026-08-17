@@ -80,8 +80,15 @@ func TestParseFixture_getResearchTrees(t *testing.T) {
 	if len(trees) == 0 || len(trees[0].Nodes) == 0 {
 		t.Fatal("expected research tree with nodes")
 	}
-	if len(trees[0].Nodes[0].Cost) == 0 {
+	node := trees[0].Nodes[0]
+	if len(node.Cost) == 0 {
 		t.Fatal("expected node with cost items")
+	}
+	if node.Coordinates.X != 4 || node.Coordinates.Y != 4 {
+		t.Fatalf("coordinates = %+v, want (4,4)", node.Coordinates)
+	}
+	if len(node.Parents) != 1 || node.Parents[0].X != 3 || node.Parents[0].Y != 3 {
+		t.Fatalf("parents = %+v, want [{3,3}]", node.Parents)
 	}
 }
 
@@ -177,6 +184,32 @@ func TestResourceSink_graphPointVariants(t *testing.T) {
 		if err := json.Unmarshal([]byte(raw), &sinks); err != nil {
 			t.Fatalf("case %d: %v", i, err)
 		}
+	}
+}
+
+func TestGetSessionInfo(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/getSessionInfo" {
+			http.NotFound(w, r)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"SessionName":"GuggiRaid Factory","IsPaused":false}`))
+	}))
+	t.Cleanup(srv.Close)
+
+	host, port, err := splitHostPort(srv.Listener.Addr().String())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	client := NewClient(Config{Host: host, Port: port})
+	info, err := client.GetSessionInfo(context.Background())
+	if err != nil {
+		t.Fatalf("GetSessionInfo: %v", err)
+	}
+	if info.SessionName != "GuggiRaid Factory" {
+		t.Fatalf("SessionName = %q", info.SessionName)
 	}
 }
 

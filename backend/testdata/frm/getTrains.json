@@ -1,1 +1,16 @@
-[]
+[
+  {
+    "ID": "BP_Train_C_2147339037",
+    "Name": "Train",
+    "ClassName": "BP_Train_C",
+    "ForwardSpeed": 0,
+    "TrainStation": "No Station",
+    "Derailed": false,
+    "PendingDerail": false,
+    "Status": "Self-Driving",
+    "TimeTableIndex": 0,
+    "SelfDriving": "SDLE_NoError",
+    "Docking": "TDS_Docked",
+    "Path": "PDE_NoError"
+  }
+]

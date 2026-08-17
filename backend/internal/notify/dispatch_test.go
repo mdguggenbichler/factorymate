@@ -12,6 +12,7 @@ import (
 
 	"factorymate/internal/db"
 	"factorymate/internal/notify"
+	"factorymate/internal/template"
 )
 
 func TestDispatcher_PlayerJoined(t *testing.T) {
@@ -58,7 +59,7 @@ func TestDispatcher_PlayerJoined(t *testing.T) {
 		t.Fatalf("HandleEvent: %v", err)
 	}
 
-	if gotTitle != "🟢 NEW PLAYER DETECTED" {
+	if gotTitle != "👤 A player joined the server" {
 		t.Fatalf("webhook title = %q, want player joined embed title", gotTitle)
 	}
 
@@ -211,8 +212,61 @@ func TestDispatcher_LogsSendFailure(t *testing.T) {
 	}
 }
 
+func TestDispatcher_SendRenderedTest(t *testing.T) {
+	t.Chdir("../..")
+
+	ctx := context.Background()
+	database := openDispatchTestDB(t)
+	defer database.Close()
+
+	var gotTitle string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var payload struct {
+			Embeds []struct {
+				Title string `json:"title"`
+			} `json:"embeds"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+			t.Fatalf("decode payload: %v", err)
+		}
+		if len(payload.Embeds) != 1 {
+			t.Fatalf("embeds len = %d, want 1", len(payload.Embeds))
+		}
+		gotTitle = payload.Embeds[0].Title
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	defer srv.Close()
+
+	targetID := insertDiscordTarget(t, ctx, database, srv.URL)
+	if err := assignTarget(t, ctx, database, "player_joined", targetID); err != nil {
+		t.Fatalf("assign target: %v", err)
+	}
+	if _, err := database.ExecContext(ctx,
+		`UPDATE message_types SET enabled = 0 WHERE key = 'player_joined'`); err != nil {
+		t.Fatalf("disable message type: %v", err)
+	}
+
+	d := notify.NewDispatcher(database, map[string]notify.Provider{
+		"discord": notify.NewDiscordProvider(),
+	})
+
+	rendered := template.Render(template.Template{
+		Embed: &template.EmbedTemplate{Title: "Test Title"},
+	}, template.SampleVariables("player_joined"))
+
+	if err := d.SendRenderedTest(ctx, "player_joined", rendered); err != nil {
+		t.Fatalf("SendRenderedTest: %v", err)
+	}
+	if gotTitle != "Test Title" {
+		t.Fatalf("webhook title = %q, want Test Title", gotTitle)
+	}
+
+	if err := d.SendRenderedTest(ctx, "player_left", rendered); err != notify.ErrNoTargets {
+		t.Fatalf("SendRenderedTest no targets = %v, want ErrNoTargets", err)
+	}
+}
+
 func openDispatchTestDB(t *testing.T) *sql.DB {
-	t.Helper()
 	dir := t.TempDir()
 	path := filepath.Join(dir, "test.db")
 	database, err := db.Open(path)

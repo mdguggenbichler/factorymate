@@ -1,9 +1,17 @@
 import { UsersView } from "@/components/settings/users-view"
 import { serverApiFetch } from "@/lib/api-server"
-import type { UsersResponse } from "@/lib/api-types"
+import type { InvitesResponse, UsersResponse } from "@/lib/api-types"
 
 export default async function SettingsUsersPage() {
-  const usersData = await serverApiFetch<UsersResponse>("/users")
+  const [usersData, invitesData] = await Promise.all([
+    serverApiFetch<UsersResponse>("/users"),
+    serverApiFetch<InvitesResponse>("/invites"),
+  ])
 
-  return <UsersView initialUsers={usersData.users} />
+  return (
+    <UsersView
+      initialUsers={usersData.users}
+      initialInvites={invitesData.invites}
+    />
+  )
 }

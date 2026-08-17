@@ -22,6 +22,10 @@ type User struct {
 	ID       int64  `json:"id"`
 	Username string `json:"username"`
 	Role     Role   `json:"role"`
+	PlayerID *string `json:"playerId,omitempty"`
+	PlayerName *string `json:"playerName,omitempty"`
+	Status   string `json:"status,omitempty"`
+	CreatedAt string `json:"createdAt,omitempty"`
 }
 
 type Session struct {

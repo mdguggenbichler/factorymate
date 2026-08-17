@@ -1,139 +1,193 @@
 {
   "server_online": {
-    "plain": "🟢 {ServerName} is back online.",
+    "plain": "🌐 {ServerName} is back online.",
     "embed": {
-      "title": "🟢 SERVER ONLINE",
-      "description": "**{ServerName}** is reachable again.",
+      "title": "🌐 Server is back online",
+      "description": "",
       "color": "#5865F2",
-      "fields": []
+      "fields": [
+        { "name": "🏭 Factory", "value": "{ServerName}", "inline": true },
+        { "name": "🕐 In-game time", "value": "{InGameTime}", "inline": true }
+      ],
+      "footer": "🏭 {ServerName} · {Timestamp}",
+      "show_timestamp": true
     }
   },
   "server_offline": {
-    "plain": "🔴 {ServerName} is unreachable.",
+    "plain": "🌐 {ServerName} went offline.",
     "embed": {
-      "title": "🔴 SERVER OFFLINE",
-      "description": "**{ServerName}** is not responding.",
+      "title": "🌐 Server went offline",
+      "description": "",
       "color": "#5865F2",
-      "fields": []
+      "fields": [
+        { "name": "🏭 Factory", "value": "{ServerName}", "inline": true },
+        { "name": "🕐 In-game time", "value": "{InGameTime}", "inline": true }
+      ],
+      "footer": "🏭 {ServerName} · {Timestamp}",
+      "show_timestamp": true
     }
   },
   "player_joined": {
-    "plain": "🟢 **{PlayerName}** has entered the factory. ({OnlineCount} online)",
+    "plain": "👤 **{PlayerName}** joined the server. ({OnlineCount} players online)",
     "embed": {
-      "title": "🟢 NEW PLAYER DETECTED",
-      "description": "**{PlayerName}** has entered the factory.",
+      "title": "👤 A player joined the server",
+      "description": "",
       "color": "#57F287",
       "fields": [
-        { "name": "Players online", "value": "{OnlineCount}", "inline": true }
-      ]
+        { "name": "👤 Player", "value": "{PlayerName}", "inline": true },
+        { "name": "🏭 Factory", "value": "{ServerName}", "inline": true },
+        { "name": "👥 Online", "value": "{OnlineCount} players online", "inline": true }
+      ],
+      "footer": "🏭 {ServerName} · {Timestamp}",
+      "show_timestamp": true
     }
   },
   "player_left": {
-    "plain": "🔴 **{PlayerName}** has left the factory. ({OnlineCount} online)",
+    "plain": "👤 **{PlayerName}** disconnected from the server. ({OnlineCount} players online)",
     "embed": {
-      "title": "🔴 PLAYER DISCONNECTED",
-      "description": "**{PlayerName}** has left the factory.",
+      "title": "👤 A player disconnected",
+      "description": "",
       "color": "#57F287",
       "fields": [
-        { "name": "Players online", "value": "{OnlineCount}", "inline": true }
-      ]
+        { "name": "👤 Player", "value": "{PlayerName}", "inline": true },
+        { "name": "🏭 Factory", "value": "{ServerName}", "inline": true },
+        { "name": "👥 Online", "value": "{OnlineCount} players online", "inline": true }
+      ],
+      "footer": "🏭 {ServerName} · {Timestamp}",
+      "show_timestamp": true
     }
   },
   "fuse_tripped": {
     "plain": "⚡ Fuse tripped on circuit {CircuitID}.",
     "embed": {
-      "title": "⚡ FUSE TRIPPED",
-      "description": "A fuse has tripped on circuit **{CircuitID}**.",
+      "title": "⚡ Fuse tripped on circuit {CircuitID}",
+      "description": "",
       "color": "#ED4245",
-      "fields": []
+      "fields": [
+        { "name": "🔌 Circuit", "value": "{CircuitID}", "inline": true },
+        { "name": "📊 Demand", "value": "{PowerConsumed} / {PowerCapacity} MW", "inline": true },
+        { "name": "⚡ Production", "value": "{PowerProduction} MW", "inline": true },
+        { "name": "🔋 Batteries", "value": "{BatteryPercent}% · empty in {BatteryTimeEmpty}", "inline": false }
+      ],
+      "footer": "🏭 {ServerName} · {Timestamp}",
+      "show_timestamp": true
     }
   },
   "power_restored": {
-    "plain": "✅ Power restored on circuit {CircuitID}.",
+    "plain": "⚡ Power restored on circuit {CircuitID}.",
     "embed": {
-      "title": "✅ POWER RESTORED",
-      "description": "Power has been restored on circuit **{CircuitID}**.",
+      "title": "⚡ Power restored on circuit {CircuitID}",
+      "description": "",
       "color": "#FEE75C",
-      "fields": []
+      "fields": [
+        { "name": "🔌 Circuit", "value": "{CircuitID}", "inline": true },
+        { "name": "📊 Demand", "value": "{PowerConsumed} / {PowerCapacity} MW", "inline": true },
+        { "name": "⚡ Production", "value": "{PowerProduction} MW", "inline": true },
+        { "name": "🔋 Batteries", "value": "{BatteryPercent}% · empty in {BatteryTimeEmpty}", "inline": false }
+      ],
+      "footer": "🏭 {ServerName} · {Timestamp}",
+      "show_timestamp": true
     }
   },
   "milestone_unlocked": {
     "plain": "🏆 Milestone unlocked: {SchematicName} (Tier {TechTier}). Recipes: {RecipeNames}",
     "embed": {
-      "title": "🏆 MILESTONE UNLOCKED",
-      "description": "**{SchematicName}** has been unlocked.",
+      "title": "🏆 Milestone unlocked: {SchematicName}",
+      "description": "",
       "color": "#FEE75C",
       "fields": [
-        { "name": "Tech Tier", "value": "{TechTier}", "inline": true },
-        { "name": "New Recipes", "value": "{RecipeNames}", "inline": false }
-      ]
+        { "name": "📊 Tier", "value": "{TechTier}", "inline": true },
+        { "name": "📜 Recipes", "value": "{RecipeNames}", "inline": false }
+      ],
+      "footer": "🏭 {ServerName} · {Timestamp}",
+      "show_timestamp": true
     }
   },
   "hard_drive_ready": {
-    "plain": "💾 Hard Drive ready: {SchematicName}. Options:\n{RecipeOptions}",
+    "plain": "💾 Hard drive ready for {SchematicName}. Options:\n{RecipeOptions}",
     "embed": {
-      "title": "💾 HARD DRIVE READY",
-      "description": "**{SchematicName}** is ready for recipe selection.",
+      "title": "💾 Hard drive ready for {SchematicName}",
+      "description": "",
       "color": "#FEE75C",
       "fields": [
-        { "name": "Recipe Options", "value": "{RecipeOptions}", "inline": false }
-      ]
+        { "name": "📜 Recipe options", "value": "{RecipeOptions}", "inline": false }
+      ],
+      "footer": "🏭 {ServerName} · {Timestamp}",
+      "show_timestamp": true
     }
   },
   "elevator_phase_complete": {
-    "plain": "🚀 Space Elevator phase complete at {ElevatorName}.",
+    "plain": "🚀 Elevator phase ready at {ElevatorName}.",
     "embed": {
-      "title": "🚀 ELEVATOR PHASE COMPLETE",
-      "description": "The next phase is ready at **{ElevatorName}**.",
+      "title": "🚀 Elevator phase ready",
+      "description": "",
       "color": "#FEE75C",
       "fields": [
-        { "name": "Phase", "value": "{PhaseNumber}", "inline": true }
-      ]
+        { "name": "📊 Phase", "value": "{PhaseNumber}", "inline": true },
+        { "name": "📦 Requirements", "value": "{PhaseRequirements}", "inline": false }
+      ],
+      "footer": "🏭 {ServerName} · {Timestamp}",
+      "show_timestamp": true
     }
   },
   "research_unlocked": {
     "plain": "🔬 Research unlocked: {NodeName} ({TreeName}, Tier {TechTier}).",
     "embed": {
-      "title": "🔬 RESEARCH UNLOCKED",
-      "description": "**{NodeName}** has been purchased.",
+      "title": "🔬 Research unlocked: {NodeName}",
+      "description": "",
       "color": "#FEE75C",
       "fields": [
-        { "name": "Tree", "value": "{TreeName}", "inline": true },
-        { "name": "Tech Tier", "value": "{TechTier}", "inline": true }
-      ]
+        { "name": "🌳 Tree", "value": "{TreeName}", "inline": true },
+        { "name": "📊 Tier", "value": "{TechTier}", "inline": true },
+        { "name": "💰 Cost", "value": "{ResearchCost}", "inline": false }
+      ],
+      "footer": "🏭 {ServerName} · {Timestamp}",
+      "show_timestamp": true
     }
   },
   "train_derailed": {
     "plain": "🚂 Train derailed: {TrainName} at {StationName}.",
     "embed": {
-      "title": "🚂 TRAIN DERAILED",
-      "description": "**{TrainName}** has derailed.",
+      "title": "🚂 Train derailed: {TrainName}",
+      "description": "",
       "color": "#9B59B6",
       "fields": [
-        { "name": "Station", "value": "{StationName}", "inline": true }
-      ]
+        { "name": "🚉 Station", "value": "{StationName}", "inline": true },
+        { "name": "⚠️ Status", "value": "{TrainStatus}", "inline": true },
+        { "name": "🤖 Autopilot", "value": "{SelfDriving}", "inline": true }
+      ],
+      "footer": "🏭 {ServerName} · {Timestamp}",
+      "show_timestamp": true
     }
   },
   "vehicle_out_of_fuel": {
-    "plain": "⛽ {VehicleType} ({VehicleName}) is out of fuel.",
+    "plain": "⛽ {VehicleName} is out of fuel.",
     "embed": {
-      "title": "⛽ OUT OF FUEL",
-      "description": "A **{VehicleType}** has run out of fuel.",
+      "title": "⛽ {VehicleName} is out of fuel",
+      "description": "",
       "color": "#9B59B6",
       "fields": [
-        { "name": "Vehicle", "value": "{VehicleName}", "inline": true }
-      ]
+        { "name": "🚗 Vehicle", "value": "{VehicleName}", "inline": true },
+        { "name": "👤 Driver", "value": "{Driver}", "inline": true },
+        { "name": "💨 Speed", "value": "{ForwardSpeed}", "inline": true }
+      ],
+      "footer": "🏭 {ServerName} · {Timestamp}",
+      "show_timestamp": true
     }
   },
   "vehicle_stuck": {
-    "plain": "🛑 {VehicleType} ({VehicleName}) appears stuck.",
+    "plain": "🛑 {VehicleName} appears stuck.",
     "embed": {
-      "title": "🛑 VEHICLE STUCK",
-      "description": "A **{VehicleType}** appears to be stuck on its route.",
+      "title": "🛑 {VehicleName} appears stuck",
+      "description": "",
       "color": "#9B59B6",
       "fields": [
-        { "name": "Vehicle", "value": "{VehicleName}", "inline": true }
-      ]
+        { "name": "🚗 Vehicle", "value": "{VehicleName}", "inline": true },
+        { "name": "👤 Driver", "value": "{Driver}", "inline": true },
+        { "name": "💨 Speed", "value": "{ForwardSpeed}", "inline": true }
+      ],
+      "footer": "🏭 {ServerName} · {Timestamp}",
+      "show_timestamp": true
     }
   }
 }

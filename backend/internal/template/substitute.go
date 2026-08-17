@@ -33,6 +33,7 @@ func ExtractVariables(tmpl Template) []string {
 		add(tmpl.Embed.Title)
 		add(tmpl.Embed.Description)
 		add(tmpl.Embed.Color)
+		add(tmpl.Embed.Footer)
 		for _, f := range tmpl.Embed.Fields {
 			add(f.Name)
 			add(f.Value)

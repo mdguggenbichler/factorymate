@@ -53,19 +53,22 @@ func TestDiscordProvider_SendSampleEmbed(t *testing.T) {
 	}
 
 	embed := got.Embeds[0]
-	if embed.Title != "🟢 NEW PLAYER DETECTED" {
+	if embed.Title != "👤 A player joined the server" {
 		t.Errorf("title = %q", embed.Title)
 	}
-	if embed.Description != "**Guggi** has entered the factory." {
-		t.Errorf("description = %q", embed.Description)
+	if embed.Footer == nil || embed.Footer.Text == "" {
+		t.Error("expected footer text")
+	}
+	if embed.Timestamp == "" {
+		t.Error("expected timestamp")
 	}
 	if embed.Color != 0x57F287 {
 		t.Errorf("color = %d, want %d", embed.Color, 0x57F287)
 	}
-	if len(embed.Fields) != 1 {
-		t.Fatalf("fields len = %d, want 1", len(embed.Fields))
+	if len(embed.Fields) != 3 {
+		t.Fatalf("fields len = %d, want 3", len(embed.Fields))
 	}
-	if embed.Fields[0].Name != "Players online" || embed.Fields[0].Value != "3" || !embed.Fields[0].Inline {
+	if embed.Fields[0].Name != "👤 Player" || embed.Fields[0].Value != "Michael" || !embed.Fields[0].Inline {
 		t.Errorf("field = %+v", embed.Fields[0])
 	}
 }

@@ -32,3 +32,24 @@ export async function changePassword(password: string): Promise<void> {
     body: JSON.stringify({ password }),
   })
 }
+
+export type InvitePreview = {
+  role: string
+  expiresAt: string
+  status: string
+}
+
+export async function getInvite(token: string): Promise<InvitePreview> {
+  return apiFetch<InvitePreview>(`/invites/${token}`)
+}
+
+export async function acceptInvite(
+  token: string,
+  username: string,
+  password: string
+): Promise<User> {
+  return apiFetch<User>(`/invites/${token}/accept`, {
+    method: "POST",
+    body: JSON.stringify({ username, password }),
+  })
+}

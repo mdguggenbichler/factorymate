@@ -42,6 +42,9 @@ func TestAllDefaultTemplatesValidateAndRender(t *testing.T) {
 					t.Fatalf("field still contains placeholders: %+v", f)
 				}
 			}
+			if strings.Contains(rendered.Embed.Footer, "{") {
+				t.Fatalf("footer still contains placeholders: %q", rendered.Embed.Footer)
+			}
 		})
 	}
 }

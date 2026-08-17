@@ -8,10 +8,12 @@ type Template struct {
 
 // EmbedTemplate is the structured embed model before variable substitution.
 type EmbedTemplate struct {
-	Title       string       `json:"title"`
-	Description string       `json:"description"`
-	Color       string       `json:"color"`
-	Fields      []EmbedField `json:"fields"`
+	Title         string       `json:"title"`
+	Description   string       `json:"description"`
+	Color         string       `json:"color"`
+	Fields        []EmbedField `json:"fields"`
+	Footer        string       `json:"footer,omitempty"`
+	ShowTimestamp bool         `json:"show_timestamp,omitempty"`
 }
 
 // EmbedField is a single embed field in the template model.
@@ -33,6 +35,8 @@ type DiscordEmbed struct {
 	Description string
 	Color       string
 	Fields      []DiscordEmbedField
+	Footer      string
+	Timestamp   string // ISO 8601 for Discord API when show_timestamp is set
 }
 
 // DiscordEmbedField is a rendered embed field.

@@ -22,19 +22,19 @@ type messageTypeMeta struct {
 }
 
 var messageTypeCatalog = []messageTypeMeta{
-	{Key: "server_online", Label: "Server Online", Category: "server", Variables: []string{"ServerName"}},
-	{Key: "server_offline", Label: "Server Offline", Category: "server", Variables: []string{"ServerName"}},
-	{Key: "player_joined", Label: "Player Joined", Category: "player", Variables: []string{"PlayerName", "OnlineCount"}},
-	{Key: "player_left", Label: "Player Left", Category: "player", Variables: []string{"PlayerName", "OnlineCount"}},
-	{Key: "fuse_tripped", Label: "Fuse Tripped", Category: "power", Variables: []string{"CircuitID"}},
-	{Key: "power_restored", Label: "Power Restored", Category: "power", Variables: []string{"CircuitID"}},
-	{Key: "milestone_unlocked", Label: "Milestone Unlocked", Category: "progression", Variables: []string{"SchematicName", "TechTier", "RecipeNames"}},
-	{Key: "hard_drive_ready", Label: "Hard Drive Ready", Category: "progression", Variables: []string{"SchematicName", "RecipeOptions"}},
-	{Key: "elevator_phase_complete", Label: "Elevator Phase Complete", Category: "progression", Variables: []string{"ElevatorName", "PhaseNumber"}},
-	{Key: "research_unlocked", Label: "Research Unlocked", Category: "progression", Variables: []string{"NodeName", "TreeName", "TechTier"}},
-	{Key: "train_derailed", Label: "Train Derailed", Category: "vehicle", Variables: []string{"TrainName", "StationName"}},
-	{Key: "vehicle_out_of_fuel", Label: "Vehicle Out of Fuel", Category: "vehicle", Variables: []string{"VehicleType", "VehicleName"}},
-	{Key: "vehicle_stuck", Label: "Vehicle Stuck", Category: "vehicle", Variables: []string{"VehicleType", "VehicleName"}},
+	{Key: "server_online", Label: "Server Online", Category: "server", Variables: []string{"Timestamp", "ServerName", "InGameTime"}},
+	{Key: "server_offline", Label: "Server Offline", Category: "server", Variables: []string{"Timestamp", "ServerName", "InGameTime"}},
+	{Key: "player_joined", Label: "Player Joined", Category: "player", Variables: []string{"Timestamp", "ServerName", "PlayerName", "OnlineCount"}},
+	{Key: "player_left", Label: "Player Disconnected", Category: "player", Variables: []string{"Timestamp", "ServerName", "PlayerName", "OnlineCount"}},
+	{Key: "fuse_tripped", Label: "Fuse Tripped", Category: "power", Variables: []string{"Timestamp", "ServerName", "CircuitID", "PowerProduction", "PowerConsumed", "PowerCapacity", "BatteryPercent", "BatteryTimeEmpty"}},
+	{Key: "power_restored", Label: "Power Restored", Category: "power", Variables: []string{"Timestamp", "ServerName", "CircuitID", "PowerProduction", "PowerConsumed", "PowerCapacity", "BatteryPercent", "BatteryTimeEmpty"}},
+	{Key: "milestone_unlocked", Label: "Milestone Unlocked", Category: "progression", Variables: []string{"Timestamp", "ServerName", "SchematicName", "TechTier", "RecipeNames"}},
+	{Key: "hard_drive_ready", Label: "Hard Drive Ready", Category: "progression", Variables: []string{"Timestamp", "ServerName", "SchematicName", "RecipeOptions"}},
+	{Key: "elevator_phase_complete", Label: "Elevator Phase Complete", Category: "progression", Variables: []string{"Timestamp", "ServerName", "ElevatorName", "PhaseNumber", "PhaseRequirements"}},
+	{Key: "research_unlocked", Label: "Research Unlocked", Category: "progression", Variables: []string{"Timestamp", "ServerName", "NodeName", "TreeName", "TechTier", "ResearchCost"}},
+	{Key: "train_derailed", Label: "Train Derailed", Category: "vehicle", Variables: []string{"Timestamp", "ServerName", "TrainName", "StationName", "TrainStatus", "SelfDriving"}},
+	{Key: "vehicle_out_of_fuel", Label: "Vehicle Out of Fuel", Category: "vehicle", Variables: []string{"Timestamp", "ServerName", "VehicleType", "VehicleName", "Driver", "ForwardSpeed"}},
+	{Key: "vehicle_stuck", Label: "Vehicle Stuck", Category: "vehicle", Variables: []string{"Timestamp", "ServerName", "VehicleType", "VehicleName", "Driver", "ForwardSpeed"}},
 }
 
 // Seed inserts idempotent reference data required at startup.
@@ -68,8 +68,13 @@ func seedMessageTypes(ctx context.Context, db *sql.DB) error {
 		}
 
 		_, err = db.ExecContext(ctx, `
-			INSERT OR IGNORE INTO message_types (key, label, category, enabled, default_template_json, variables_json)
-			VALUES (?, ?, ?, 1, ?, ?)`,
+			INSERT INTO message_types (key, label, category, enabled, default_template_json, variables_json)
+			VALUES (?, ?, ?, 1, ?, ?)
+			ON CONFLICT(key) DO UPDATE SET
+				label = excluded.label,
+				category = excluded.category,
+				default_template_json = excluded.default_template_json,
+				variables_json = excluded.variables_json`,
 			meta.Key, meta.Label, meta.Category, string(templateJSON), string(variablesJSON),
 		)
 		if err != nil {

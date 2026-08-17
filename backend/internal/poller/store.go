@@ -44,6 +44,37 @@ func loadAppSettings(ctx context.Context, db *sql.DB) (appSettings, error) {
 	return s, nil
 }
 
+func syncSessionFromFRM(ctx context.Context, db *sql.DB, settings appSettings) (sessionSnapshot, error) {
+	var snap sessionSnapshot
+	if strings.TrimSpace(settings.FRMHost) == "" {
+		return snap, nil
+	}
+	token := ""
+	if settings.FRMAuthToken.Valid {
+		token = settings.FRMAuthToken.String
+	}
+	client := frm.NewClient(frm.Config{
+		Host:  strings.TrimSpace(settings.FRMHost),
+		Port:  settings.FRMPort,
+		Token: token,
+	})
+	info, err := client.GetSessionInfo(ctx)
+	if err != nil {
+		return snap, err
+	}
+	if strings.TrimSpace(info.SessionName) != "" {
+		snap.ServerName = info.SessionName
+	}
+	snap.InGameTime = formatInGameTime(info)
+	if info.SessionName != "" && info.SessionName != settings.ServerName {
+		if _, err := db.ExecContext(ctx, `
+			UPDATE app_settings SET server_name = ? WHERE id = 1`, info.SessionName); err != nil {
+			return snap, fmt.Errorf("update server_name: %w", err)
+		}
+	}
+	return snap, nil
+}
+
 type serverStateRow struct {
 	Exists       bool
 	ServerOnline sql.NullBool
@@ -325,9 +356,16 @@ func upsertResearchNodeState(ctx context.Context, db *sql.DB, treeName string, n
 	if err != nil {
 		return err
 	}
+	parentsJSON, err := json.Marshal(n.Parents)
+	if err != nil {
+		return err
+	}
 	_, err = db.ExecContext(ctx, `
-		INSERT INTO research_node_state (node_id, tree_name, name, category, state, tech_tier, cost_json, updated_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+		INSERT INTO research_node_state (
+			node_id, tree_name, name, category, state, tech_tier, cost_json,
+			coord_x, coord_y, parents_json, updated_at
+		)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 		ON CONFLICT(node_id) DO UPDATE SET
 			tree_name = excluded.tree_name,
 			name = excluded.name,
@@ -335,8 +373,12 @@ func upsertResearchNodeState(ctx context.Context, db *sql.DB, treeName string, n
 			state = excluded.state,
 			tech_tier = excluded.tech_tier,
 			cost_json = excluded.cost_json,
+			coord_x = excluded.coord_x,
+			coord_y = excluded.coord_y,
+			parents_json = excluded.parents_json,
 			updated_at = excluded.updated_at`,
 		n.ID, treeName, n.Name, n.Category, n.State, n.TechTier, string(costJSON),
+		n.Coordinates.X, n.Coordinates.Y, string(parentsJSON),
 		now.UTC().Format(time.RFC3339),
 	)
 	return err
@@ -426,7 +468,7 @@ func upsertVehicleState(ctx context.Context, db *sql.DB, v frm.Vehicle, fuelEmpt
 			low_speed_since = excluded.low_speed_since,
 			stuck = excluded.stuck,
 			updated_at = excluded.updated_at`,
-		v.ID.String(), vtype, vtype, v.Status, v.Driver, v.IsAutoPilot(),
+		v.ID.String(), vtype, v.DisplayName(), v.Status, v.Driver, v.IsAutoPilot(),
 		v.FollowingPath, v.ForwardSpeed, fuelEmpty, lowSpeedSince, stuck,
 		now.UTC().Format(time.RFC3339),
 	)
