@@ -21,8 +21,25 @@ Copy `.env.example` to `.env` at the repo root (or export vars in your shell).
 | `BACKEND_URL` | Next.js rewrite target (`http://localhost:8080` local; `http://127.0.0.1:8080` inside the Docker container) |
 | `SATISFACTORY_NETWORK` | External Docker network shared with `satisfactory-server` (default `satisfactory-server_default`) |
 | `FACTORYMATE_PORT` | Host port mapping for the single compose service (default `3000`) |
+| `DISCORD_BOT_TOKEN` | Discord bot token (soft dependency — bot features disabled when unset) |
+| `DISCORD_GUILD_ID` | Bootstrap guild ID until set in Settings → Discord |
+| `DISCORD_ADMIN_ROLE_IDS` | Optional comma-separated admin role IDs before UI role mapping is configured |
+| `FACTORYMATE_PUBLIC_URL` | Public dashboard URL used in bot welcome/help copy |
 
 See `docs/factorymate-spec.md` §9 for the full variable list.
+
+## Discord bot setup (M15)
+
+1. Create a Discord application in the [Developer Portal](https://discord.com/developers/applications).
+2. **Bot** tab → create bot → copy token → set `DISCORD_BOT_TOKEN` in `.env`.
+3. **OAuth2 → URL Generator** → scopes: `bot`, `applications.commands`; permissions: View Channels, Send Messages, Embed Links, Use Slash Commands, Send Messages in Threads, Create Private Channels (for DMs).
+4. Complete FactoryMate `/setup` (first admin) before or after adding the bot token.
+5. Open **Settings → Discord** in the dashboard → load invite URL → add bot to your guild.
+6. Set guild ID and role mappings; toggle auto-approve if manual registration approval is desired.
+7. **Settings → Notifications → Targets** → pick a channel (replaces legacy webhook URLs).
+8. Ask players to run `/register` in Discord (primary onboarding). Web invites under Settings → Users → break-glass section are for recovery only.
+
+Slash commands register per guild when the bot starts. Restart the backend after changing `DISCORD_GUILD_ID` or bot token.
 
 ## Running locally
 
@@ -130,7 +147,7 @@ Manual smoke test per project DoD — not run in CI.
    docker compose up -d
    ```
 
-4. **First-run setup:** open `http://<host>:3000`, complete admin setup, configure FRM host/port in `/settings/general` if needed, add a Discord notification target, and assign it to a message type (e.g. `player_joined`).
+4. **First-run setup:** open `http://<host>:3000`, complete admin setup, configure FRM host/port in `/settings/general` if needed, configure the Discord bot under `/settings/discord`, add a notification target channel, and assign it to a message type (e.g. `player_joined`). New players register via Discord `/register`.
 
 5. **Smoke checks:**
    - `curl -s http://localhost:3000/healthz` → `{"status":"ok"}`

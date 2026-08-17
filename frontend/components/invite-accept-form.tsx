@@ -8,6 +8,7 @@ import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { ApiError } from "@/lib/api"
 import { acceptInvite } from "@/lib/auth-client"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -85,6 +86,10 @@ export function InviteAcceptForm({
 
   return (
     <div className={cn("flex flex-col gap-6")}>
+      <Alert>
+        <AlertTitle>{t("title")}</AlertTitle>
+        <AlertDescription>{t("deprecatedNotice")}</AlertDescription>
+      </Alert>
       <Card>
         <CardHeader>
           <CardTitle>{t("title")}</CardTitle>

@@ -25,6 +25,9 @@ import {
   FlaskConicalIcon,
   GaugeIcon,
   LayoutDashboardIcon,
+  LinkIcon,
+  MessageSquareIcon,
+  PackageIcon,
   RocketIcon,
   Settings2Icon,
   TrainFrontIcon,
@@ -101,6 +104,11 @@ export function AppSidebar({
       url: "/elevator",
       icon: <RocketIcon />,
     },
+    {
+      title: t("mods"),
+      url: "/mods",
+      icon: <PackageIcon />,
+    },
   ]
 
   const settingsItems: NavItem[] = [
@@ -108,6 +116,16 @@ export function AppSidebar({
       title: t("settingsGeneral"),
       url: "/settings/general",
       icon: <Settings2Icon />,
+    },
+    {
+      title: t("settingsDiscord"),
+      url: "/settings/discord",
+      icon: <MessageSquareIcon />,
+    },
+    {
+      title: t("settingsConnection"),
+      url: "/settings/connection",
+      icon: <LinkIcon />,
     },
     {
       title: t("settingsNotificationTargets"),
@@ -180,8 +198,11 @@ export function usePageTitle(): string {
     "/research": t("research"),
     "/vehicles": t("vehicles"),
     "/elevator": t("elevator"),
+    "/mods": t("mods"),
     "/account": t("account"),
     "/settings/general": t("settingsGeneral"),
+    "/settings/discord": t("settingsDiscord"),
+    "/settings/connection": t("settingsConnection"),
     "/settings/notifications/targets": t("settingsNotificationTargets"),
     "/settings/notifications/templates": t("settingsNotificationTemplates"),
     "/settings/notifications/log": t("settingsNotificationLog"),

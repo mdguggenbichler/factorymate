@@ -741,11 +741,12 @@ A **Notification Target** is a named destination with a provider type and provid
 
 ```json
 {
-  "webhook_url": "https://discord.com/api/webhooks/{id}/{token}",
-  "username_override": "F.I.C.S.I.T. Oracle",
-  "avatar_url_override": "https://.../avatar.png"
+  "channel_id": "123456789012345678",
+  "thread_id": "optional"
 }
 ```
+
+Legacy webhook targets (`webhook_url`, `username_override`, `avatar_url_override`) are deprecated as of M15. After upgrade, admins re-select a Discord channel for each target in the UI.
 
 API request/response bodies for targets use `{ "name", "providerType", "config", "enabled" }` where `config` matches the shape above (§7.2).
 
@@ -874,7 +875,7 @@ All 13 message types: see `backend/data/message_defaults.json`. M1 seed reads th
   - **admin** — full access: settings, notification targets, message templates, target assignment, user management.
   - **viewer** — read-only access to all dashboard pages (status, players, production, power, resource sink, drones, doggos, milestones, research, vehicles, elevator); no access to settings/templates/targets/users pages (these routes 403 for viewers, and are hidden from navigation).
 - First-run: if the `users` table is empty, the app serves a one-time setup page to create the first admin account instead of the login page.
-- Additional accounts are created via **invite links** only: admins generate single-use links (preset role, 7-day TTL); invitees set their own username and password at `/invite/:token`. No admin-set passwords.
+- Additional accounts are created primarily via **Discord `/register`** (M15). Admins generate break-glass **web invite links** only when Discord registration is unavailable: single-use links (preset role, 7-day TTL); invitees set their own username and password at `/invite/:token`. No admin-set passwords.
 
 ---
 
@@ -914,6 +915,9 @@ All endpoints under `/api`, JSON in/out, session-cookie authenticated unless not
 | GET | `/api/research` | session | Current M.A.M. research tree state, grouped by tree/category |
 | GET | `/api/vehicles` | session | Current trains and wheeled vehicles, with derailed/fuel/stuck status |
 | GET | `/api/elevator` | session | Current elevator phase state |
+| GET | `/api/mods` | session, active | Cached server mod list + `gameBuild`, `smlVersion`, `cachedAt`, `frmReachable` |
+| GET | `/api/mods/smmprofile` | session, active | Downloadable `.smmprofile` file |
+| GET | `/api/connection-details` | session, active | Game join details (`gameHost`, `gamePort`, `gamePassword`, `notes`, `smmProfileName`) |
 | GET | `/api/elevator/unknown-log` | admin | Unresolved entries plus resolved entries from the last 30 days (`resolved_at` within window), max 50 rows total |
 | POST | `/api/elevator/unknown-log/:id/resolve` | admin | Mark a diagnostic entry as resolved (after correcting the reference table) |
 | GET | `/api/notification-targets` | admin | List targets |
@@ -937,6 +941,17 @@ All endpoints under `/api`, JSON in/out, session-cookie authenticated unless not
 | POST | `/api/invites` | admin | `{ role }` → invite with `invitePath`, `token`, `expiresAt` |
 | GET | `/api/invites` | admin | List invites with derived status |
 | DELETE | `/api/invites/:id` | admin | Revoke pending invite |
+| POST | `/api/mods/refresh` | admin | Re-fetch mod list from FRM and bust SMM cache |
+| PUT | `/api/connection-details` | admin | Update join details; triggers mandatory DM broadcast to linked users |
+| GET | `/api/discord/settings` | admin | Bot status, guild ID, role mappings, `autoApprove` |
+| PUT | `/api/discord/settings` | admin | Update guild ID, role mappings, `autoApprove` |
+| GET | `/api/discord/channels` | admin | Guild text channels for notification target picker |
+| GET | `/api/discord/invite-url` | admin | OAuth URL to add the bot to the guild |
+| GET | `/api/registrations/pending` | admin | Pending registration approval queue |
+| POST | `/api/registrations/:id/approve` | admin | Approve pending registration |
+| POST | `/api/registrations/:id/reject` | admin | `{ comment? }` — reject and notify registrant |
+| GET | `/api/players/unmapped` | admin | Server players with no linked FactoryMate user |
+| PUT | `/api/users/:id/external` | admin | Override or unlink external identity |
 
 ### 7.1 Response schemas
 
@@ -1024,8 +1039,10 @@ JSON field names use **camelCase** in API responses; DB columns remain snake_cas
 | `POST /api/auth/setup` | `{ "username", "password" }` |
 | `POST /api/auth/login` | `{ "username", "password" }` |
 | `PUT /api/account/password` | `{ "password" }` (new password) |
-| `POST /api/notification-targets` | `{ "name", "providerType": "discord", "config": { webhook_url, username_override?, avatar_url_override? }, "enabled": true }` |
+| `POST /api/notification-targets` | `{ "name", "providerType": "discord", "config": { "channel_id", "thread_id?" }, "enabled": true }` |
 | `PUT /api/notification-targets/:id` | same fields, partial update allowed |
+| `PUT /api/connection-details` | `{ "gameHost", "gamePort", "gamePassword?", "notes?", "clearPassword?", "smmProfileName?" }` |
+| `PUT /api/discord/settings` | `{ "guildId?", "autoApprove?", "roleMappings": { ... } }` per discord-bot-plan §10.2 |
 | `PUT /api/message-types/:key/enabled` | `{ "enabled": boolean }` |
 | `PUT /api/message-types/:key/template` | Partial `{ "plain"?: "...", "embed"?: { title, description, color, fields } }` — merge into the existing override; omitted variants are left unchanged (not a full replace; see §5.4, §7) |
 | `POST /api/message-types/:key/template/preview` | `{ "variant", "template" }` |
@@ -1056,11 +1073,14 @@ JSON field names use **camelCase** in API responses; DB columns remain snake_cas
 | `/research` | viewer, admin | M.A.M. research trees grouped by tree name, each node showing purchase state, tech tier, and cost — flat grouped view for v1, not the visual node-graph the underlying coordinate/parent data would technically support (possible future enhancement, not built now) | Accordion (grouped by tree), Table, Badge |
 | `/vehicles` | viewer, admin | Trains (derailed/pending-derail flags, self-driving status, current station) and wheeled vehicles (type, driver, fuel status, autopilot/route status) as two grouped tables | Tabs (Trains / Wheeled Vehicles), Table, Badge |
 | `/elevator` | viewer, admin | Current phase required-items progress bars, upgrade-ready indicator; admins additionally see an alert banner if `elevator_phase_unknown_log` has unresolved entries, with the raw mismatched data and a "mark resolved" action | Progress bars, card, admin-only alert |
-| `/settings/notifications/targets` | admin only | CRUD for Notification Targets, per-target "Send test" button | Data table, dialog forms |
+| `/mods` | viewer, admin (active users) | Full server mod list from FRM `getModList`; game build + SML header; disclaimer; download SMM profile; admin refresh | Table, cards, alert |
+| `/settings/notifications/targets` | admin only | CRUD for Notification Targets (Discord channel picker), per-target "Send test" button; legacy webhook deprecation banner | Data table, dialog forms |
 | `/settings/notifications/templates` | admin only | List of message types; selecting one opens the template editor (plain-text + embed fields, variable picker, live preview, target assignment checkboxes for that type, reset-to-default) | Data table + detail panel, live preview card |
 | `/settings/notifications/log` | admin only | Recent sent notifications with success/failure status | Data table |
 | `/settings/general` | admin only | FRM host/port/token, poll interval, production snapshot interval/retention; server display name shown read-only (auto-fetched from FRM) | Form, test-connection button |
-| `/settings/users` | admin only | User management: invite links, state column, promote to admin, optional player mapping, edit/delete | Data table, dialog forms |
+| `/settings/discord` | admin only | Bot status, invite URL, guild ID, role mapping editor, auto-approve toggle | Form, table, badges |
+| `/settings/connection` | admin only | Game join details + SMM profile name | Form |
+| `/settings/users` | admin only | User management: Discord-first onboarding copy, break-glass invites, pending approval queue, unmapped players panel, external identity columns, promote to admin, optional player mapping, edit/delete | Data table, dialog forms |
 | `/account` | viewer, admin | Change own password | Form |
 
 Navigation: a persistent sidebar (shadcn `Sidebar` pattern) with the dashboard pages always visible to both roles, and a "Settings" section only rendered/routable for admins.

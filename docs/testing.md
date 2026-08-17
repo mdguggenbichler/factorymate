@@ -66,9 +66,45 @@ services:
 
 FactoryMate v1 only POSTs to webhook URLs — **httptest is sufficient** and keeps CI dependency-free.
 
+> **M15 note:** Game-event notifications now use the Discord **bot** (`channel_id` in target config), not incoming webhooks. Webhook httptest patterns remain useful for regression tests on payload shape; new provider tests should mock `discordgo.Session` channel message sends instead.
+
 ### Manual smoke test (optional, human)
 
 Set `DISCORD_TEST_WEBHOOK_URL` in `.env` (private test channel). Not required for verifier PASS.
+
+## Discord bot testing (M15)
+
+The Discord bot runs inside the Go backend process. CI does **not** require a live Discord guild.
+
+### Unit tests (recommended)
+
+| Area | Approach |
+| --- | --- |
+| `DiscordProvider.Send` / `SendDirect` | Mock `discordgo.Session`; assert channel/user IDs and embed payload |
+| Slash command handlers | JSON interaction fixtures under `backend/internal/discord/` |
+| Registration / approval | Extend `auth` / `registration` tests; `pending_approval` blocks login |
+| Pending player auto-link | Poller test: upsert `player_state` → assert `player_id` set |
+| Connection broadcast | Assert `SendDirect` called for all active linked users |
+| Log redaction | Assert `notification_log` and `bot_command_log` never contain `game_password` |
+| Dispatcher regression | Existing `dispatch_test.go` with mock session instead of httptest webhook |
+
+### Optional integration test guild
+
+Configure CI secrets:
+
+```bash
+DISCORD_BOT_TOKEN=...
+DISCORD_GUILD_ID=...
+```
+
+Run tagged integration tests against a private test guild when validating slash commands end-to-end. Not required for autonomous verifier PASS.
+
+### Frontend smoke (manual)
+
+1. Settings → Discord — verify bot status badge and invite URL load
+2. Settings → Notifications → Targets — channel picker populated; legacy webhook banner if old targets exist
+3. Settings → Users — pending approval queue and unmapped players panels
+4. `/mods` — mod table, download SMM profile, admin refresh
 
 ## FRM client testing (M2, M3)
 

@@ -1,0 +1,192 @@
+"use client"
+
+import { useState } from "react"
+import { useTranslations } from "next-intl"
+import { DownloadIcon, RefreshCwIcon } from "lucide-react"
+import { toast } from "sonner"
+
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+import { apiFetch, apiUrl } from "@/lib/api"
+import type { ModsResponse } from "@/lib/api-types"
+import { formatDateTime } from "@/lib/format"
+
+type ModsViewProps = {
+  initialData: ModsResponse
+  isAdmin: boolean
+}
+
+export function ModsView({ initialData, isAdmin }: ModsViewProps) {
+  const t = useTranslations("mods")
+  const tCommon = useTranslations("common")
+  const [data, setData] = useState(initialData)
+  const [isRefreshing, setIsRefreshing] = useState(false)
+  const [isDownloading, setIsDownloading] = useState(false)
+
+  async function handleRefresh() {
+    setIsRefreshing(true)
+    try {
+      const refreshed = await apiFetch<ModsResponse>("/mods/refresh", {
+        method: "POST",
+      })
+      setData(refreshed)
+      toast.success(t("refreshed"))
+    } catch {
+      toast.error(tCommon("error"))
+    } finally {
+      setIsRefreshing(false)
+    }
+  }
+
+  async function handleDownload() {
+    setIsDownloading(true)
+    try {
+      const response = await fetch(apiUrl("/mods/smmprofile"), {
+        credentials: "include",
+      })
+      if (!response.ok) {
+        throw new Error("download failed")
+      }
+      const blob = await response.blob()
+      const disposition = response.headers.get("Content-Disposition") ?? ""
+      const match = disposition.match(/filename="([^"]+)"/)
+      const filename = match?.[1] ?? "factorymate-server.smmprofile"
+      const url = URL.createObjectURL(blob)
+      const anchor = document.createElement("a")
+      anchor.href = url
+      anchor.download = filename
+      anchor.click()
+      URL.revokeObjectURL(url)
+      toast.success(t("downloadStarted"))
+    } catch {
+      toast.error(t("downloadFailed"))
+    } finally {
+      setIsDownloading(false)
+    }
+  }
+
+  return (
+    <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-2">
+          <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
+          <p className="text-muted-foreground">{t("description")}</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant="outline"
+            onClick={() => void handleDownload()}
+            disabled={isDownloading || !data.frmReachable}
+          >
+            <DownloadIcon data-icon="inline-start" />
+            {t("downloadProfile")}
+          </Button>
+          {isAdmin ? (
+            <Button
+              variant="outline"
+              onClick={() => void handleRefresh()}
+              disabled={isRefreshing}
+            >
+              <RefreshCwIcon data-icon="inline-start" />
+              {t("refresh")}
+            </Button>
+          ) : null}
+        </div>
+      </div>
+
+      <Alert>
+        <AlertTitle>{t("disclaimerTitle")}</AlertTitle>
+        <AlertDescription>{t("disclaimerDescription")}</AlertDescription>
+      </Alert>
+
+      {!data.frmReachable ? (
+        <Alert variant="destructive">
+          <AlertTitle>{t("frmUnreachableTitle")}</AlertTitle>
+          <AlertDescription>{t("frmUnreachableDescription")}</AlertDescription>
+        </Alert>
+      ) : null}
+
+      <div className="grid gap-4 sm:grid-cols-3">
+        <Card>
+          <CardHeader>
+            <CardTitle>{t("gameBuild")}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-semibold">{data.gameBuild || "—"}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>{t("smlVersion")}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-semibold">{data.smlVersion || "—"}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>{t("cachedAt")}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground">
+              {data.cachedAt ? formatDateTime(data.cachedAt) : "—"}
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>{t("tableTitle")}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {data.mods.length === 0 ? (
+            <p className="text-sm text-muted-foreground">{t("empty")}</p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>{t("columns.name")}</TableHead>
+                  <TableHead>{t("columns.version")}</TableHead>
+                  <TableHead>{t("columns.smrName")}</TableHead>
+                  <TableHead>{t("columns.required")}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {data.mods.map((mod) => (
+                  <TableRow key={`${mod.smrName}-${mod.version}`}>
+                    <TableCell className="font-medium">{mod.name}</TableCell>
+                    <TableCell>{mod.version}</TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {mod.smrName}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={mod.requiredOnRemote ? "default" : "secondary"}>
+                        {mod.requiredOnRemote ? t("requiredYes") : t("requiredNo")}
+                      </Badge>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  )
+}

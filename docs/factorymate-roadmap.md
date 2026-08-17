@@ -245,6 +245,29 @@ Build order:
 
 ---
 
+## M15 — Discord Bot, Provider Refactor & Player Onboarding
+
+**Goal:** Unified Discord bot for onboarding, notifications, connection details, and mod list — per `docs/discord-bot-plan.md`.
+
+- [ ] Schema: external identity, `users.status`, connection details, registration audit, bot config
+- [ ] `internal/discord/` — gateway, slash command router
+- [ ] Refactor `DiscordProvider`: `Send` (channel) + `SendDirect` (DM); remove webhook HTTP
+- [ ] Notification targets UI: channel picker; drop webhook URL fields
+- [ ] `/register`, `/register user`, `/link`, `/set-player`, `/whoami`, `/help` (Appendix G copy + slash descriptions)
+- [ ] Registration approval: `auto_approve`, pending status, admin DM buttons, web queue
+- [ ] `/registration auto-approve` admin command
+- [ ] Pending player mapping + poller auto-link (`TryResolvePendingPlayers`)
+- [ ] Unmapped server players admin panel
+- [ ] Connection details API + `/connection`, `/connection set` + mandatory DM broadcast
+- [ ] FRM `getModList` + SMM profile export (`SMMProfileService` + ficsit.app) + `/mods` page/command
+- [ ] Settings → Discord + Connection; Users UI extensions
+- [ ] Deprecate primary web invite flow (keep break-glass)
+- [ ] Tests + `docs/development.md` + spec §5 update + log-redaction tests (§8.6)
+
+**DoD:** Discord `/register` onboarding works; bot posts game events to configured channels; `/mods` page and connection settings live; web invite is break-glass only; spec and docs updated.
+
+---
+
 ## M14 — Deferred Backlog
 
 Per **spec §10** — not v1:
