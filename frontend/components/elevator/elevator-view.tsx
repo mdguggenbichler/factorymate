@@ -11,9 +11,9 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { apiFetch } from "@/lib/api"
+import { useFormatDateTime } from "@/hooks/use-format-datetime"
 import {
   elevatorPercentComplete,
-  formatDateTime,
   formatPercent,
   phaseProgress,
 } from "@/lib/format"
@@ -36,6 +36,7 @@ export function ElevatorView({
 }: ElevatorViewProps) {
   const t = useTranslations("elevator")
   const tCommon = useTranslations("common")
+  const { formatDateTime } = useFormatDateTime()
   const [unknownLog, setUnknownLog] = useState(initialUnknownLog)
   const [resolvingId, setResolvingId] = useState<number | null>(null)
 

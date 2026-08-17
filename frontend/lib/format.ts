@@ -1,9 +1,30 @@
-export function formatDateTime(iso: string | null | undefined): string {
+export function formatDateTime(
+  iso: string | null | undefined,
+  locale?: string
+): string {
   if (!iso) {
     return "—"
   }
 
-  return new Date(iso).toLocaleString()
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) {
+    return "—"
+  }
+
+  return date.toLocaleString(locale, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  })
+}
+
+export function formatLocalDateTime(
+  date: Date,
+  locale?: string
+): string {
+  return date.toLocaleString(locale, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  })
 }
 
 export function formatNumber(

@@ -9,7 +9,7 @@
         { "name": "🏭 Factory", "value": "{ServerName}", "inline": true },
         { "name": "🕐 In-game time", "value": "{InGameTime}", "inline": true }
       ],
-      "footer": "🏭 {ServerName} · {Timestamp}",
+      "footer": "🏭 {ServerName}",
       "show_timestamp": true
     }
   },
@@ -23,7 +23,7 @@
         { "name": "🏭 Factory", "value": "{ServerName}", "inline": true },
         { "name": "🕐 In-game time", "value": "{InGameTime}", "inline": true }
       ],
-      "footer": "🏭 {ServerName} · {Timestamp}",
+      "footer": "🏭 {ServerName}",
       "show_timestamp": true
     }
   },
@@ -38,7 +38,7 @@
         { "name": "🏭 Factory", "value": "{ServerName}", "inline": true },
         { "name": "👥 Online", "value": "{OnlineCount} players online", "inline": true }
       ],
-      "footer": "🏭 {ServerName} · {Timestamp}",
+      "footer": "🏭 {ServerName}",
       "show_timestamp": true
     }
   },
@@ -53,7 +53,7 @@
         { "name": "🏭 Factory", "value": "{ServerName}", "inline": true },
         { "name": "👥 Online", "value": "{OnlineCount} players online", "inline": true }
       ],
-      "footer": "🏭 {ServerName} · {Timestamp}",
+      "footer": "🏭 {ServerName}",
       "show_timestamp": true
     }
   },
@@ -69,7 +69,7 @@
         { "name": "⚡ Production", "value": "{PowerProduction} MW", "inline": true },
         { "name": "🔋 Batteries", "value": "{BatteryPercent}% · empty in {BatteryTimeEmpty}", "inline": false }
       ],
-      "footer": "🏭 {ServerName} · {Timestamp}",
+      "footer": "🏭 {ServerName}",
       "show_timestamp": true
     }
   },
@@ -85,7 +85,7 @@
         { "name": "⚡ Production", "value": "{PowerProduction} MW", "inline": true },
         { "name": "🔋 Batteries", "value": "{BatteryPercent}% · empty in {BatteryTimeEmpty}", "inline": false }
       ],
-      "footer": "🏭 {ServerName} · {Timestamp}",
+      "footer": "🏭 {ServerName}",
       "show_timestamp": true
     }
   },
@@ -99,7 +99,7 @@
         { "name": "📊 Tier", "value": "{TechTier}", "inline": true },
         { "name": "📜 Recipes", "value": "{RecipeNames}", "inline": false }
       ],
-      "footer": "🏭 {ServerName} · {Timestamp}",
+      "footer": "🏭 {ServerName}",
       "show_timestamp": true
     }
   },
@@ -112,7 +112,7 @@
       "fields": [
         { "name": "📜 Recipe options", "value": "{RecipeOptions}", "inline": false }
       ],
-      "footer": "🏭 {ServerName} · {Timestamp}",
+      "footer": "🏭 {ServerName}",
       "show_timestamp": true
     }
   },
@@ -126,7 +126,7 @@
         { "name": "📊 Phase", "value": "{PhaseNumber}", "inline": true },
         { "name": "📦 Requirements", "value": "{PhaseRequirements}", "inline": false }
       ],
-      "footer": "🏭 {ServerName} · {Timestamp}",
+      "footer": "🏭 {ServerName}",
       "show_timestamp": true
     }
   },
@@ -141,7 +141,7 @@
         { "name": "📊 Tier", "value": "{TechTier}", "inline": true },
         { "name": "💰 Cost", "value": "{ResearchCost}", "inline": false }
       ],
-      "footer": "🏭 {ServerName} · {Timestamp}",
+      "footer": "🏭 {ServerName}",
       "show_timestamp": true
     }
   },
@@ -156,7 +156,7 @@
         { "name": "⚠️ Status", "value": "{TrainStatus}", "inline": true },
         { "name": "🤖 Autopilot", "value": "{SelfDriving}", "inline": true }
       ],
-      "footer": "🏭 {ServerName} · {Timestamp}",
+      "footer": "🏭 {ServerName}",
       "show_timestamp": true
     }
   },
@@ -171,7 +171,7 @@
         { "name": "👤 Driver", "value": "{Driver}", "inline": true },
         { "name": "💨 Speed", "value": "{ForwardSpeed}", "inline": true }
       ],
-      "footer": "🏭 {ServerName} · {Timestamp}",
+      "footer": "🏭 {ServerName}",
       "show_timestamp": true
     }
   },
@@ -186,7 +186,7 @@
         { "name": "👤 Driver", "value": "{Driver}", "inline": true },
         { "name": "💨 Speed", "value": "{ForwardSpeed}", "inline": true }
       ],
-      "footer": "🏭 {ServerName} · {Timestamp}",
+      "footer": "🏭 {ServerName}",
       "show_timestamp": true
     }
   },
@@ -202,7 +202,7 @@
         { "name": "🔌 Port", "value": "{GamePort}", "inline": true },
         { "name": "📝 Notes", "value": "{Notes}", "inline": false }
       ],
-      "footer": "🏭 {ServerName} · {Timestamp}",
+      "footer": "🏭 {ServerName}",
       "show_timestamp": true
     }
   }

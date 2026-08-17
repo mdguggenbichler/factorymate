@@ -18,7 +18,7 @@ import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
 import { apiFetch } from "@/lib/api"
 import type { ConnectionDetails } from "@/lib/api-types"
-import { formatDateTime } from "@/lib/format"
+import { useFormatDateTime } from "@/hooks/use-format-datetime"
 
 type ConnectionSettingsFormProps = {
   initialDetails: ConnectionDetails
@@ -28,6 +28,7 @@ export function ConnectionSettingsForm({
   initialDetails,
 }: ConnectionSettingsFormProps) {
   const t = useTranslations("settings.connection")
+  const { formatDateTime } = useFormatDateTime()
   const tCommon = useTranslations("common")
   const [details, setDetails] = useState(initialDetails)
   const [gameHost, setGameHost] = useState(initialDetails.gameHost ?? "")

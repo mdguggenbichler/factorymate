@@ -17,7 +17,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { formatDateTime } from "@/lib/format"
+import { useFormatDateTime } from "@/hooks/use-format-datetime"
 import type { NotificationLogEntry } from "@/lib/api-types"
 
 type NotificationLogViewProps = {
@@ -30,6 +30,7 @@ export function NotificationLogView({
   total,
 }: NotificationLogViewProps) {
   const t = useTranslations("settings.log")
+  const { formatDateTime } = useFormatDateTime()
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">

@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/card"
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
-import { formatDateTime } from "@/lib/format"
+import { useFormatDateTime } from "@/hooks/use-format-datetime"
 
 type InviteAcceptFormProps = {
   token: string
@@ -35,6 +35,7 @@ export function InviteAcceptForm({
   errorStatus,
 }: InviteAcceptFormProps) {
   const t = useTranslations("invite")
+  const { formatDateTime } = useFormatDateTime()
   const tAuth = useTranslations("auth")
   const router = useRouter()
   const [username, setUsername] = useState("")

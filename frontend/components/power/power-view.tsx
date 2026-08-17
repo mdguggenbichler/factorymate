@@ -32,7 +32,8 @@ import {
   presetToDateRange,
   type DateRangePreset,
 } from "@/lib/date-range"
-import { formatDateTime, formatMw, formatNumber, formatPercent } from "@/lib/format"
+import { useFormatDateTime } from "@/hooks/use-format-datetime"
+import { formatMw, formatNumber, formatPercent } from "@/lib/format"
 import type {
   Circuit,
   PowerHistoryEvent,
@@ -60,6 +61,7 @@ export function PowerView({
 }: PowerViewProps) {
   const t = useTranslations("power")
   const tCharts = useTranslations("charts")
+  const { formatDateTime } = useFormatDateTime()
   const [circuits] = useState(initialPower.circuits)
   const [history] = useState(initialHistory)
   const [selectedCircuit, setSelectedCircuit] = useState<string>(

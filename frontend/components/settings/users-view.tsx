@@ -74,7 +74,7 @@ import type {
   Player,
   UnmappedPlayer,
 } from "@/lib/api-types"
-import { formatDateTime } from "@/lib/format"
+import { useFormatDateTime } from "@/hooks/use-format-datetime"
 
 type UserFormState = {
   password: string
@@ -122,6 +122,7 @@ export function UsersView({
   const t = useTranslations("settings.users")
   const tAuth = useTranslations("auth")
   const tCommon = useTranslations("common")
+  const { formatDateTime } = useFormatDateTime()
   const [users, setUsers] = useState(initialUsers)
   const [invites, setInvites] = useState(initialInvites)
   const [players, setPlayers] = useState<Player[]>([])

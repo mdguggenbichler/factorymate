@@ -1,9 +1,11 @@
 "use client"
 
+import { useLocale } from "next-intl"
 import { useTranslations } from "next-intl"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
+import { formatLocalDateTime } from "@/lib/format"
 import type { EmbedTemplate } from "@/lib/api-types"
 
 type EmbedPreviewProps = {
@@ -28,6 +30,7 @@ export function EmbedPreview({
   showTimestamp,
 }: EmbedPreviewProps) {
   const t = useTranslations("settings.templates")
+  const locale = useLocale()
 
   if (!embed) {
     return (
@@ -45,6 +48,9 @@ export function EmbedPreview({
   const borderColor = hexToBorderColor(embed.color)
   const footer = footerText ?? embed.footer
   const displayTimestamp = showTimestamp ?? embed.show_timestamp
+  const timestampLabel = displayTimestamp
+    ? formatLocalDateTime(new Date(), locale)
+    : null
 
   return (
     <Card>
@@ -82,13 +88,13 @@ export function EmbedPreview({
               </div>
             </>
           ) : null}
-          {footer || displayTimestamp ? (
+          {footer || timestampLabel ? (
             <>
               <Separator className="my-3" />
               <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
                 {footer ? <span>{footer}</span> : <span />}
-                {displayTimestamp ? (
-                  <span className="shrink-0">{t("previewTimestampSample")}</span>
+                {timestampLabel ? (
+                  <span className="shrink-0">{timestampLabel}</span>
                 ) : null}
               </div>
             </>

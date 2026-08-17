@@ -234,7 +234,7 @@ func SampleRenderedMessage() RenderedMessage {
 		Embed: &DiscordEmbed{
 			Title:     "👤 A player joined the server",
 			Color:     "#57F287",
-			Footer:    "🏭 CBC | Conveyor Belt Cult · Aug 17, 2026 · 14:37 UTC",
+			Footer:    "🏭 CBC | Conveyor Belt Cult",
 			Timestamp: "2026-08-17T14:37:00Z",
 			Fields: []DiscordEmbedField{
 				{Name: "👤 Player", Value: "Michael", Inline: true},

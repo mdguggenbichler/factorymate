@@ -39,7 +39,7 @@ import {
 } from "@/components/ui/tooltip"
 import { apiFetch, apiUrl } from "@/lib/api"
 import type { ModsResponse } from "@/lib/api-types"
-import { formatDateTime } from "@/lib/format"
+import { useFormatDateTime } from "@/hooks/use-format-datetime"
 
 type ModsViewProps = {
   initialData: ModsResponse
@@ -50,6 +50,7 @@ type SortKey = "name" | "version"
 
 export function ModsView({ initialData, isAdmin }: ModsViewProps) {
   const t = useTranslations("mods")
+  const { formatDateTime } = useFormatDateTime()
   const tCommon = useTranslations("common")
   const [data, setData] = useState(initialData)
   const [isRefreshing, setIsRefreshing] = useState(false)

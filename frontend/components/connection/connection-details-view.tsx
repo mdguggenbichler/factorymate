@@ -12,7 +12,7 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import type { ConnectionDetails } from "@/lib/api-types"
-import { formatDateTime } from "@/lib/format"
+import { useFormatDateTime } from "@/hooks/use-format-datetime"
 
 type ConnectionDetailsViewProps = {
   details: ConnectionDetails
@@ -24,6 +24,7 @@ export function ConnectionDetailsView({
   showModsLink = true,
 }: ConnectionDetailsViewProps) {
   const t = useTranslations("connection")
+  const { formatDateTime } = useFormatDateTime()
   const tMods = useTranslations("mods")
 
   const configured = Boolean(details.gameHost?.trim())
