@@ -30,7 +30,7 @@ func TestAuthFlow(t *testing.T) {
 	}
 
 	svc := auth.NewService(database)
-	handler := api.NewHandler(svc)
+	handler := api.NewHandler(database, svc)
 	router := newTestRouter(handler, svc)
 
 	t.Run("setup once", func(t *testing.T) {
@@ -153,7 +153,7 @@ func TestAuthFlow(t *testing.T) {
 		}
 		cookie := sessionCookie(loginResp)
 
-		adminReq := httptest.NewRequest(http.MethodGet, "/api/admin-only", nil)
+		adminReq := httptest.NewRequest(http.MethodGet, "/api/settings", nil)
 		adminReq.AddCookie(cookie)
 		adminResp := httptest.NewRecorder()
 		router.ServeHTTP(adminResp, adminReq)
@@ -169,7 +169,7 @@ func TestAuthFlow(t *testing.T) {
 		})
 		cookie := sessionCookie(loginResp)
 
-		adminReq := httptest.NewRequest(http.MethodGet, "/api/admin-only", nil)
+		adminReq := httptest.NewRequest(http.MethodGet, "/api/settings", nil)
 		adminReq.AddCookie(cookie)
 		adminResp := httptest.NewRecorder()
 		router.ServeHTTP(adminResp, adminReq)
@@ -227,21 +227,8 @@ func newTestRouter(handler *api.Handler, svc *auth.Service) http.Handler {
 	})
 	r.Route("/api", func(r chi.Router) {
 		handler.Mount(r)
-		r.Group(func(r chi.Router) {
-			r.Use(svc.RequireSession(apiWriteError))
-			r.Use(svc.RequireAdmin(apiWriteError))
-			r.Get("/admin-only", func(w http.ResponseWriter, r *http.Request) {
-				w.WriteHeader(http.StatusOK)
-			})
-		})
 	})
 	return r
-}
-
-func apiWriteError(w http.ResponseWriter, r *http.Request, status int, message string) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(map[string]string{"error": message})
 }
 
 func openTestDB(t *testing.T) *sql.DB {

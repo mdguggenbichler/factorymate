@@ -7,8 +7,6 @@ import (
 	"strings"
 
 	"factorymate/internal/auth"
-
-	"github.com/go-chi/chi/v5"
 )
 
 type credentialsRequest struct {
@@ -18,18 +16,6 @@ type credentialsRequest struct {
 
 type passwordRequest struct {
 	Password string `json:"password"`
-}
-
-func (h *Handler) Mount(r chi.Router) {
-	r.Post("/auth/setup", h.Setup)
-	r.Post("/auth/login", h.Login)
-
-	r.Group(func(r chi.Router) {
-		r.Use(h.auth.RequireSession(writeError))
-		r.Post("/auth/logout", h.Logout)
-		r.Get("/auth/me", h.Me)
-		r.Put("/account/password", h.ChangePassword)
-	})
 }
 
 func (h *Handler) Setup(w http.ResponseWriter, r *http.Request) {

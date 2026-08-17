@@ -52,7 +52,7 @@ func main() {
 	r := chi.NewRouter()
 	r.Get("/healthz", healthz)
 	r.Route("/api", func(r chi.Router) {
-		api.NewHandler(authSvc).Mount(r)
+		api.NewHandler(database, authSvc).Mount(r)
 	})
 
 	addr := ":" + port
