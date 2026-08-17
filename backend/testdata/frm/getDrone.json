@@ -1,1 +1,14 @@
-[]
+[
+  {
+    "ID": "BP_DroneTransport_C_2147415346",
+    "Name": "Drone",
+    "ClassName": "BP_DroneTransport_C",
+    "HomeStation": "Arlanda",
+    "PairedStation": "None",
+    "HasPairedStation": false,
+    "CurrentDestination": "No Destination",
+    "FlyingSpeed": 0,
+    "MaxSpeed": 0,
+    "CurrentFlyingMode": "None"
+  }
+]

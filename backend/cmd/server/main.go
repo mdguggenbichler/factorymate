@@ -40,6 +40,7 @@ func main() {
 	}
 
 	go runPoller(ctx, database, phases)
+	go runSlowPoller(ctx, database)
 
 	authSvc := auth.NewService(database)
 	go authSvc.StartCleanupJob(ctx)
@@ -60,6 +61,24 @@ func main() {
 	if err := http.ListenAndServe(addr, r); err != nil {
 		log.Fatal(err)
 	}
+}
+
+func runSlowPoller(ctx context.Context, database *sql.DB) {
+	fetcher := &settingsSlowFetcher{db: database}
+	sp := poller.NewSlowPoller(database, fetcher)
+	sp.Run(ctx)
+}
+
+type settingsSlowFetcher struct {
+	db *sql.DB
+}
+
+func (f *settingsSlowFetcher) GetSlow(ctx context.Context) frm.SlowPollResult {
+	client, err := poller.FRMClientFromSettings(ctx, f.db)
+	if err != nil {
+		return frm.SlowPollResult{Errors: map[string]error{"config": err}}
+	}
+	return client.GetSlow(ctx)
 }
 
 func runPoller(ctx context.Context, database *sql.DB, phases *poller.ElevatorPhases) {

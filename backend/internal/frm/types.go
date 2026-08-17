@@ -188,17 +188,27 @@ type PowerInfo struct {
 
 // FactoryMachine is a FRM getFactory entry.
 type FactoryMachine struct {
-	ID               string            `json:"ID"`
-	Name             string            `json:"Name"`
-	ClassName        string            `json:"ClassName"`
-	Recipe           string            `json:"Recipe"`
-	ManuSpeed        float64           `json:"ManuSpeed"`
-	IsConfigured     bool              `json:"IsConfigured"`
-	IsProducing      bool              `json:"IsProducing"`
-	IsPaused         bool              `json:"IsPaused"`
-	Ingredients      []FactoryFlowItem `json:"ingredients"`
-	Production       []FactoryFlowItem `json:"production"`
-	PowerInfo        PowerInfo         `json:"PowerInfo"`
+	ID           string            `json:"ID"`
+	Name         string            `json:"Name"`
+	ClassName    string            `json:"ClassName"`
+	Recipe       string            `json:"Recipe"`
+	ManuSpeed    float64           `json:"ManuSpeed"`
+	IsConfigured bool              `json:"IsConfigured"`
+	IsProducing  bool              `json:"IsProducing"`
+	IsPaused     bool              `json:"IsPaused"`
+	Ingredients  []FactoryFlowItem `json:"ingredients"`
+	Production   []FactoryFlowItem `json:"production"`
+	PowerInfo    PowerInfo         `json:"PowerInfo"`
+	Features     struct {
+		Properties struct {
+			Type string `json:"type"`
+		} `json:"properties"`
+	} `json:"features"`
+}
+
+// BuildingType returns FRM's features.properties.type when set.
+func (m FactoryMachine) BuildingType() string {
+	return m.Features.Properties.Type
 }
 
 // Drone is a FRM getDrone entry.

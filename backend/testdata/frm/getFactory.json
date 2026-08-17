@@ -1,1 +1,402 @@
-[{"ID": "Build_AssemblerMk1_C_2147394722", "Name": "Assembler", "ClassName": "Build_AssemblerMk1_C", "location": {"x": -97700, "y": 255600, "z": -699.985107421875, "rotation": 270, "pitch": 0}, "BoundingBox": {"min": {"x": -98150, "y": 254750, "z": -699.985107421875}, "max": {"x": -97250, "y": 256350, "z": 375.014892578125}}, "ColorSlot": {"PrimaryColor": "FA954900", "SecondaryColor": "5F668C00"}, "Recipe": "Reinforced Iron Plate", "RecipeClassName": "Recipe_IronPlateReinforced_C", "production": [{"Name": "Reinforced Iron Plate", "ClassName": "Desc_IronPlateReinforced_C", "Amount": 1, "MaxAmount": 100, "CurrentProd": 4.9882354736328125, "MaxProd": 8, "ProdPercent": 62.352943420410156}], "ingredients": [{"Name": "Iron Plate", "ClassName": "Desc_IronPlate_C", "Amount": 6, "MaxAmount": 200, "CurrentConsumed": 29.929412841796875, "MaxConsumed": 48, "ConsPercent": 62.352943420410156}, {"Name": "Screws", "ClassName": "Desc_IronScrew_C", "Amount": 12, "MaxAmount": 500, "CurrentConsumed": 59.85882568359375, "MaxConsumed": 96, "ConsPercent": 62.352943420410156}], "InputInventory": [{"Name": "Iron Plate", "ClassName": "Desc_IronPlate_C", "Amount": 8, "MaxAmount": 200}, {"Name": "Screws", "ClassName": "Desc_IronScrew_C", "Amount": 500, "MaxAmount": 500}], "OutputInventory": [], "Productivity": 62.352943420410156, "ManuSpeed": 160, "Somersloops": 0, "PowerShards": 2, "IsConfigured": true, "IsProducing": true, "IsPaused": false, "PowerInfo": {"CircuitGroupID": 2, "CircuitID": 8, "FuseTriggered": false, "PowerConsumed": 27.92051124572754, "MaxPowerConsumed": 27.92051124572754}, "features": {"properties": {"name": "Assembler", "type": "Assembler"}, "geometry": {"coordinates": {"x": -97700, "y": 255600, "z": -699.985107421875}, "type": "Point"}}}]
+[
+  {
+    "ID": "Build_AssemblerMk1_C_2147394722",
+    "Name": "Assembler",
+    "ClassName": "Build_AssemblerMk1_C",
+    "location": {
+      "x": -97700,
+      "y": 255600,
+      "z": -699.985107421875,
+      "rotation": 270,
+      "pitch": 0
+    },
+    "BoundingBox": {
+      "min": {
+        "x": -98150,
+        "y": 254750,
+        "z": -699.985107421875
+      },
+      "max": {
+        "x": -97250,
+        "y": 256350,
+        "z": 375.014892578125
+      }
+    },
+    "ColorSlot": {
+      "PrimaryColor": "FA954900",
+      "SecondaryColor": "5F668C00"
+    },
+    "Recipe": "Reinforced Iron Plate",
+    "RecipeClassName": "Recipe_IronPlateReinforced_C",
+    "production": [
+      {
+        "Name": "Reinforced Iron Plate",
+        "ClassName": "Desc_IronPlateReinforced_C",
+        "Amount": 1,
+        "MaxAmount": 100,
+        "CurrentProd": 4.9882354736328125,
+        "MaxProd": 8,
+        "ProdPercent": 62.352943420410156
+      }
+    ],
+    "ingredients": [
+      {
+        "Name": "Iron Plate",
+        "ClassName": "Desc_IronPlate_C",
+        "Amount": 6,
+        "MaxAmount": 200,
+        "CurrentConsumed": 29.929412841796875,
+        "MaxConsumed": 48,
+        "ConsPercent": 62.352943420410156
+      },
+      {
+        "Name": "Screws",
+        "ClassName": "Desc_IronScrew_C",
+        "Amount": 12,
+        "MaxAmount": 500,
+        "CurrentConsumed": 59.85882568359375,
+        "MaxConsumed": 96,
+        "ConsPercent": 62.352943420410156
+      }
+    ],
+    "InputInventory": [
+      {
+        "Name": "Iron Plate",
+        "ClassName": "Desc_IronPlate_C",
+        "Amount": 8,
+        "MaxAmount": 200
+      },
+      {
+        "Name": "Screws",
+        "ClassName": "Desc_IronScrew_C",
+        "Amount": 500,
+        "MaxAmount": 500
+      }
+    ],
+    "OutputInventory": [],
+    "Productivity": 62.352943420410156,
+    "ManuSpeed": 160,
+    "Somersloops": 0,
+    "PowerShards": 2,
+    "IsConfigured": true,
+    "IsProducing": true,
+    "IsPaused": false,
+    "PowerInfo": {
+      "CircuitGroupID": 2,
+      "CircuitID": 8,
+      "FuseTriggered": false,
+      "PowerConsumed": 27.920511245727539,
+      "MaxPowerConsumed": 27.920511245727539
+    },
+    "features": {
+      "properties": {
+        "name": "Assembler",
+        "type": "Assembler"
+      },
+      "geometry": {
+        "coordinates": {
+          "x": -97700,
+          "y": 255600,
+          "z": -699.985107421875
+        },
+        "type": "Point"
+      }
+    }
+  },
+  {
+    "ID": "Build_ConstructorMk1_C_2147467044",
+    "Name": "Constructor",
+    "ClassName": "Build_ConstructorMk1_C",
+    "location": {
+      "x": -105600,
+      "y": 260800,
+      "z": -4499.9921875,
+      "rotation": 270,
+      "pitch": 0
+    },
+    "BoundingBox": {
+      "min": {
+        "x": -106000,
+        "y": 260300,
+        "z": -4499.9921875
+      },
+      "max": {
+        "x": -105200,
+        "y": 261300,
+        "z": -3649.9921875
+      }
+    },
+    "ColorSlot": {
+      "PrimaryColor": "FA954900",
+      "SecondaryColor": "5F668C00"
+    },
+    "Recipe": "Concrete",
+    "RecipeClassName": "Recipe_Concrete_C",
+    "production": [
+      {
+        "Name": "Concrete",
+        "ClassName": "Desc_Cement_C",
+        "Amount": 1,
+        "MaxAmount": 500,
+        "CurrentProd": 15,
+        "MaxProd": 15,
+        "ProdPercent": 100
+      }
+    ],
+    "ingredients": [
+      {
+        "Name": "Limestone",
+        "ClassName": "Desc_Stone_C",
+        "Amount": 3,
+        "MaxAmount": 100,
+        "CurrentConsumed": 45,
+        "MaxConsumed": 45,
+        "ConsPercent": 100
+      }
+    ],
+    "InputInventory": [
+      {
+        "Name": "Limestone",
+        "ClassName": "Desc_Stone_C",
+        "Amount": 5,
+        "MaxAmount": 100
+      }
+    ],
+    "OutputInventory": [
+      {
+        "Name": "Concrete",
+        "ClassName": "Desc_Cement_C",
+        "Amount": 496,
+        "MaxAmount": 500
+      }
+    ],
+    "Productivity": 100,
+    "ManuSpeed": 100,
+    "Somersloops": 0,
+    "PowerShards": 0,
+    "IsConfigured": true,
+    "IsProducing": true,
+    "IsPaused": false,
+    "PowerInfo": {
+      "CircuitGroupID": 2,
+      "CircuitID": 8,
+      "FuseTriggered": false,
+      "PowerConsumed": 4,
+      "MaxPowerConsumed": 4
+    },
+    "features": {
+      "properties": {
+        "name": "Constructor",
+        "type": "Constructor"
+      },
+      "geometry": {
+        "coordinates": {
+          "x": -105600,
+          "y": 260800,
+          "z": -4499.9921875
+        },
+        "type": "Point"
+      }
+    }
+  },
+  {
+    "ID": "Build_FoundryMk1_C_2147322373",
+    "Name": "Foundry",
+    "ClassName": "Build_FoundryMk1_C",
+    "location": {
+      "x": -62000,
+      "y": 298200,
+      "z": -5899.98779296875,
+      "rotation": 1.4210854715202004E-14,
+      "pitch": 0
+    },
+    "BoundingBox": {
+      "min": {
+        "x": -62500,
+        "y": 297650,
+        "z": -5899.98779296875
+      },
+      "max": {
+        "x": -61500,
+        "y": 298650,
+        "z": -4999.98779296875
+      }
+    },
+    "ColorSlot": {
+      "PrimaryColor": "FA954900",
+      "SecondaryColor": "5F668C00"
+    },
+    "Recipe": "Steel Ingot",
+    "RecipeClassName": "Recipe_IngotSteel_C",
+    "production": [
+      {
+        "Name": "Steel Ingot",
+        "ClassName": "Desc_SteelIngot_C",
+        "Amount": 3,
+        "MaxAmount": 100,
+        "CurrentProd": 29.823530197143555,
+        "MaxProd": 45,
+        "ProdPercent": 66.274511549207901
+      }
+    ],
+    "ingredients": [
+      {
+        "Name": "Iron Ore",
+        "ClassName": "Desc_OreIron_C",
+        "Amount": 3,
+        "MaxAmount": 100,
+        "CurrentConsumed": 29.823530197143555,
+        "MaxConsumed": 45,
+        "ConsPercent": 66.274511549207901
+      },
+      {
+        "Name": "Coal",
+        "ClassName": "Desc_Coal_C",
+        "Amount": 3,
+        "MaxAmount": 100,
+        "CurrentConsumed": 29.823530197143555,
+        "MaxConsumed": 45,
+        "ConsPercent": 66.274511549207901
+      }
+    ],
+    "InputInventory": [
+      {
+        "Name": "Iron Ore",
+        "ClassName": "Desc_OreIron_C",
+        "Amount": 6,
+        "MaxAmount": 100
+      },
+      {
+        "Name": "Coal",
+        "ClassName": "Desc_Coal_C",
+        "Amount": 100,
+        "MaxAmount": 100
+      }
+    ],
+    "OutputInventory": [],
+    "Productivity": 66.274513244628906,
+    "ManuSpeed": 100,
+    "Somersloops": 0,
+    "PowerShards": 0,
+    "IsConfigured": true,
+    "IsProducing": true,
+    "IsPaused": false,
+    "PowerInfo": {
+      "CircuitGroupID": 2,
+      "CircuitID": 8,
+      "FuseTriggered": false,
+      "PowerConsumed": 16,
+      "MaxPowerConsumed": 16
+    },
+    "features": {
+      "properties": {
+        "name": "Foundry",
+        "type": "Foundry"
+      },
+      "geometry": {
+        "coordinates": {
+          "x": -62000,
+          "y": 298200,
+          "z": -5899.98779296875
+        },
+        "type": "Point"
+      }
+    }
+  },
+  {
+    "ID": "Build_SmelterMk1_C_2147444397",
+    "Name": "Smelter",
+    "ClassName": "Build_SmelterMk1_C",
+    "location": {
+      "x": -82200,
+      "y": 273600,
+      "z": -6100,
+      "rotation": 1.4210854715202004E-14,
+      "pitch": 0
+    },
+    "BoundingBox": {
+      "min": {
+        "x": -82450,
+        "y": 273100,
+        "z": -6100
+      },
+      "max": {
+        "x": -81940,
+        "y": 274100,
+        "z": -5250
+      }
+    },
+    "ColorSlot": {
+      "PrimaryColor": "FA954900",
+      "SecondaryColor": "5F668C00"
+    },
+    "Recipe": "Copper Ingot",
+    "RecipeClassName": "Recipe_IngotCopper_C",
+    "production": [
+      {
+        "Name": "Copper Ingot",
+        "ClassName": "Desc_CopperIngot_C",
+        "Amount": 1,
+        "MaxAmount": 100,
+        "CurrentProd": 0,
+        "MaxProd": 30,
+        "ProdPercent": 0
+      }
+    ],
+    "ingredients": [
+      {
+        "Name": "Copper Ore",
+        "ClassName": "Desc_OreCopper_C",
+        "Amount": 1,
+        "MaxAmount": 100,
+        "CurrentConsumed": 0,
+        "MaxConsumed": 30,
+        "ConsPercent": 0
+      }
+    ],
+    "InputInventory": [
+      {
+        "Name": "Copper Ore",
+        "ClassName": "Desc_OreCopper_C",
+        "Amount": 100,
+        "MaxAmount": 100
+      }
+    ],
+    "OutputInventory": [
+      {
+        "Name": "Copper Ingot",
+        "ClassName": "Desc_CopperIngot_C",
+        "Amount": 100,
+        "MaxAmount": 100
+      }
+    ],
+    "Productivity": 0,
+    "ManuSpeed": 100,
+    "Somersloops": 0,
+    "PowerShards": 0,
+    "IsConfigured": true,
+    "IsProducing": false,
+    "IsPaused": false,
+    "PowerInfo": {
+      "CircuitGroupID": 2,
+      "CircuitID": 8,
+      "FuseTriggered": false,
+      "PowerConsumed": 0.10000000149011612,
+      "MaxPowerConsumed": 4
+    },
+    "features": {
+      "properties": {
+        "name": "Smelter",
+        "type": "Smelter"
+      },
+      "geometry": {
+        "coordinates": {
+          "x": -82200,
+          "y": 273600,
+          "z": -6100
+        },
+        "type": "Point"
+      }
+    }
+  }
+]

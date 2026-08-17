@@ -12,24 +12,34 @@ import (
 )
 
 type appSettings struct {
-	ServerName          string
-	FRMHost             string
-	FRMPort             int
-	FRMAuthToken        sql.NullString
-	PollIntervalSeconds int
+	ServerName                        string
+	FRMHost                           string
+	FRMPort                           int
+	FRMAuthToken                      sql.NullString
+	PollIntervalSeconds               int
+	ProductionSnapshotIntervalSeconds int
+	ProductionSnapshotRetentionDays   int
 }
 
 func loadAppSettings(ctx context.Context, db *sql.DB) (appSettings, error) {
 	var s appSettings
 	err := db.QueryRowContext(ctx, `
-		SELECT server_name, frm_host, frm_port, frm_auth_token, poll_interval_seconds
+		SELECT server_name, frm_host, frm_port, frm_auth_token, poll_interval_seconds,
+			production_snapshot_interval_seconds, production_snapshot_retention_days
 		FROM app_settings WHERE id = 1`,
-	).Scan(&s.ServerName, &s.FRMHost, &s.FRMPort, &s.FRMAuthToken, &s.PollIntervalSeconds)
+	).Scan(&s.ServerName, &s.FRMHost, &s.FRMPort, &s.FRMAuthToken, &s.PollIntervalSeconds,
+		&s.ProductionSnapshotIntervalSeconds, &s.ProductionSnapshotRetentionDays)
 	if err != nil {
 		return s, fmt.Errorf("load app_settings: %w", err)
 	}
 	if s.PollIntervalSeconds <= 0 {
 		s.PollIntervalSeconds = 20
+	}
+	if s.ProductionSnapshotIntervalSeconds <= 0 {
+		s.ProductionSnapshotIntervalSeconds = 300
+	}
+	if s.ProductionSnapshotRetentionDays <= 0 {
+		s.ProductionSnapshotRetentionDays = 30
 	}
 	return s, nil
 }
