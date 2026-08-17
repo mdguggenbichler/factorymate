@@ -35,11 +35,11 @@ function stateLabelKey(state: string): string | null {
 function nodeStateClasses(state: string): string {
   switch (state) {
     case "Purchased":
-      return "border-emerald-500/60 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+      return "border-emerald-500/60 bg-emerald-950 text-emerald-100 dark:bg-emerald-950 dark:text-emerald-300"
     case "Available":
-      return "border-primary/70 bg-primary/10 text-foreground"
+      return "border-primary/70 bg-card text-foreground"
     case "Hidden":
-      return "border-dashed border-muted-foreground/40 bg-muted/40 text-muted-foreground"
+      return "border-dashed border-muted-foreground/40 bg-muted text-muted-foreground"
     default:
       return "border-border bg-card text-foreground"
   }

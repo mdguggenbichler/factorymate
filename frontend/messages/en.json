@@ -343,7 +343,7 @@
     "description": "M.A.M. research trees with node layout, prerequisites, and costs.",
     "empty": "No research data available.",
     "layoutPending": "Tree layout data is not available yet. It will appear after the next fast poll.",
-    "nodeCount": "{count, plural, one {# node} other {# nodes}}",
+    "nodeProgress": "{purchased}/{total}",
     "costItem": "{name} × {amount}",
     "nodeDetails": {
       "tier": "Tech tier {tier}",
@@ -371,7 +371,7 @@
     "overallProgress": "Overall phase progress",
     "itemsTitle": "Required items",
     "itemsEmpty": "No phase items recorded.",
-    "itemProgress": "{remaining} / {total} remaining · Need {amount}",
+    "itemProgress": "{delivered} / {total} delivered · Need {remaining}",
     "unknownAlertTitle": "Unknown elevator phase detected",
     "unknownAlertDescription": "{count, plural, one {# unresolved diagnostic entry requires admin attention.} other {# unresolved diagnostic entries require admin attention.}}",
     "unknownDetectedAt": "Detected {date}",

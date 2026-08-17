@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type { ResearchTree } from "@/lib/api-types"
+import { countResearchProgress } from "@/lib/research-layout"
 
 type ResearchViewProps = {
   trees: ResearchTree[]
@@ -31,14 +32,17 @@ export function ResearchView({ trees }: ResearchViewProps) {
       ) : (
         <Tabs defaultValue={trees[0].name}>
           <TabsList className="h-auto flex-wrap">
-            {trees.map((tree) => (
+            {trees.map((tree) => {
+              const { purchased, total } = countResearchProgress(tree.nodes)
+              return (
               <TabsTrigger key={tree.name} value={tree.name} className="gap-2">
                 <span>{tree.name}</span>
                 <Badge variant="outline" className="px-1.5 py-0 text-[10px]">
-                  {t("nodeCount", { count: tree.nodes.length })}
+                  {t("nodeProgress", { purchased, total })}
                 </Badge>
               </TabsTrigger>
-            ))}
+              )
+            })}
           </TabsList>
 
           {trees.map((tree) => (

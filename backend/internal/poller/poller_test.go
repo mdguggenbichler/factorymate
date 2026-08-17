@@ -52,6 +52,70 @@ func TestFirstPollBaselineNoEvents(t *testing.T) {
 	assertElevatorPhase(t, ctx, database, "elevator-1", 2)
 }
 
+func TestResearchTreePrunesStaleNodes(t *testing.T) {
+	t.Chdir("../..")
+
+	ctx := context.Background()
+	database := openTestDB(t)
+	defer database.Close()
+
+	if err := db.Init(ctx, database, db.SeedConfig{}); err != nil {
+		t.Fatalf("init: %v", err)
+	}
+
+	phases, err := poller.LoadElevatorPhases("data/elevator_phases.json")
+	if err != nil {
+		t.Fatalf("load phases: %v", err)
+	}
+
+	engine := &poller.Engine{DB: database, ElevatorPhases: phases}
+	now := time.Date(2026, 8, 17, 12, 0, 0, 0, time.UTC)
+
+	firstPoll := frm.FastPollResult{
+		Research: []frm.ResearchTree{{
+			Name: "Mycelia",
+			Nodes: []frm.ResearchNode{
+				{ID: "node-a", Name: "A", State: "Purchased", TechTier: 1,
+					Coordinates: &frm.ResearchCoordinate{X: 0, Y: 0}},
+				{ID: "node-b", Name: "B", State: "Available", TechTier: 1,
+					Coordinates: &frm.ResearchCoordinate{X: 1, Y: 0}},
+				{ID: "node-c", Name: "C", State: "Available", TechTier: 1,
+					Coordinates: &frm.ResearchCoordinate{X: 2, Y: 0}},
+			},
+		}},
+	}
+	if _, err := engine.PollOnce(ctx, firstPoll, now); err != nil {
+		t.Fatalf("first PollOnce: %v", err)
+	}
+	assertResearchTreeNodeCount(t, ctx, database, "Mycelia", 3)
+
+	secondPoll := frm.FastPollResult{
+		Research: []frm.ResearchTree{{
+			Name: "Mycelia",
+			Nodes: []frm.ResearchNode{
+				{ID: "node-d", Name: "D", State: "Purchased", TechTier: 1,
+					Coordinates: &frm.ResearchCoordinate{X: 3, Y: 0}},
+				{ID: "node-e", Name: "E", State: "Available", TechTier: 1,
+					Coordinates: &frm.ResearchCoordinate{X: 4, Y: 0}},
+			},
+		}},
+	}
+	if _, err := engine.PollOnce(ctx, secondPoll, now.Add(time.Minute)); err != nil {
+		t.Fatalf("second PollOnce: %v", err)
+	}
+	assertResearchTreeNodeCount(t, ctx, database, "Mycelia", 2)
+
+	var staleCount int
+	if err := database.QueryRowContext(ctx,
+		`SELECT COUNT(*) FROM research_node_state WHERE tree_name = 'Mycelia' AND node_id IN ('node-a', 'node-b', 'node-c')`,
+	).Scan(&staleCount); err != nil {
+		t.Fatalf("count stale: %v", err)
+	}
+	if staleCount != 0 {
+		t.Fatalf("expected stale nodes removed, found %d", staleCount)
+	}
+}
+
 func TestElevatorPhaseLookup(t *testing.T) {
 	phases, err := poller.LoadElevatorPhases("../../data/elevator_phases.json")
 	if err != nil {
@@ -549,6 +613,19 @@ func assertResearchCoordsNull(t *testing.T, ctx context.Context, database *sql.D
 	}
 	if coordX.Valid || coordY.Valid {
 		t.Fatalf("node %s coords = (%v,%v), want NULL", id, coordX, coordY)
+	}
+}
+
+func assertResearchTreeNodeCount(t *testing.T, ctx context.Context, database *sql.DB, treeName string, want int) {
+	t.Helper()
+	var count int
+	if err := database.QueryRowContext(ctx,
+		`SELECT COUNT(*) FROM research_node_state WHERE tree_name = ?`, treeName,
+	).Scan(&count); err != nil {
+		t.Fatalf("research_node_state count: %v", err)
+	}
+	if count != want {
+		t.Fatalf("tree %q node count = %d, want %d", treeName, count, want)
 	}
 }
 

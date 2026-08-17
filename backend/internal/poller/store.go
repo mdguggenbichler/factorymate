@@ -414,6 +414,26 @@ func upsertResearchNodeState(ctx context.Context, db *sql.DB, treeName string, n
 	return err
 }
 
+func deleteResearchNodesNotInTree(ctx context.Context, db *sql.DB, treeName string, keepIDs []string) error {
+	if len(keepIDs) == 0 {
+		_, err := db.ExecContext(ctx, `DELETE FROM research_node_state WHERE tree_name = ?`, treeName)
+		return err
+	}
+
+	placeholders := make([]string, len(keepIDs))
+	args := make([]any, 0, len(keepIDs)+1)
+	args = append(args, treeName)
+	for i, id := range keepIDs {
+		placeholders[i] = "?"
+		args = append(args, id)
+	}
+
+	query := `DELETE FROM research_node_state WHERE tree_name = ? AND node_id NOT IN (` +
+		strings.Join(placeholders, ",") + `)`
+	_, err := db.ExecContext(ctx, query, args...)
+	return err
+}
+
 type trainStateRow struct {
 	Exists   bool
 	Derailed bool

@@ -331,7 +331,9 @@ func (e *Engine) processElevators(ctx context.Context, elevators []frm.Elevator,
 func (e *Engine) processResearch(ctx context.Context, trees []frm.ResearchTree, now time.Time) ([]Event, error) {
 	var events []Event
 	for _, tree := range trees {
+		seenIDs := make([]string, 0, len(tree.Nodes))
 		for _, node := range tree.Nodes {
+			seenIDs = append(seenIDs, node.ID)
 			prev, err := loadResearchNodeState(ctx, e.DB, node.ID)
 			if err != nil {
 				return nil, err
@@ -359,6 +361,9 @@ func (e *Engine) processResearch(ctx context.Context, trees []frm.ResearchTree, 
 			if err := upsertResearchNodeState(ctx, e.DB, tree.Name, node, now); err != nil {
 				return nil, err
 			}
+		}
+		if err := deleteResearchNodesNotInTree(ctx, e.DB, tree.Name, seenIDs); err != nil {
+			return nil, err
 		}
 	}
 	return events, nil

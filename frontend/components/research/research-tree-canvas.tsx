@@ -92,7 +92,7 @@ export function ResearchTreeCanvas({ nodes, treeName }: ResearchTreeCanvasProps)
         </svg>
 
         <div
-          className="relative grid"
+          className="relative z-10 grid"
           style={{
             gridTemplateColumns: `repeat(${layout.cols}, ${RESEARCH_CELL_WIDTH}px)`,
             gridTemplateRows: `repeat(${layout.rows}, ${RESEARCH_CELL_HEIGHT}px)`,

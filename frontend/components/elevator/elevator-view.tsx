@@ -148,15 +148,16 @@ export function ElevatorView({
           ) : (
             elevator.currentPhase.map((item) => {
               const progress = phaseProgress(item)
+              const delivered = item.totalCost - item.remainingCost
               return (
                 <div key={item.className} className="space-y-2">
                   <div className="flex items-center justify-between gap-2 text-sm">
                     <span className="font-medium">{item.name}</span>
                     <span className="tabular-nums text-muted-foreground">
                       {t("itemProgress", {
-                        remaining: item.remainingCost,
+                        delivered,
                         total: item.totalCost,
-                        amount: item.amount,
+                        remaining: item.remainingCost,
                       })}
                     </span>
                   </div>
