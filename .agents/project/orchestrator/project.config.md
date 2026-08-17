@@ -7,7 +7,8 @@
 | Field | Value |
 | ----- | ----- |
 | Project name | FactoryMate |
-| Repo path | /home/mdguggenbichler/projects/factorymate |
+| Repo URL | https://github.com/ghotso/factorymate |
+| Repo path | /home/michael/projects/factorymate |
 | Integration branch | `main` |
 | Plan file | `docs/factorymate-roadmap.md` |
 | Spec doc | `docs/factorymate-spec.md` |

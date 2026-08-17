@@ -109,16 +109,16 @@ GitHub Actions uses branch/PR entry workflows with reusable `_*.yml` workflows �
 | Branch / event | What runs |
 | --- | --- |
 | Pull request | CI only (`_ci.yml`) — backend, frontend, Docker smoke build |
-| `push` → `dev` | CI + push `ghcr.io/mdguggenbichler/factorymate:nightly` and `:{sha7}` |
+| `push` → `dev` | CI + push `ghcr.io/ghotso/factorymate:nightly` and `:{sha7}` |
 | `push` → `main` | CI + draft release when root `VERSION` semver-increases and `v{VERSION}` tag is missing |
-| Release published (`v*`) | Push `ghcr.io/mdguggenbichler/factorymate:{version}` and `:latest` |
+| Release published (`v*`) | Push `ghcr.io/ghotso/factorymate:{version}` and `:latest` |
 
 **Release flow:** bump [`VERSION`](../VERSION) on `main` (e.g. `0.1.0`) → merge → workflow creates draft release `v0.1.0` → review and publish → stable images land on GHCR.
 
 **Pull nightly image:**
 
 ```bash
-docker pull ghcr.io/mdguggenbichler/factorymate:nightly
+docker pull ghcr.io/ghotso/factorymate:nightly
 ```
 
 Ensure **Settings → Actions → General → Workflow permissions** allows read/write for releases and packages.

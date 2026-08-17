@@ -80,7 +80,7 @@ reviews:
     - path: ".github/workflows/**"
       instructions: |
         Reusable workflows: `_ci.yml` (backend go test/vet, frontend lint/build, Docker smoke build).
-        `dev` branch publishes `ghcr.io/mdguggenbichler/factorymate:nightly`; `main` drafts releases from VERSION.
+        `dev` branch publishes `ghcr.io/ghotso/factorymate:nightly`; `main` drafts releases from VERSION.
 
   finishing_touches:
     docstrings:

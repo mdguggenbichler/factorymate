@@ -1,5 +1,7 @@
 # FactoryMate
 
+**Repository:** [github.com/ghotso/factorymate](https://github.com/ghotso/factorymate)
+
 Self-hosted monitoring and Discord notifications for **Satisfactory** dedicated servers using [FicsIt Remote Monitoring (FRM)](https://docs.ficsit.app/ficsitremotemonitoring/latest/index.html).
 
 FactoryMate polls your FRM HTTP API, detects edge-triggered game events (players joining, fuse trips, milestones, trains, and more), sends rich Discord embeds to configurable webhook targets, and provides a small authenticated web dashboard for live factory stats and history.
@@ -32,8 +34,8 @@ This is the recommended path for production and homelab deploys.
 Pre-built images are published to GitHub Container Registry:
 
 ```bash
-docker pull ghcr.io/mdguggenbichler/factorymate:nightly   # dev branch
-# docker pull ghcr.io/mdguggenbichler/factorymate:1.0.0  # release tag
+docker pull ghcr.io/ghotso/factorymate:nightly   # dev branch
+# docker pull ghcr.io/ghotso/factorymate:1.0.0  # release tag
 ```
 
 ### 2. Configure environment
@@ -159,7 +161,7 @@ cd backend && go test ./... && go vet ./...
 cd frontend && npm run lint && npm run build
 ```
 
-GitHub Actions runs the same gates on pull requests. Pushes to `dev` publish `ghcr.io/mdguggenbichler/factorymate:nightly`. See [`.github/workflows/README.md`](.github/workflows/README.md).
+GitHub Actions runs the same gates on pull requests. Pushes to `dev` publish `ghcr.io/ghotso/factorymate:nightly`. See [`.github/workflows/README.md`](.github/workflows/README.md).
 
 ## License
 
@@ -169,4 +171,4 @@ MIT is a good fit for a self-hosted sidecar tool: permissive, widely understood,
 
 ---
 
-**Version:** see [`VERSION`](VERSION). **Container:** `ghcr.io/mdguggenbichler/factorymate`.
+**Version:** see [`VERSION`](VERSION). **Container:** `ghcr.io/ghotso/factorymate`.

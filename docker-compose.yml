@@ -5,7 +5,7 @@
 
 services:
   factorymate:
-    image: ghcr.io/mdguggenbichler/factorymate:nightly
+    image: ghcr.io/ghotso/factorymate:nightly
     restart: unless-stopped
     ports:
       - "${FACTORYMATE_PORT:-3000}:3000"
