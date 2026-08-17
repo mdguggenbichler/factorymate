@@ -147,6 +147,14 @@ func (v Vehicle) Fuels() []Item {
 	return v.FuelInventory
 }
 
+// --- Session info ---
+
+// SessionInfo is the FRM getSessionInfo response (subset used by FactoryMate).
+type SessionInfo struct {
+	SessionName string `json:"SessionName"`
+	IsPaused    bool   `json:"IsPaused"`
+}
+
 // --- Slow poll types ---
 
 // ProdStat is a FRM getProdStats entry (maps to prod_stats_state per §4.1.1).

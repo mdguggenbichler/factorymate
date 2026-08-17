@@ -171,8 +171,24 @@ CREATE TABLE users (
     username TEXT UNIQUE NOT NULL,
     password_hash TEXT NOT NULL,
     role TEXT NOT NULL CHECK (role IN ('admin', 'viewer')),
+    player_id TEXT REFERENCES player_state(player_id),  -- optional admin mapping to game player
     created_at TEXT NOT NULL
 );
+
+CREATE TABLE invites (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    token TEXT NOT NULL UNIQUE,
+    role TEXT NOT NULL CHECK (role IN ('admin', 'viewer')),
+    created_by INTEGER NOT NULL REFERENCES users(id),
+    created_at TEXT NOT NULL,
+    expires_at TEXT NOT NULL,
+    accepted_at TEXT,
+    accepted_by_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    revoked_at TEXT
+);
+CREATE INDEX idx_invites_token ON invites(token);
+CREATE INDEX idx_invites_pending ON invites(accepted_at, revoked_at, expires_at);
+CREATE INDEX idx_users_player_id ON users(player_id);
 
 -- Server-side session store (SQLite — sessions survive process restarts)
 CREATE TABLE sessions (
@@ -477,7 +493,7 @@ CREATE INDEX idx_circuit_snapshots_circuit_time ON circuit_snapshots (circuit_id
 -- App-level configuration (single row)
 CREATE TABLE app_settings (
     id INTEGER PRIMARY KEY CHECK (id = 1),
-    server_name TEXT NOT NULL DEFAULT 'Satisfactory Server',  -- free-text label, used as {ServerName} in templates
+    server_name TEXT NOT NULL DEFAULT 'Satisfactory Server',  -- auto-synced from FRM getSessionInfo.SessionName; cached for {ServerName} in templates
     frm_host TEXT NOT NULL DEFAULT '',
     frm_port INTEGER NOT NULL DEFAULT 8080,
     frm_auth_token TEXT,                -- optional; sent as X-FRM-Authorization when set (see §4.1)
@@ -506,6 +522,8 @@ Two separate cadences: the **fast poll** drives notification/event detection (§
 | `GET /getResearchTrees` | M.A.M. research tree nodes → `research_node_state`, drives `research_unlocked` |
 | `GET /getTrains` | All trains — derailment/self-driving status → `train_state`, drives `train_derailed` |
 | `GET /getVehicles` | All wheeled vehicles (Explorer/Tractor/Truck/Factory Cart in one call, same aggregation pattern as `getFactory`) → `vehicle_state`, drives `vehicle_out_of_fuel`/`vehicle_stuck` |
+
+**Server display name** (not part of fast/slow poll entity tables): when FRM is reachable and `frm_host` is set, FactoryMate calls `GET /getSessionInfo` and caches `SessionName` into `app_settings.server_name`. Also fetched on `PUT /api/settings` (when host is set) and via `POST /api/settings/frm/test` for admin preview.
 
 **Slow poll** (every `production_snapshot_interval_seconds`, default 5 min):
 
@@ -828,7 +846,7 @@ All 13 message types: see `backend/data/message_defaults.json`. M1 seed reads th
   - **admin** — full access: settings, notification targets, message templates, target assignment, user management.
   - **viewer** — read-only access to all dashboard pages (status, players, production, power, resource sink, drones, doggos, milestones, research, vehicles, elevator); no access to settings/templates/targets/users pages (these routes 403 for viewers, and are hidden from navigation).
 - First-run: if the `users` table is empty, the app serves a one-time setup page to create the first admin account instead of the login page.
-- No self-service registration — admins create additional user accounts (viewer or admin) from the Users page.
+- Additional accounts are created via **invite links** only: admins generate single-use links (preset role, 7-day TTL); invitees set their own username and password at `/invite/:token`. No admin-set passwords.
 
 ---
 
@@ -845,6 +863,8 @@ All endpoints under `/api`, JSON in/out, session-cookie authenticated unless not
 | GET | `/healthz` | none | Liveness probe — `200 {"status":"ok"}`; no DB or FRM check |
 | POST | `/api/auth/setup` | none (only when no users exist) | Create first admin account |
 | POST | `/api/auth/login` | none | Login, sets session cookie |
+| GET | `/api/invites/:token` | none | Validate invite; return `{ role, expiresAt, status }` if pending |
+| POST | `/api/invites/:token/accept` | none | `{ username, password }` — create account, mark invite accepted, set session cookie |
 | POST | `/api/auth/logout` | session | Clear session |
 | GET | `/api/auth/me` | session | Current user + role |
 | PUT | `/api/account/password` | session | Change the current user's own password (any role — this is distinct from `/api/users/:id`, which is admin-only and manages *other* users) |
@@ -880,12 +900,15 @@ All endpoints under `/api`, JSON in/out, session-cookie authenticated unless not
 | POST | `/api/message-types/:key/template/preview` | admin | Render given (unsaved) template against sample data, return rendered result for live preview |
 | PUT | `/api/message-types/:key/targets` | admin | Replace target assignment set for this message type |
 | GET | `/api/notification-log?type=&target=&limit=&offset=` | admin | Recent sent-notification audit log (`notification_log`), paginated. Query with a LEFT JOIN on `notification_targets` (not INNER JOIN) so rows whose `target_id` no longer exists are still returned; `target_id` has no FK (§3). |
-| GET | `/api/settings` | admin | App settings (FRM host/port, poll intervals, retention) |
-| PUT | `/api/settings` | admin | Update app settings |
-| GET | `/api/users` | admin | List users |
-| POST | `/api/users` | admin | Create user |
-| PUT | `/api/users/:id` | admin | Update user (role, password reset) |
-| DELETE | `/api/users/:id` | admin | Delete user |
+| GET | `/api/settings` | admin | App settings (FRM host/port, poll intervals, retention, cached serverName) |
+| PUT | `/api/settings` | admin | Update app settings; when `frmHost` is set, probes FRM `getSessionInfo` and updates `serverName` |
+| POST | `/api/settings/frm/test` | admin | `{ frmHost, frmPort, frmAuthToken? }` → `{ sessionName, reachable: true }` (preview only) |
+| GET | `/api/users` | admin | List users (includes `status`, optional `playerId`/`playerName`) |
+| PUT | `/api/users/:id` | admin | Update user (`role?`, `password?`, `playerId?` — `null` clears mapping) |
+| DELETE | `/api/users/:id` | admin | Delete user (cannot delete last admin) |
+| POST | `/api/invites` | admin | `{ role }` → invite with `invitePath`, `token`, `expiresAt` |
+| GET | `/api/invites` | admin | List invites with derived status |
+| DELETE | `/api/invites/:id` | admin | Revoke pending invite |
 
 ### 7.1 Response schemas
 
@@ -979,9 +1002,11 @@ JSON field names use **camelCase** in API responses; DB columns remain snake_cas
 | `PUT /api/message-types/:key/template` | Partial `{ "plain"?: "...", "embed"?: { title, description, color, fields } }` — merge into the existing override; omitted variants are left unchanged (not a full replace; see §5.4, §7) |
 | `POST /api/message-types/:key/template/preview` | `{ "variant", "template" }` |
 | `PUT /api/message-types/:key/targets` | `{ "targetIds": [1, 2, ...] }` |
-| `PUT /api/settings` | subset of settings fields from `GET /api/settings` |
-| `POST /api/users` | `{ "username", "password", "role": "admin" \| "viewer" }` |
-| `PUT /api/users/:id` | `{ "role"?, "password"? }` |
+| `PUT /api/settings` | subset of settings fields from `GET /api/settings` (excluding `serverName` — read-only, auto-synced) |
+| `POST /api/settings/frm/test` | `{ "frmHost", "frmPort", "frmAuthToken"? }` |
+| `POST /api/invites` | `{ "role": "admin" \| "viewer" }` |
+| `POST /api/invites/:token/accept` | `{ "username", "password" }` |
+| `PUT /api/users/:id` | `{ "role"?, "password"?, "playerId"? }` (`playerId: null` clears mapping) |
 
 ---
 
@@ -991,6 +1016,7 @@ JSON field names use **camelCase** in API responses; DB columns remain snake_cas
 |---|---|---|---|
 | `/setup` | public, only if no users exist | First-run: create initial admin account | Form (username, password, confirm) |
 | `/login` | public | Login | Form (username, password) |
+| `/invite/:token` | public | Accept invite — set username/password, preset role from invite | Form (username, password, confirm) |
 | `/` (Dashboard Overview) | viewer, admin | At-a-glance status from `GET /api/status` (server badge, players, fuse warnings, latest milestone, elevator progress) | Status cards, badge, progress bar |
 | `/players` | viewer, admin | Full player roster (online/offline), last-seen timestamps, join/leave history timeline | Table, timeline list |
 | `/production` | viewer, admin | Two views, mirroring FRM's own web UI which this was modeled after: **Overall** — a table of every tracked item (name, `ProdPerMin` label, prod/cons %, current/max produced, current/max consumed, from `prod_stats_state`); clicking a row expands a historical trend chart for that item below the table, backed by `production_snapshots`. **Detailed** — a table of every producer machine (building type, recipe, manufacturing speed %, producing/paused status, from `factory_machine_state`); clicking a row expands that machine's full ingredient/output breakdown. | Recharts line chart (on row expand), item combobox, date-range picker, `Table` for both views, `Tabs` to switch between them |
@@ -1005,8 +1031,8 @@ JSON field names use **camelCase** in API responses; DB columns remain snake_cas
 | `/settings/notifications/targets` | admin only | CRUD for Notification Targets, per-target "Send test" button | Data table, dialog forms |
 | `/settings/notifications/templates` | admin only | List of message types; selecting one opens the template editor (plain-text + embed fields, variable picker, live preview, target assignment checkboxes for that type, reset-to-default) | Data table + detail panel, live preview card |
 | `/settings/notifications/log` | admin only | Recent sent notifications with success/failure status | Data table |
-| `/settings/general` | admin only | Server display name (used as `{ServerName}` in templates), FRM host/port, poll interval, production snapshot interval/retention | Form |
-| `/settings/users` | admin only | User management (create/edit role/reset password/delete) | Data table, dialog forms |
+| `/settings/general` | admin only | FRM host/port/token, poll interval, production snapshot interval/retention; server display name shown read-only (auto-fetched from FRM) | Form, test-connection button |
+| `/settings/users` | admin only | User management: invite links, state column, promote to admin, optional player mapping, edit/delete | Data table, dialog forms |
 | `/account` | viewer, admin | Change own password | Form |
 
 Navigation: a persistent sidebar (shadcn `Sidebar` pattern) with the dashboard pages always visible to both roles, and a "Settings" section only rendered/routable for admins.

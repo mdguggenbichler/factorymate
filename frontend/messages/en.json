@@ -86,6 +86,15 @@
     "roleAdmin": "Admin",
     "roleViewer": "Viewer"
   },
+  "invite": {
+    "title": "Accept invite",
+    "description": "You have been invited as {role}. This link expires on {expiresAt}.",
+    "acceptButton": "Create account",
+    "notFound": "This invite link is invalid.",
+    "invalid": "This invite link has expired or is no longer valid.",
+    "usernameTaken": "That username is already taken.",
+    "genericError": "Something went wrong. Please try again."
+  },
   "players": {
     "title": "Players",
     "description": "Full player roster and join/leave history.",
@@ -299,16 +308,20 @@
   "settings": {
     "general": {
       "title": "General settings",
-      "description": "Server display name, FRM connection, and polling intervals.",
+      "description": "FRM connection details and polling intervals.",
       "formTitle": "Application settings",
       "formDescription": "Changes apply on the next poll cycle.",
       "serverName": "Server display name",
+      "serverNameHint": "Fetched automatically from FRM when the connection is saved or tested.",
       "frmHost": "FRM host",
       "frmHostPlaceholder": "192.168.178.42",
       "frmPort": "FRM port",
       "frmAuthToken": "FRM auth token",
       "frmAuthTokenPlaceholder": "Optional",
       "frmAuthTokenHint": "Sent as X-FRM-Authorization when non-empty. Leave blank if your FRM server does not require authentication.",
+      "testConnection": "Test connection",
+      "connectionOk": "Connection successful.",
+      "connectionFailed": "Could not reach the FRM server.",
       "pollIntervalSeconds": "Fast poll interval (seconds)",
       "productionSnapshotIntervalSeconds": "Production snapshot interval (seconds)",
       "productionSnapshotRetentionDays": "Snapshot retention (days)",
@@ -412,30 +425,53 @@
     },
     "users": {
       "title": "Users",
-      "description": "Manage dashboard accounts and roles.",
+      "description": "Manage dashboard accounts, invites, and roles.",
       "tableTitle": "Accounts",
-      "create": "Add user",
-      "createTitle": "Create user",
-      "createDescription": "Add a new dashboard account.",
+      "createInvite": "Create invite",
+      "createInviteTitle": "Create invite link",
+      "createInviteDescription": "Generate a single-use link for a new account.",
+      "inviteCreated": "Invite link created.",
+      "inviteRevoked": "Invite revoked.",
+      "linkCopied": "Invite link copied.",
+      "copyLink": "Copy link",
+      "revokeInvite": "Revoke",
+      "revokeInviteTitle": "Revoke invite?",
+      "revokeInviteDescription": "This invite link will no longer work.",
+      "revokeInviteConfirm": "Revoke invite",
       "editTitle": "Edit user",
-      "editDescription": "Update role or reset password.",
+      "editDescription": "Update role, player mapping, or reset password.",
       "edit": "Edit",
       "delete": "Delete",
-      "created": "User created.",
+      "promote": "Promote",
+      "promoteTitle": "Promote to admin?",
+      "promoteDescription": "Grant admin access to {username}.",
+      "promoteConfirm": "Promote",
+      "promoted": "User promoted to admin.",
       "updated": "User updated.",
       "deleted": "User deleted.",
       "newPasswordOptional": "New password (optional)",
       "deleteTitle": "Delete user?",
       "deleteDescription": "This will permanently delete {username}.",
       "deleteConfirm": "Delete user",
+      "state": {
+        "pending": "Pending",
+        "active": "Active",
+        "accepted": "Accepted",
+        "expired": "Expired",
+        "revoked": "Revoked"
+      },
       "columns": {
         "username": "Username",
         "role": "Role",
+        "state": "State",
+        "player": "Player",
         "createdAt": "Created",
         "actions": "Actions"
       },
       "fields": {
-        "role": "Role"
+        "role": "Role",
+        "player": "Game player",
+        "noPlayer": "None"
       }
     }
   }

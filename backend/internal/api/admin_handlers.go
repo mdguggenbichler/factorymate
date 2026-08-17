@@ -5,10 +5,12 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"strings"
 
 	"factorymate/internal/auth"
+	"factorymate/internal/frm"
 	"factorymate/internal/notify"
 	"factorymate/internal/template"
 
@@ -51,15 +53,16 @@ type settingsResponse struct {
 	ProductionSnapshotRetentionDays   int    `json:"productionSnapshotRetentionDays"`
 }
 
-type createUserRequest struct {
-	Username string     `json:"username"`
-	Password string     `json:"password"`
-	Role     auth.Role  `json:"role"`
-}
-
 type updateUserRequest struct {
 	Role     *auth.Role `json:"role"`
 	Password *string    `json:"password"`
+	PlayerID **string   `json:"playerId"`
+}
+
+type frmTestRequest struct {
+	FRMHost      string `json:"frmHost"`
+	FRMPort      int    `json:"frmPort"`
+	FRMAuthToken string `json:"frmAuthToken"`
 }
 
 func (h *Handler) ListNotificationTargets(w http.ResponseWriter, r *http.Request) {
@@ -814,9 +817,6 @@ func (h *Handler) UpdateSettings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if raw, ok := req["serverName"]; ok {
-		_ = json.Unmarshal(raw, &current.ServerName)
-	}
 	if raw, ok := req["frmHost"]; ok {
 		_ = json.Unmarshal(raw, &current.FRMHost)
 	}
@@ -839,6 +839,15 @@ func (h *Handler) UpdateSettings(w http.ResponseWriter, r *http.Request) {
 	if current.PollIntervalSeconds <= 0 || current.ProductionSnapshotIntervalSeconds <= 0 || current.ProductionSnapshotRetentionDays <= 0 {
 		writeError(w, r, http.StatusBadRequest, "interval and retention values must be positive")
 		return
+	}
+
+	if strings.TrimSpace(current.FRMHost) != "" {
+		sessionName, err := fetchFRMSessionName(r.Context(), current.FRMHost, current.FRMPort, current.FRMAuthToken)
+		if err != nil {
+			writeError(w, r, http.StatusBadRequest, "could not reach FRM server or resolve session name")
+			return
+		}
+		current.ServerName = sessionName
 	}
 
 	_, err = h.db.ExecContext(r.Context(), `
@@ -876,6 +885,44 @@ func (h *Handler) getSettingsRow(ctx context.Context) (settingsResponse, error) 
 	return s, nil
 }
 
+func (h *Handler) TestFRMConnection(w http.ResponseWriter, r *http.Request) {
+	var req frmTestRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, r, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	if strings.TrimSpace(req.FRMHost) == "" || req.FRMPort <= 0 {
+		writeError(w, r, http.StatusBadRequest, "frmHost and frmPort are required")
+		return
+	}
+
+	sessionName, err := fetchFRMSessionName(r.Context(), req.FRMHost, req.FRMPort, req.FRMAuthToken)
+	if err != nil {
+		writeError(w, r, http.StatusBadGateway, "could not reach FRM server")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"sessionName": sessionName,
+		"reachable":   true,
+	})
+}
+
+func fetchFRMSessionName(ctx context.Context, host string, port int, token string) (string, error) {
+	client := frm.NewClient(frm.Config{
+		Host:  strings.TrimSpace(host),
+		Port:  port,
+		Token: strings.TrimSpace(token),
+	})
+	info, err := client.GetSessionInfo(ctx)
+	if err != nil {
+		return "", err
+	}
+	if strings.TrimSpace(info.SessionName) == "" {
+		return "", fmt.Errorf("empty session name")
+	}
+	return info.SessionName, nil
+}
+
 func nullIfEmpty(s string) any {
 	if s == "" {
 		return nil
@@ -884,58 +931,12 @@ func nullIfEmpty(s string) any {
 }
 
 func (h *Handler) ListUsers(w http.ResponseWriter, r *http.Request) {
-	rows, err := h.db.QueryContext(r.Context(), `
-		SELECT id, username, role, created_at FROM users ORDER BY username`)
+	users, err := h.auth.ListUsers(r.Context())
 	if err != nil {
-		writeError(w, r, http.StatusInternalServerError, "internal error")
-		return
-	}
-	defer rows.Close()
-
-	users := make([]map[string]any, 0)
-	for rows.Next() {
-		var id int64
-		var username, role, createdAt string
-		if err := rows.Scan(&id, &username, &role, &createdAt); err != nil {
-			writeError(w, r, http.StatusInternalServerError, "internal error")
-			return
-		}
-		users = append(users, map[string]any{
-			"id":        id,
-			"username":  username,
-			"role":      role,
-			"createdAt": createdAt,
-		})
-	}
-	if err := rows.Err(); err != nil {
 		writeError(w, r, http.StatusInternalServerError, "internal error")
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"users": users})
-}
-
-func (h *Handler) CreateUser(w http.ResponseWriter, r *http.Request) {
-	var req createUserRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, r, http.StatusBadRequest, "invalid request body")
-		return
-	}
-	req.Username = strings.TrimSpace(req.Username)
-	if req.Username == "" || req.Password == "" {
-		writeError(w, r, http.StatusBadRequest, "username and password are required")
-		return
-	}
-	if req.Role != auth.RoleAdmin && req.Role != auth.RoleViewer {
-		writeError(w, r, http.StatusBadRequest, "invalid role")
-		return
-	}
-
-	user, err := h.auth.CreateUser(r.Context(), req.Username, req.Password, req.Role)
-	if err != nil {
-		writeError(w, r, http.StatusInternalServerError, "internal error")
-		return
-	}
-	writeJSON(w, http.StatusCreated, user)
 }
 
 func (h *Handler) UpdateUser(w http.ResponseWriter, r *http.Request) {
@@ -956,15 +957,30 @@ func (h *Handler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 			writeError(w, r, http.StatusBadRequest, "invalid role")
 			return
 		}
-		res, err := h.db.ExecContext(r.Context(),
-			`UPDATE users SET role = ? WHERE id = ?`, string(*req.Role), id)
-		if err != nil {
+		if err := h.auth.UpdateUserRole(r.Context(), id, *req.Role); err != nil {
+			if errors.Is(err, auth.ErrUserNotFound) {
+				writeError(w, r, http.StatusNotFound, "not found")
+				return
+			}
+			if errors.Is(err, auth.ErrLastAdmin) {
+				writeError(w, r, http.StatusBadRequest, "cannot demote the last admin")
+				return
+			}
 			writeError(w, r, http.StatusInternalServerError, "internal error")
 			return
 		}
-		n, _ := res.RowsAffected()
-		if n == 0 {
-			writeError(w, r, http.StatusNotFound, "not found")
+	}
+	if req.PlayerID != nil {
+		if err := h.auth.UpdatePlayerID(r.Context(), id, *req.PlayerID); err != nil {
+			if errors.Is(err, auth.ErrUserNotFound) {
+				writeError(w, r, http.StatusNotFound, "not found")
+				return
+			}
+			if strings.Contains(err.Error(), "player not found") {
+				writeError(w, r, http.StatusBadRequest, "player not found")
+				return
+			}
+			writeError(w, r, http.StatusInternalServerError, "internal error")
 			return
 		}
 	}
@@ -997,14 +1013,16 @@ func (h *Handler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 		writeError(w, r, http.StatusBadRequest, "invalid id")
 		return
 	}
-	res, err := h.db.ExecContext(r.Context(), `DELETE FROM users WHERE id = ?`, id)
-	if err != nil {
+	if err := h.auth.DeleteUser(r.Context(), id); err != nil {
+		if errors.Is(err, auth.ErrUserNotFound) {
+			writeError(w, r, http.StatusNotFound, "not found")
+			return
+		}
+		if errors.Is(err, auth.ErrLastAdmin) {
+			writeError(w, r, http.StatusBadRequest, "cannot delete the last admin")
+			return
+		}
 		writeError(w, r, http.StatusInternalServerError, "internal error")
-		return
-	}
-	n, _ := res.RowsAffected()
-	if n == 0 {
-		writeError(w, r, http.StatusNotFound, "not found")
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)

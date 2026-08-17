@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"strconv"
+	"strings"
 	"time"
 
 	"factorymate/internal/frm"
@@ -25,6 +26,12 @@ func (e *Engine) PollOnce(ctx context.Context, result frm.FastPollResult, now ti
 
 	reachable := result.Reachable()
 	var events []Event
+
+	if reachable && strings.TrimSpace(settings.FRMHost) != "" {
+		if updated, err := syncServerNameFromFRM(ctx, e.DB, settings); err == nil && updated != "" {
+			settings.ServerName = updated
+		}
+	}
 
 	serverPrev, err := loadServerState(ctx, e.DB)
 	if err != nil {

@@ -217,6 +217,15 @@ func (c *Client) get(ctx context.Context, endpoint string, dest any) error {
 	return nil
 }
 
+// GetSessionInfo fetches FRM getSessionInfo (save/session metadata).
+func (c *Client) GetSessionInfo(ctx context.Context) (SessionInfo, error) {
+	var info SessionInfo
+	if err := c.get(ctx, "getSessionInfo", &info); err != nil {
+		return SessionInfo{}, err
+	}
+	return info, nil
+}
+
 // FastEndpoints returns the fast-poll endpoint names (for tests and M3).
 func FastEndpoints() []string {
 	out := make([]string, len(fastEndpoints))

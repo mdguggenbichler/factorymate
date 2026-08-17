@@ -7,6 +7,8 @@ import (
 func (h *Handler) Mount(r chi.Router) {
 	r.Post("/auth/setup", h.Setup)
 	r.Post("/auth/login", h.Login)
+	r.Get("/invites/{token}", h.GetInvite)
+	r.Post("/invites/{token}/accept", h.AcceptInvite)
 
 	r.Group(func(r chi.Router) {
 		r.Use(h.auth.RequireSession(writeError))
@@ -57,10 +59,13 @@ func (h *Handler) Mount(r chi.Router) {
 			r.Get("/notification-log", h.GetNotificationLog)
 			r.Get("/settings", h.GetSettings)
 			r.Put("/settings", h.UpdateSettings)
+			r.Post("/settings/frm/test", h.TestFRMConnection)
 			r.Get("/users", h.ListUsers)
-			r.Post("/users", h.CreateUser)
 			r.Put("/users/{id}", h.UpdateUser)
 			r.Delete("/users/{id}", h.DeleteUser)
+			r.Post("/invites", h.CreateInvite)
+			r.Get("/invites", h.ListInvites)
+			r.Delete("/invites/{id}", h.RevokeInvite)
 		})
 	})
 }

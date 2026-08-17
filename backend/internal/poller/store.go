@@ -44,6 +44,33 @@ func loadAppSettings(ctx context.Context, db *sql.DB) (appSettings, error) {
 	return s, nil
 }
 
+func syncServerNameFromFRM(ctx context.Context, db *sql.DB, settings appSettings) (string, error) {
+	if strings.TrimSpace(settings.FRMHost) == "" {
+		return "", nil
+	}
+	token := ""
+	if settings.FRMAuthToken.Valid {
+		token = settings.FRMAuthToken.String
+	}
+	client := frm.NewClient(frm.Config{
+		Host:  strings.TrimSpace(settings.FRMHost),
+		Port:  settings.FRMPort,
+		Token: token,
+	})
+	info, err := client.GetSessionInfo(ctx)
+	if err != nil || strings.TrimSpace(info.SessionName) == "" {
+		return "", err
+	}
+	if info.SessionName == settings.ServerName {
+		return "", nil
+	}
+	if _, err := db.ExecContext(ctx, `
+		UPDATE app_settings SET server_name = ? WHERE id = 1`, info.SessionName); err != nil {
+		return "", fmt.Errorf("update server_name: %w", err)
+	}
+	return info.SessionName, nil
+}
+
 type serverStateRow struct {
 	Exists       bool
 	ServerOnline sql.NullBool

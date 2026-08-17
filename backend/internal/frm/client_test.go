@@ -187,6 +187,32 @@ func TestResourceSink_graphPointVariants(t *testing.T) {
 	}
 }
 
+func TestGetSessionInfo(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/getSessionInfo" {
+			http.NotFound(w, r)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"SessionName":"GuggiRaid Factory","IsPaused":false}`))
+	}))
+	t.Cleanup(srv.Close)
+
+	host, port, err := splitHostPort(srv.Listener.Addr().String())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	client := NewClient(Config{Host: host, Port: port})
+	info, err := client.GetSessionInfo(context.Background())
+	if err != nil {
+		t.Fatalf("GetSessionInfo: %v", err)
+	}
+	if info.SessionName != "GuggiRaid Factory" {
+		t.Fatalf("SessionName = %q", info.SessionName)
+	}
+}
+
 func TestClient_authHeader(t *testing.T) {
 	var gotAuth string
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

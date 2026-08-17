@@ -3,7 +3,7 @@ import type { NextRequest } from "next/server"
 
 import { isSetupRequired } from "@/lib/api"
 
-const PUBLIC_PATHS = ["/login", "/setup"]
+const PUBLIC_PATHS = ["/login", "/setup", "/invite"]
 const SESSION_COOKIE = "factorymate_session"
 
 function isPublicPath(pathname: string): boolean {
@@ -35,6 +35,10 @@ export async function middleware(request: NextRequest) {
 
     if (pathname.startsWith("/setup") && !setupRequired) {
       return NextResponse.redirect(new URL("/login", request.url))
+    }
+
+    if (pathname.startsWith("/invite")) {
+      return NextResponse.next()
     }
 
     if (hasSession) {

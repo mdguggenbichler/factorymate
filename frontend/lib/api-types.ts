@@ -381,11 +381,38 @@ export type AppUser = {
   id: number
   username: string
   role: string
+  status: string
   createdAt: string
+  playerId?: string | null
+  playerName?: string | null
 }
 
 export type UsersResponse = {
   users: AppUser[]
+}
+
+export type Invite = {
+  id: number
+  token: string
+  role: string
+  createdBy: number
+  createdAt: string
+  expiresAt: string
+  status: string
+  invitePath: string
+  acceptedAt?: string
+  acceptedByUserId?: number
+  acceptedUsername?: string
+  revokedAt?: string
+}
+
+export type InvitesResponse = {
+  invites: Invite[]
+}
+
+export type FRMTestResponse = {
+  sessionName: string
+  reachable: boolean
 }
 
 export type RenderedPreview = {

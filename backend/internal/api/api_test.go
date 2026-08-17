@@ -5,8 +5,10 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"net"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"testing"
 	"time"
 
@@ -455,6 +457,16 @@ func TestReadEndpoints(t *testing.T) {
 		if resp.Code != http.StatusForbidden {
 			t.Fatalf("viewer settings status = %d, want 403", resp.Code)
 		}
+		invitesResp := getWithCookie(t, router, "/api/invites", viewerCookie)
+		if invitesResp.Code != http.StatusForbidden {
+			t.Fatalf("viewer invites status = %d, want 403", invitesResp.Code)
+		}
+		createInviteResp := postJSONWithCookie(t, router, "/api/invites", viewerCookie, map[string]string{
+			"role": "viewer",
+		})
+		if createInviteResp.StatusCode != http.StatusForbidden {
+			t.Fatalf("viewer create invite status = %d, want 403", createInviteResp.StatusCode)
+		}
 	})
 }
 
@@ -475,6 +487,12 @@ func TestAdminEndpoints(t *testing.T) {
 	seedAdminAPIFixtures(t, ctx, database)
 
 	t.Run("settings get and put", func(t *testing.T) {
+		frmSrv := newMockFRMServer(t, map[string][]byte{
+			"/getSessionInfo": []byte(`{"SessionName":"GuggiRaid Factory","IsPaused":false}`),
+		})
+		defer frmSrv.Close()
+		host, port := frmServerHostPort(t, frmSrv)
+
 		getResp := getWithCookie(t, router, "/api/settings", adminCookie)
 		if getResp.Code != http.StatusOK {
 			t.Fatalf("get settings status = %d", getResp.Code)
@@ -486,9 +504,8 @@ func TestAdminEndpoints(t *testing.T) {
 		}
 
 		putReq := httptest.NewRequest(http.MethodPut, "/api/settings", bytes.NewReader(mustJSON(t, map[string]any{
-			"serverName": "GuggiRaid Factory",
-			"frmHost":    "192.168.178.42",
-			"frmPort":    8889,
+			"frmHost": host,
+			"frmPort": port,
 		})))
 		putReq.Header.Set("Content-Type", "application/json")
 		putReq.AddCookie(adminCookie)
@@ -496,6 +513,19 @@ func TestAdminEndpoints(t *testing.T) {
 		router.ServeHTTP(putResp, putReq)
 		if putResp.Code != http.StatusOK {
 			t.Fatalf("put settings status = %d body=%s", putResp.Code, putResp.Body.String())
+		}
+		var updated map[string]any
+		decodeJSONRecorder(t, putResp, &updated)
+		if updated["serverName"] != "GuggiRaid Factory" {
+			t.Fatalf("serverName = %v", updated["serverName"])
+		}
+
+		testResp := postJSONWithCookie(t, router, "/api/settings/frm/test", adminCookie, map[string]any{
+			"frmHost": host,
+			"frmPort": port,
+		})
+		if testResp.StatusCode != http.StatusOK {
+			t.Fatalf("frm test status = %d body=%s", testResp.StatusCode, readBody(t, testResp))
 		}
 	})
 
@@ -682,7 +712,7 @@ func TestAdminEndpoints(t *testing.T) {
 		}
 	})
 
-	t.Run("users CRUD", func(t *testing.T) {
+	t.Run("invites and users", func(t *testing.T) {
 		listResp := getWithCookie(t, router, "/api/users", adminCookie)
 		if listResp.Code != http.StatusOK {
 			t.Fatalf("list users status = %d", listResp.Code)
@@ -692,6 +722,7 @@ func TestAdminEndpoints(t *testing.T) {
 				ID       int64  `json:"id"`
 				Username string `json:"username"`
 				Role     string `json:"role"`
+				Status   string `json:"status"`
 			} `json:"users"`
 		}
 		decodeJSONRecorder(t, listResp, &listBody)
@@ -699,20 +730,60 @@ func TestAdminEndpoints(t *testing.T) {
 			t.Fatalf("users = %+v", listBody.Users)
 		}
 
-		createResp := postJSONWithCookie(t, router, "/api/users", adminCookie, map[string]string{
-			"username": "bob",
-			"password": "bobpass",
-			"role":     "viewer",
+		createResp := postJSONWithCookie(t, router, "/api/invites", adminCookie, map[string]string{
+			"role": "viewer",
 		})
 		if createResp.StatusCode != http.StatusCreated {
-			t.Fatalf("create user status = %d", createResp.StatusCode)
+			t.Fatalf("create invite status = %d body=%s", createResp.StatusCode, readBody(t, createResp))
+		}
+		var inviteBody struct {
+			Token      string `json:"token"`
+			InvitePath string `json:"invitePath"`
+		}
+		decodeJSON(t, createResp, &inviteBody)
+		if inviteBody.Token == "" || inviteBody.InvitePath == "" {
+			t.Fatalf("invite = %+v", inviteBody)
 		}
 
-		putResp := putJSONWithCookie(t, router, "/api/users/2", adminCookie, map[string]string{
-			"role": "admin",
+		acceptResp := postJSON(t, router, "/api/invites/"+inviteBody.Token+"/accept", map[string]string{
+			"username": "bob",
+			"password": "bobpass",
+		})
+		if acceptResp.StatusCode != http.StatusCreated {
+			t.Fatalf("accept invite status = %d body=%s", acceptResp.StatusCode, readBody(t, acceptResp))
+		}
+
+		dupInviteResp := postJSONWithCookie(t, router, "/api/invites", adminCookie, map[string]string{
+			"role": "viewer",
+		})
+		if dupInviteResp.StatusCode != http.StatusCreated {
+			t.Fatalf("create duplicate invite status = %d", dupInviteResp.StatusCode)
+		}
+		var dupInviteBody struct {
+			Token string `json:"token"`
+		}
+		decodeJSON(t, dupInviteResp, &dupInviteBody)
+		dupAcceptResp := postJSON(t, router, "/api/invites/"+dupInviteBody.Token+"/accept", map[string]string{
+			"username": "bob",
+			"password": "otherpass",
+		})
+		if dupAcceptResp.StatusCode != http.StatusConflict {
+			t.Fatalf("duplicate username accept status = %d, want 409 body=%s", dupAcceptResp.StatusCode, readBody(t, dupAcceptResp))
+		}
+
+		_, err := database.ExecContext(ctx, `
+			INSERT INTO player_state (player_id, name, online, last_seen_at)
+			VALUES ('player-1', 'BobPlayer', 1, NULL)`)
+		if err != nil {
+			t.Fatalf("seed player: %v", err)
+		}
+
+		putResp := putJSONWithCookie(t, router, "/api/users/2", adminCookie, map[string]any{
+			"role":     "admin",
+			"playerId": "player-1",
 		})
 		if putResp.StatusCode != http.StatusOK {
-			t.Fatalf("update user status = %d", putResp.StatusCode)
+			t.Fatalf("update user status = %d body=%s", putResp.StatusCode, readBody(t, putResp))
 		}
 
 		delReq := httptest.NewRequest(http.MethodDelete, "/api/users/2", nil)
@@ -1105,4 +1176,30 @@ func seedAdminAPIFixtures(t *testing.T, ctx context.Context, database *sql.DB) {
 	if err != nil {
 		t.Fatalf("seed elevator unknown log: %v", err)
 	}
+}
+
+func newMockFRMServer(t *testing.T, responses map[string][]byte) *httptest.Server {
+	t.Helper()
+	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, ok := responses[r.URL.Path]
+		if !ok {
+			http.NotFound(w, r)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write(body)
+	}))
+}
+
+func frmServerHostPort(t *testing.T, srv *httptest.Server) (string, int) {
+	t.Helper()
+	host, portStr, err := net.SplitHostPort(srv.Listener.Addr().String())
+	if err != nil {
+		t.Fatalf("split host port: %v", err)
+	}
+	port, err := strconv.Atoi(portStr)
+	if err != nil {
+		t.Fatalf("parse port: %v", err)
+	}
+	return host, port
 }
