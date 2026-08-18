@@ -18,6 +18,7 @@ import (
 	"factorymate/internal/connection"
 	"factorymate/internal/db"
 	"factorymate/internal/frm"
+	"factorymate/internal/health"
 	"factorymate/internal/mods"
 	"factorymate/internal/notify"
 	"factorymate/internal/registration"
@@ -26,14 +27,7 @@ import (
 func TestHealthz(t *testing.T) {
 	t.Chdir("../..")
 
-	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		_ = json.NewEncoder(w).Encode(map[string]string{
-			"status":  "ok",
-			"version": "0.1.0",
-		})
-	})
+	handler := health.Handler("0.1.0")
 	req := httptest.NewRequest(http.MethodGet, "/healthz", nil)
 	resp := httptest.NewRecorder()
 	handler.ServeHTTP(resp, req)

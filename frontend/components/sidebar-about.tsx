@@ -47,7 +47,7 @@ export function SidebarAbout({
               {t("version", { version: APP_VERSION })}
             </span>
             <span className="hidden group-data-[collapsible=icon]:inline">
-              v{APP_VERSION}
+              {t("shortVersion", { version: APP_VERSION })}
             </span>
           </>
         ) : (

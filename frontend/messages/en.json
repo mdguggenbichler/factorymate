@@ -10,6 +10,7 @@
   },
   "about": {
     "version": "Version {version}",
+    "shortVersion": "v{version}",
     "github": "GitHub",
     "reportBug": "Report a bug"
   },
