@@ -149,7 +149,7 @@ func enrichChangeDM(msg notify.RenderedMessage, old, new Details) notify.Rendere
 				msg.Embed.Description = prefix
 			}
 		}
-		if embedHasPasswordCapacity(msg.Embed, passwordLine) {
+		if embedHasPasswordCapacity(msg.Embed, new.GamePassword) {
 			msg.Embed.Fields = append(msg.Embed.Fields, notify.DiscordEmbedField{
 				Name:  "Password",
 				Value: "||" + new.GamePassword + "||",
@@ -179,7 +179,7 @@ func enrichDetailsDM(msg notify.RenderedMessage, details Details) notify.Rendere
 	}
 
 	if msg.Embed != nil {
-		if embedHasPasswordCapacity(msg.Embed, passwordLine) {
+		if embedHasPasswordCapacity(msg.Embed, details.GamePassword) {
 			msg.Embed.Fields = append(msg.Embed.Fields, notify.DiscordEmbedField{
 				Name:  "Password",
 				Value: "||" + details.GamePassword + "||",
@@ -200,16 +200,17 @@ const (
 	discordEmbedMaxTotalChars = 6000
 )
 
-func embedHasPasswordCapacity(embed *notify.DiscordEmbed, passwordLine string) bool {
+func embedHasPasswordCapacity(embed *notify.DiscordEmbed, password string) bool {
 	if embed == nil {
 		return true
 	}
-	if len(embed.Fields) >= discordEmbedMaxFields-1 {
+	if len(embed.Fields) >= discordEmbedMaxFields {
 		return false
 	}
-	total := len(embed.Title) + len(embed.Description) + len(embed.Footer) + len(passwordLine)
+	passwordFieldSize := len("Password") + len("||") + len(password) + len("||")
+	total := len(embed.Title) + len(embed.Description) + len(embed.Footer) + passwordFieldSize
 	for _, f := range embed.Fields {
 		total += len(f.Name) + len(f.Value)
 	}
-	return total < discordEmbedMaxTotalChars
+	return total <= discordEmbedMaxTotalChars
 }

@@ -5,6 +5,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -602,6 +603,64 @@ func TestAdminEndpoints(t *testing.T) {
 		router.ServeHTTP(delResp, delReq)
 		if delResp.Code != http.StatusNoContent {
 			t.Fatalf("delete status = %d", delResp.Code)
+		}
+	})
+
+	t.Run("notification target threadId clear and trim", func(t *testing.T) {
+		createResp := postJSONWithCookie(t, router, "/api/notification-targets", adminCookie, map[string]any{
+			"name":         "Thread Target",
+			"providerType": "discord",
+			"config": map[string]string{
+				"channelId": " 123456789 ",
+				"threadId":  " 987654321 ",
+			},
+			"enabled": true,
+		})
+		if createResp.StatusCode != http.StatusCreated {
+			t.Fatalf("create target status = %d body=%s", createResp.StatusCode, readBody(t, createResp))
+		}
+		var created struct {
+			ID     int64          `json:"id"`
+			Config map[string]any `json:"config"`
+		}
+		decodeJSON(t, createResp, &created)
+		if created.Config["channelId"] != "123456789" {
+			t.Fatalf("create channelId = %v, want trimmed", created.Config["channelId"])
+		}
+		if created.Config["threadId"] != "987654321" {
+			t.Fatalf("create threadId = %v, want trimmed", created.Config["threadId"])
+		}
+
+		clearResp := putJSONWithCookie(t, router, fmt.Sprintf("/api/notification-targets/%d", created.ID), adminCookie, map[string]any{
+			"config": map[string]string{
+				"threadId": "",
+			},
+		})
+		if clearResp.StatusCode != http.StatusOK {
+			t.Fatalf("clear thread status = %d body=%s", clearResp.StatusCode, readBody(t, clearResp))
+		}
+		var cleared struct {
+			Config map[string]any `json:"config"`
+		}
+		decodeJSON(t, clearResp, &cleared)
+		if _, ok := cleared.Config["threadId"]; ok {
+			t.Fatalf("expected threadId omitted after clear, got %+v", cleared.Config)
+		}
+
+		updateResp := putJSONWithCookie(t, router, fmt.Sprintf("/api/notification-targets/%d", created.ID), adminCookie, map[string]any{
+			"config": map[string]string{
+				"channelId": " 111222333 ",
+			},
+		})
+		if updateResp.StatusCode != http.StatusOK {
+			t.Fatalf("update channel status = %d body=%s", updateResp.StatusCode, readBody(t, updateResp))
+		}
+		var updated struct {
+			Config map[string]any `json:"config"`
+		}
+		decodeJSON(t, updateResp, &updated)
+		if updated.Config["channelId"] != "111222333" {
+			t.Fatalf("updated channelId = %v, want trimmed", updated.Config["channelId"])
 		}
 	})
 

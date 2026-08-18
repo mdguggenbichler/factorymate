@@ -481,7 +481,7 @@ func (b *Bot) handleMessageComponent(ctx context.Context, s *discordgo.Session, 
 	customID := i.MessageComponentData().CustomID
 	externalID := interactionUserID(i)
 
-	if !strings.HasPrefix(customID, btnCompleteReg) {
+	if !strings.HasPrefix(customID, btnCompleteReg) && !strings.HasPrefix(customID, btnRegReject) {
 		if deferEphemeral(s, i) {
 			ctx = withDeferred(ctx)
 		}
@@ -796,6 +796,9 @@ func interactionUserID(i *discordgo.InteractionCreate) string {
 func interactionMember(i *discordgo.InteractionCreate) *discordgo.Member {
 	if i.Member != nil {
 		return i.Member
+	}
+	if i.User != nil {
+		return &discordgo.Member{User: i.User}
 	}
 	return nil
 }

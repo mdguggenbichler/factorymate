@@ -84,6 +84,9 @@ export async function middleware(request: NextRequest) {
       if (lookup.kind === "unavailable") {
         return new NextResponse("Service unavailable", { status: 503 })
       }
+      if (lookup.kind === "none") {
+        return NextResponse.next()
+      }
       if (lookup.kind === "ok" && lookup.status === "pending_approval") {
         return NextResponse.redirect(new URL("/awaiting-approval", request.url))
       }
@@ -101,6 +104,9 @@ export async function middleware(request: NextRequest) {
   const lookup = await lookupSessionUser(request)
   if (lookup.kind === "unavailable") {
     return new NextResponse("Service unavailable", { status: 503 })
+  }
+  if (lookup.kind === "none") {
+    return NextResponse.redirect(new URL("/login", request.url))
   }
   if (lookup.kind === "ok" && lookup.status === "pending_approval" && !isPendingAllowedPath(pathname)) {
     return NextResponse.redirect(new URL("/awaiting-approval", request.url))

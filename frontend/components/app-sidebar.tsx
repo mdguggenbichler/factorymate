@@ -47,6 +47,7 @@ export function AppSidebar({
   ...props
 }: React.ComponentProps<typeof Sidebar> & { user: User }) {
   const t = useTranslations("nav")
+  const tCommon = useTranslations("common")
 
   const viewerItems: NavItem[] = [
     {
@@ -166,7 +167,7 @@ export function AppSidebar({
           <SidebarMenuItem>
             <SidebarMenuButton
               size="lg"
-              render={<Link href="/" aria-label="FactoryMate" />}
+              render={<Link href="/" aria-label={tCommon("appName")} />}
               className="data-[slot=sidebar-menu-button]:p-1.5!"
             >
               <FactoryMateLogo variant="onDark" />

@@ -103,7 +103,7 @@ func (s *Service) Set(ctx context.Context, input UpdateInput, updatedByUserID in
 	if err != nil {
 		return Details{}, fmt.Errorf("begin transaction: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	if _, err := tx.ExecContext(ctx, `
 		INSERT INTO app_setting_kv (key, value) VALUES (?, ?)

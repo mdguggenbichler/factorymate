@@ -46,6 +46,35 @@ func discordConfigFromStored(raw string) map[string]any {
 	return out
 }
 
+func mergeDiscordConfigUpdate(existing notify.DiscordConfig, patch json.RawMessage) (notify.DiscordConfig, error) {
+	if len(patch) == 0 {
+		return existing, nil
+	}
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal(patch, &fields); err != nil {
+		return existing, err
+	}
+	merged := existing
+	if raw, ok := fields["channelId"]; ok {
+		var channelID string
+		if err := json.Unmarshal(raw, &channelID); err != nil {
+			return existing, err
+		}
+		trimmed := strings.TrimSpace(channelID)
+		if trimmed != "" {
+			merged.ChannelID = trimmed
+		}
+	}
+	if raw, ok := fields["threadId"]; ok {
+		var threadID string
+		if err := json.Unmarshal(raw, &threadID); err != nil {
+			return existing, err
+		}
+		merged.ThreadID = strings.TrimSpace(threadID)
+	}
+	return merged, nil
+}
+
 type notificationTargetRequest struct {
 	Name         string              `json:"name"`
 	ProviderType string              `json:"providerType"`
@@ -175,7 +204,7 @@ func (h *Handler) CreateNotificationTarget(w http.ResponseWriter, r *http.Reques
 		"id":           id,
 		"name":         req.Name,
 		"providerType": req.ProviderType,
-		"config":       req.Config,
+		"config":       discordConfigFromStored(configJSON),
 		"enabled":      enabled,
 		"createdAt":    now,
 	})
@@ -188,7 +217,12 @@ func (h *Handler) UpdateNotificationTarget(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	var req notificationTargetRequest
+	var req struct {
+		Name         string          `json:"name"`
+		ProviderType string          `json:"providerType"`
+		Config       json.RawMessage `json:"config"`
+		Enabled      *bool           `json:"enabled"`
+	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, r, http.StatusBadRequest, "invalid request body")
 		return
@@ -224,13 +258,15 @@ func (h *Handler) UpdateNotificationTarget(w http.ResponseWriter, r *http.Reques
 
 	var existing notify.DiscordConfig
 	_ = json.Unmarshal([]byte(configJSON), &existing)
-	if strings.TrimSpace(req.Config.ChannelID) != "" {
-		existing.ChannelID = req.Config.ChannelID
+	merged, err := mergeDiscordConfigUpdate(existing, req.Config)
+	if err != nil {
+		writeError(w, r, http.StatusBadRequest, "invalid config")
+		return
 	}
-	if req.Config.ThreadID != "" {
-		existing.ThreadID = req.Config.ThreadID
-	}
-	newConfigJSON, err := json.Marshal(existing)
+	newConfigJSON, err := discordConfigToStored(discordTargetConfig{
+		ChannelID: merged.ChannelID,
+		ThreadID:  merged.ThreadID,
+	})
 	if err != nil {
 		writeError(w, r, http.StatusInternalServerError, "internal error")
 		return
