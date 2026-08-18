@@ -294,8 +294,9 @@ func (s *Service) UpdateUser(ctx context.Context, id int64, update UserUpdate) (
 
 	if update.PlayerID != nil {
 		pid := *update.PlayerID
+		clearing := pid == nil || *pid == ""
 		var val any
-		if pid == nil || *pid == "" {
+		if clearing {
 			val = nil
 		} else {
 			val = *pid
@@ -307,6 +308,11 @@ func (s *Service) UpdateUser(ctx context.Context, id int64, update UserUpdate) (
 		n, _ := res.RowsAffected()
 		if n == 0 {
 			return User{}, ErrUserNotFound
+		}
+		if clearing {
+			if _, err := tx.ExecContext(ctx, `UPDATE users SET pending_player_name = NULL WHERE id = ?`, id); err != nil {
+				return User{}, fmt.Errorf("clear pending_player_name: %w", err)
+			}
 		}
 	}
 

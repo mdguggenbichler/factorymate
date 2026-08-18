@@ -129,6 +129,16 @@ func (b *Bot) handleApplicationCommand(ctx context.Context, s *discordgo.Session
 			}
 		}
 		b.handleSetPlayer(ctx, s, i, externalID, user.ID, name)
+	case "clear-player":
+		if !CanRunCommand(perms, CommandGroupPlayer, state) {
+			b.logAndDeny(ctx, s, i, externalID, "clear-player", "forbidden")
+			return
+		}
+		if user == nil {
+			respondEphemeral(s, i, "You must be registered first. Use /register or /link.")
+			return
+		}
+		b.handleClearPlayer(ctx, s, i, externalID, user.ID)
 	case "connection":
 		b.handleConnectionCommand(ctx, s, i, data, externalID, perms, state, user)
 	case "mods":
@@ -303,6 +313,26 @@ func (b *Bot) handleSetPlayer(ctx context.Context, s *discordgo.Session, i *disc
 	player := playerDisplayLine(updated.PlayerName, name, updated.PlayerID != nil)
 	respondEphemeral(s, i, fmt.Sprintf("Player mapping updated: **%s**", player))
 	_ = LogBotCommand(ctx, b.db, externalID, "set-player", true, name)
+}
+
+func (b *Bot) handleClearPlayer(ctx context.Context, s *discordgo.Session, i *discordgo.InteractionCreate, externalID string, userID int64) {
+	updated, err := b.registration.ClearPlayerMapping(ctx, userID)
+	if err != nil {
+		msg := "Could not clear player mapping."
+		if errors.Is(err, registration.ErrUserNotFound) {
+			msg = "User not found."
+		}
+		respondEphemeral(s, i, msg)
+		_ = LogBotCommand(ctx, b.db, externalID, "clear-player", false, err.Error())
+		return
+	}
+	if updated.PlayerID != nil || (updated.PendingPlayerName != nil && *updated.PendingPlayerName != "") {
+		respondEphemeral(s, i, "Player mapping could not be cleared.")
+		_ = LogBotCommand(ctx, b.db, externalID, "clear-player", false, "still mapped")
+		return
+	}
+	respondEphemeral(s, i, "Player mapping cleared.")
+	_ = LogBotCommand(ctx, b.db, externalID, "clear-player", true, "")
 }
 
 func (b *Bot) handleModalSubmit(ctx context.Context, s *discordgo.Session, i *discordgo.InteractionCreate) {

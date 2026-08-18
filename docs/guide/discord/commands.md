@@ -20,6 +20,7 @@ FactoryMate registers slash commands in your Discord guild when the bot starts. 
 | `/register` | Member with register permission; not already linked | Self-serve account; prompts for in-game name and dashboard password |
 | `/link` | Discord user not yet linked; has existing FM account | Attach Discord to an existing web account |
 | `/set-player <name>` | Active registered user | Update in-game player mapping |
+| `/clear-player` | Active registered user | Remove in-game player mapping |
 | `/connection get` | Active registered user | DM current game join details |
 | `/mods` | Active registered user | `list` (default): mod table; `export`: SMM profile download |
 

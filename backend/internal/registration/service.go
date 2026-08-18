@@ -351,6 +351,30 @@ func (s *Service) SetPlayerName(ctx context.Context, userID int64, name string) 
 	return s.auth.GetUserByID(ctx, userID)
 }
 
+// ClearPlayerMapping removes player_id and pending_player_name for an active user.
+func (s *Service) ClearPlayerMapping(ctx context.Context, userID int64) (auth.User, error) {
+	var status string
+	if err := s.db.QueryRowContext(ctx, `SELECT status FROM users WHERE id = ?`, userID).Scan(&status); err == sql.ErrNoRows {
+		return auth.User{}, ErrUserNotFound
+	} else if err != nil {
+		return auth.User{}, fmt.Errorf("query user: %w", err)
+	}
+	if status != auth.StatusActive {
+		return auth.User{}, auth.ErrPendingApproval
+	}
+
+	res, err := s.db.ExecContext(ctx, `
+		UPDATE users SET player_id = NULL, pending_player_name = NULL WHERE id = ?`, userID)
+	if err != nil {
+		return auth.User{}, fmt.Errorf("clear player mapping: %w", err)
+	}
+	n, _ := res.RowsAffected()
+	if n == 0 {
+		return auth.User{}, ErrUserNotFound
+	}
+	return s.auth.GetUserByID(ctx, userID)
+}
+
 // ApproveRegistration activates a pending user.
 func (s *Service) ApproveRegistration(ctx context.Context, userID, actedByUserID int64) (auth.User, error) {
 	now := time.Now().UTC().Format(time.RFC3339)

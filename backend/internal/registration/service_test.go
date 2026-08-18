@@ -205,6 +205,43 @@ func TestRegisterUsernameAutoSuffix(t *testing.T) {
 	}
 }
 
+func TestClearPlayerMapping(t *testing.T) {
+	t.Chdir("../..")
+	ctx := context.Background()
+	database := openTestDB(t)
+	defer database.Close()
+	if err := db.Init(ctx, database, db.SeedConfig{}); err != nil {
+		t.Fatalf("init db: %v", err)
+	}
+
+	authSvc := auth.NewService(database)
+	regSvc := registration.NewService(database, authSvc)
+	user, err := authSvc.CreateUser(ctx, "player-user", "password123", auth.RoleViewer)
+	if err != nil {
+		t.Fatalf("create user: %v", err)
+	}
+	_, err = database.ExecContext(ctx, `
+		INSERT INTO player_state (player_id, name, online, last_seen_at)
+		VALUES ('player-1', 'Alice', 1, '2026-08-17T12:00:00Z')`)
+	if err != nil {
+		t.Fatalf("seed player: %v", err)
+	}
+	_, err = database.ExecContext(ctx, `
+		UPDATE users SET player_id = 'player-1', pending_player_name = 'Alice', status = 'active'
+		WHERE id = ?`, user.ID)
+	if err != nil {
+		t.Fatalf("seed mapping: %v", err)
+	}
+
+	updated, err := regSvc.ClearPlayerMapping(ctx, user.ID)
+	if err != nil {
+		t.Fatalf("clear mapping: %v", err)
+	}
+	if updated.PlayerID != nil || updated.PendingPlayerName != nil {
+		t.Fatalf("expected cleared mapping, got %+v", updated)
+	}
+}
+
 func openTestDB(t *testing.T) *sql.DB {
 	t.Helper()
 	path := filepath.Join(t.TempDir(), "test.db")

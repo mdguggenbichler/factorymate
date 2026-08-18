@@ -69,6 +69,10 @@ func slashCommands() []*discordgo.ApplicationCommand {
 			},
 		},
 		{
+			Name:        "clear-player",
+			Description: "Remove your in-game player mapping",
+		},
+		{
 			Name:        "whoami",
 			Description: "Show your FactoryMate link status",
 		},

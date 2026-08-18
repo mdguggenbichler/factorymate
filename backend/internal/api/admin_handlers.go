@@ -53,9 +53,9 @@ type settingsResponse struct {
 }
 
 type updateUserRequest struct {
-	Role     *auth.Role `json:"role"`
-	Password *string    `json:"password"`
-	PlayerID **string   `json:"playerId"`
+	Role         *auth.Role      `json:"role"`
+	Password     *string         `json:"password"`
+	PlayerIDJSON json.RawMessage `json:"playerId"`
 }
 
 type frmTestRequest struct {
@@ -980,10 +980,16 @@ func (h *Handler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	playerIDUpdate, err := auth.ParseOptionalPlayerID(req.PlayerIDJSON)
+	if err != nil {
+		writeError(w, r, http.StatusBadRequest, "invalid playerId")
+		return
+	}
+
 	user, err := h.auth.UpdateUser(r.Context(), id, auth.UserUpdate{
 		Role:     req.Role,
 		Password: req.Password,
-		PlayerID: req.PlayerID,
+		PlayerID: playerIDUpdate,
 	})
 	if err != nil {
 		if errors.Is(err, auth.ErrUserNotFound) {

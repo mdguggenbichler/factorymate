@@ -14,6 +14,7 @@ const helpMessageTemplate = `🏭 FactoryMate — quick start
 /connection get — join details (DM)
 /mods — full mod list
 /set-player — fix your in-game name mapping
+/clear-player — remove your in-game player mapping
 /whoami — check your link status
 
 **Have a web account but new to Discord?**
@@ -36,7 +37,7 @@ func formatRegistrationPendingMessage(playerName string) string {
 }
 
 func formatRegistrationApprovedMessage(username, role, playerLine string) string {
-	return fmt.Sprintf("✅ **You're registered!**\n\nDashboard: %s\nUsername:  %s\nRole:      %s\nPlayer:    %s\n\nWe'll link your player automatically when you join.\nUse /set-player to correct your in-game name.\nUse /connection get for join details. Use /mods for the full mod list.",
+	return fmt.Sprintf("✅ **You're registered!**\n\nDashboard: %s\nUsername:  %s\nRole:      %s\nPlayer:    %s\n\nWe'll link your player automatically when you join.\nUse /set-player to correct your in-game name, or /clear-player to remove your mapping.\nUse /connection get for join details. Use /mods for the full mod list.",
 		PublicURL(), username, role, playerLine)
 }
 

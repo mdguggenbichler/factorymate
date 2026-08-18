@@ -2,6 +2,7 @@ package auth_test
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"strings"
 	"testing"
@@ -83,5 +84,60 @@ func TestUpdateUserAtomic(t *testing.T) {
 	}
 	if !errors.Is(err, auth.ErrWeakPassword) {
 		t.Fatalf("error = %v, want ErrWeakPassword", err)
+	}
+}
+
+func TestUpdateUserClearsPlayerMapping(t *testing.T) {
+	t.Chdir("../..")
+
+	ctx := context.Background()
+	database := openTestDB(t)
+	defer database.Close()
+	if err := db.Init(ctx, database, db.SeedConfig{}); err != nil {
+		t.Fatalf("init: %v", err)
+	}
+
+	svc := auth.NewService(database)
+	user, err := svc.CreateUser(ctx, "mapped", "secret123", auth.RoleViewer)
+	if err != nil {
+		t.Fatalf("create user: %v", err)
+	}
+
+	_, err = database.ExecContext(ctx, `
+		INSERT INTO player_state (player_id, name, online, last_seen_at)
+		VALUES ('player-1', 'Alice', 1, '2026-08-17T12:00:00Z')`)
+	if err != nil {
+		t.Fatalf("seed player: %v", err)
+	}
+
+	playerID := "player-1"
+	pending := "Alice"
+	_, err = database.ExecContext(ctx, `
+		UPDATE users SET player_id = ?, pending_player_name = ? WHERE id = ?`,
+		playerID, pending, user.ID)
+	if err != nil {
+		t.Fatalf("seed mapping: %v", err)
+	}
+
+	var cleared *string
+	updated, err := svc.UpdateUser(ctx, user.ID, auth.UserUpdate{PlayerID: &cleared})
+	if err != nil {
+		t.Fatalf("clear mapping: %v", err)
+	}
+	if updated.PlayerID != nil {
+		t.Fatalf("playerId = %v, want nil", updated.PlayerID)
+	}
+	if updated.PendingPlayerName != nil {
+		t.Fatalf("pendingPlayerName = %v, want nil", updated.PendingPlayerName)
+	}
+
+	var dbPlayerID, dbPending sql.NullString
+	if err := database.QueryRowContext(ctx, `
+		SELECT player_id, pending_player_name FROM users WHERE id = ?`, user.ID,
+	).Scan(&dbPlayerID, &dbPending); err != nil {
+		t.Fatalf("query user: %v", err)
+	}
+	if dbPlayerID.Valid || dbPending.Valid {
+		t.Fatalf("db still has mapping: player_id=%v pending=%v", dbPlayerID, dbPending)
 	}
 }
