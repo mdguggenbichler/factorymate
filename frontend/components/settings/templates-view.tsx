@@ -31,7 +31,7 @@ import {
 } from "@/components/ui/table"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
-import { apiFetch } from "@/lib/api"
+import { apiFetch, ApiError } from "@/lib/api"
 import type {
   EmbedTemplate,
   MessageTemplate,
@@ -410,8 +410,8 @@ export function TemplatesView({
         body: JSON.stringify(body),
       })
       toast.success(t("testSent"))
-    } catch {
-      toast.error(t("testFailed"))
+    } catch (error) {
+      toast.error(error instanceof ApiError ? error.message : t("testFailed"))
     } finally {
       setIsTesting(false)
     }

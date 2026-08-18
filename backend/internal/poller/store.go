@@ -5,11 +5,16 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"log"
 	"strings"
 	"time"
 
 	"factorymate/internal/frm"
+	"factorymate/internal/auth"
 )
+
+// OnPlayersAutoLinked is invoked after pending_player_name rows are auto-linked (M16).
+var OnPlayersAutoLinked func(ctx context.Context, links []auth.ResolvedPlayerLink) error
 
 type appSettings struct {
 	ServerName                        string
@@ -131,7 +136,13 @@ func loadPlayerState(ctx context.Context, db *sql.DB, playerID string) (playerSt
 }
 
 func upsertPlayerState(ctx context.Context, db *sql.DB, p frm.Player, lastSeenAt *string, now time.Time) error {
-	_, err := db.ExecContext(ctx, `
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	_, err = tx.ExecContext(ctx, `
 		INSERT INTO player_state (player_id, name, online, last_seen_at)
 		VALUES (?, ?, ?, ?)
 		ON CONFLICT(player_id) DO UPDATE SET
@@ -140,7 +151,22 @@ func upsertPlayerState(ctx context.Context, db *sql.DB, p frm.Player, lastSeenAt
 			last_seen_at = COALESCE(excluded.last_seen_at, player_state.last_seen_at)`,
 		p.ID, p.Name, p.Online, lastSeenAt,
 	)
-	return err
+	if err != nil {
+		return err
+	}
+	links, err := auth.TryResolvePendingPlayers(ctx, tx, p.ID, p.Name)
+	if err != nil {
+		return err
+	}
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+	if len(links) > 0 && OnPlayersAutoLinked != nil {
+		if err := OnPlayersAutoLinked(ctx, links); err != nil {
+			log.Printf("poller: auto-link notification failed: %v", err)
+		}
+	}
+	return nil
 }
 
 func insertPlayerSessionEvent(ctx context.Context, db *sql.DB, playerID, playerName, eventType string, onlineCount int, now time.Time) error {
@@ -336,10 +362,10 @@ type researchNodeStateRow struct {
 	State  string
 }
 
-func loadResearchNodeState(ctx context.Context, db *sql.DB, nodeID string) (researchNodeStateRow, error) {
+func loadResearchNodeState(ctx context.Context, db *sql.DB, treeName, nodeID string) (researchNodeStateRow, error) {
 	var row researchNodeStateRow
 	err := db.QueryRowContext(ctx,
-		`SELECT state FROM research_node_state WHERE node_id = ?`, nodeID,
+		`SELECT state FROM research_node_state WHERE tree_name = ? AND node_id = ?`, treeName, nodeID,
 	).Scan(&row.State)
 	if err == sql.ErrNoRows {
 		return row, nil
@@ -360,14 +386,18 @@ func upsertResearchNodeState(ctx context.Context, db *sql.DB, treeName string, n
 	if err != nil {
 		return err
 	}
+	var coordX, coordY sql.NullInt64
+	if n.Coordinates != nil {
+		coordX = sql.NullInt64{Int64: int64(n.Coordinates.X), Valid: true}
+		coordY = sql.NullInt64{Int64: int64(n.Coordinates.Y), Valid: true}
+	}
 	_, err = db.ExecContext(ctx, `
 		INSERT INTO research_node_state (
-			node_id, tree_name, name, category, state, tech_tier, cost_json,
+			tree_name, node_id, name, category, state, tech_tier, cost_json,
 			coord_x, coord_y, parents_json, updated_at
 		)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-		ON CONFLICT(node_id) DO UPDATE SET
-			tree_name = excluded.tree_name,
+		ON CONFLICT(tree_name, node_id) DO UPDATE SET
 			name = excluded.name,
 			category = excluded.category,
 			state = excluded.state,
@@ -377,10 +407,30 @@ func upsertResearchNodeState(ctx context.Context, db *sql.DB, treeName string, n
 			coord_y = excluded.coord_y,
 			parents_json = excluded.parents_json,
 			updated_at = excluded.updated_at`,
-		n.ID, treeName, n.Name, n.Category, n.State, n.TechTier, string(costJSON),
-		n.Coordinates.X, n.Coordinates.Y, string(parentsJSON),
+		treeName, n.ID, n.Name, n.Category, n.State, n.TechTier, string(costJSON),
+		coordX, coordY, string(parentsJSON),
 		now.UTC().Format(time.RFC3339),
 	)
+	return err
+}
+
+func deleteResearchNodesNotInTree(ctx context.Context, db *sql.DB, treeName string, keepIDs []string) error {
+	if len(keepIDs) == 0 {
+		_, err := db.ExecContext(ctx, `DELETE FROM research_node_state WHERE tree_name = ?`, treeName)
+		return err
+	}
+
+	placeholders := make([]string, len(keepIDs))
+	args := make([]any, 0, len(keepIDs)+1)
+	args = append(args, treeName)
+	for i, id := range keepIDs {
+		placeholders[i] = "?"
+		args = append(args, id)
+	}
+
+	query := `DELETE FROM research_node_state WHERE tree_name = ? AND node_id NOT IN (` +
+		strings.Join(placeholders, ",") + `)`
+	_, err := db.ExecContext(ctx, query, args...)
 	return err
 }
 

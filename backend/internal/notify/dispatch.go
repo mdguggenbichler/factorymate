@@ -6,9 +6,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"strings"
 	"time"
 
+	"factorymate/internal/notifications"
 	"factorymate/internal/template"
 )
 
@@ -19,6 +21,7 @@ var ErrNoTargets = errors.New("no targets assigned")
 type Dispatcher struct {
 	DB        *sql.DB
 	Providers map[string]Provider
+	Prefs     *notifications.Service
 	Now       func() time.Time
 }
 
@@ -27,13 +30,14 @@ func NewDispatcher(db *sql.DB, providers map[string]Provider) *Dispatcher {
 	return &Dispatcher{
 		DB:        db,
 		Providers: providers,
+		Prefs:     notifications.NewService(db),
 		Now:       time.Now,
 	}
 }
 
 // HandleEvent implements poller.EventHandler — render and send for enabled types/targets.
 func (d *Dispatcher) HandleEvent(ctx context.Context, messageTypeKey string, vars map[string]string) error {
-	enabled, defaultJSON, err := d.loadMessageType(ctx, messageTypeKey)
+	enabled, category, defaultJSON, err := d.loadMessageType(ctx, messageTypeKey)
 	if err != nil {
 		return err
 	}
@@ -45,9 +49,6 @@ func (d *Dispatcher) HandleEvent(ctx context.Context, messageTypeKey string, var
 	if err != nil {
 		return err
 	}
-	if len(targets) == 0 {
-		return nil
-	}
 
 	tmpl, err := d.loadEffectiveTemplate(ctx, messageTypeKey, defaultJSON)
 	if err != nil {
@@ -56,9 +57,48 @@ func (d *Dispatcher) HandleEvent(ctx context.Context, messageTypeKey string, var
 
 	rendered := template.Render(tmpl, d.mergeSystemVariables(ctx, vars))
 	for _, target := range targets {
-		_ = d.dispatchToTarget(ctx, messageTypeKey, target, rendered)
+		if err := d.dispatchToTarget(ctx, messageTypeKey, target, rendered); err != nil {
+			log.Printf("notify: dispatch %q to target %d failed: %v", messageTypeKey, target.ID, err)
+		}
+	}
+
+	sent, err := d.dispatchCategoryDMs(ctx, messageTypeKey, category, rendered)
+	if err != nil {
+		log.Printf("notify: category dm %q failed: %v", messageTypeKey, err)
+	}
+	if messageTypeKey == "player_joined" || messageTypeKey == "player_left" {
+		if err := d.dispatchPersonalPlayerDMs(ctx, messageTypeKey, vars, rendered, sent); err != nil {
+			log.Printf("notify: personal dm %q failed: %v", messageTypeKey, err)
+		}
 	}
 	return nil
+}
+
+// NotifyPlayerAutoLinked sends a DM when pending_player_name is resolved to player_id.
+func (d *Dispatcher) NotifyPlayerAutoLinked(ctx context.Context, links []PlayerAutoLink) error {
+	provider, ok := d.directProvider()
+	if !ok {
+		return nil
+	}
+	for _, link := range links {
+		if strings.TrimSpace(link.ExternalUserID) == "" {
+			continue
+		}
+		msg := RenderedMessage{Plain: fmt.Sprintf(
+			"🔗 **Player linked**\n\nYour in-game character **%s** is now linked to your FactoryMate account.",
+			link.PlayerName,
+		)}
+		preview := RedactForLog(msg.Plain)
+		sendErr := provider.SendDirect(ctx, "discord", link.ExternalUserID, msg)
+		d.recordDMLog(ctx, "player_auto_linked", link.ExternalUserID, preview, sendErr == nil, sendErr)
+	}
+	return nil
+}
+
+// PlayerAutoLink is returned when a pending player name is auto-linked.
+type PlayerAutoLink struct {
+	ExternalUserID string
+	PlayerName     string
 }
 
 // SendRenderedTest sends a pre-rendered message to all assigned enabled targets.
@@ -81,19 +121,50 @@ func (d *Dispatcher) SendRenderedTest(ctx context.Context, messageTypeKey string
 	return firstErr
 }
 
-func (d *Dispatcher) loadMessageType(ctx context.Context, key string) (bool, string, error) {
+// SampleTemplateRenderedMessage converts the notify sample embed for dispatcher tests.
+func SampleTemplateRenderedMessage() template.RenderedMessage {
+	sample := SampleRenderedMessage()
+	if sample.Embed == nil {
+		return template.RenderedMessage{Plain: sample.Plain}
+	}
+	fields := make([]template.DiscordEmbedField, 0, len(sample.Embed.Fields))
+	for _, field := range sample.Embed.Fields {
+		fields = append(fields, template.DiscordEmbedField{
+			Name:   field.Name,
+			Value:  field.Value,
+			Inline: field.Inline,
+		})
+	}
+	return template.RenderedMessage{
+		Embed: &template.DiscordEmbed{
+			Title:       sample.Embed.Title,
+			Description: sample.Embed.Description,
+			Color:       sample.Embed.Color,
+			Footer:      sample.Embed.Footer,
+			Timestamp:   sample.Embed.Timestamp,
+			Fields:      fields,
+		},
+	}
+}
+
+// DeliverToTarget sends a rendered message to one target and records notification_log.
+func (d *Dispatcher) DeliverToTarget(ctx context.Context, messageTypeKey string, target NotificationTarget, rendered template.RenderedMessage) error {
+	return d.dispatchToTarget(ctx, messageTypeKey, target, rendered)
+}
+
+func (d *Dispatcher) loadMessageType(ctx context.Context, key string) (bool, string, string, error) {
 	var enabled bool
-	var defaultJSON string
+	var category, defaultJSON string
 	err := d.DB.QueryRowContext(ctx, `
-		SELECT enabled, default_template_json FROM message_types WHERE key = ?`, key,
-	).Scan(&enabled, &defaultJSON)
+		SELECT enabled, category, default_template_json FROM message_types WHERE key = ?`, key,
+	).Scan(&enabled, &category, &defaultJSON)
 	if err == sql.ErrNoRows {
-		return false, "", fmt.Errorf("unknown message type %q", key)
+		return false, "", "", fmt.Errorf("unknown message type %q", key)
 	}
 	if err != nil {
-		return false, "", fmt.Errorf("load message type %q: %w", key, err)
+		return false, "", "", fmt.Errorf("load message type %q: %w", key, err)
 	}
-	return enabled, defaultJSON, nil
+	return enabled, category, defaultJSON, nil
 }
 
 func (d *Dispatcher) loadTargets(ctx context.Context, messageTypeKey string) ([]NotificationTarget, error) {
@@ -147,13 +218,106 @@ func (d *Dispatcher) dispatchToTarget(ctx context.Context, messageTypeKey string
 	provider, ok := d.Providers[target.ProviderType]
 	if !ok {
 		err := fmt.Errorf("unknown provider type %q", target.ProviderType)
-		d.recordLog(ctx, messageTypeKey, target.ID, preview, false, err)
+		d.recordChannelLog(ctx, messageTypeKey, target.ID, preview, false, err)
 		return err
 	}
 
 	sendErr := provider.Send(ctx, target, msg)
-	d.recordLog(ctx, messageTypeKey, target.ID, preview, sendErr == nil, sendErr)
+	d.recordChannelLog(ctx, messageTypeKey, target.ID, preview, sendErr == nil, sendErr)
 	return sendErr
+}
+
+func (d *Dispatcher) dispatchCategoryDMs(ctx context.Context, messageTypeKey, category string, rendered template.RenderedMessage) (map[string]struct{}, error) {
+	sent := make(map[string]struct{})
+	if category == "" || d.Prefs == nil {
+		return sent, nil
+	}
+	provider, ok := d.directProvider()
+	if !ok {
+		return sent, nil
+	}
+
+	recipients, err := d.Prefs.ListDMRecipients(ctx, category)
+	if err != nil {
+		return sent, fmt.Errorf("list dm recipients for %q: %w", category, err)
+	}
+	if len(recipients) == 0 {
+		return sent, nil
+	}
+
+	msg := providerMessage("discord", rendered)
+	preview := renderedPreview("discord", rendered)
+	for i, recipient := range recipients {
+		sendErr := provider.SendDirect(ctx, "discord", recipient.ExternalUserID, msg)
+		d.recordDMLog(ctx, messageTypeKey, recipient.ExternalUserID, preview, sendErr == nil, sendErr)
+		if sendErr == nil {
+			sent[recipient.ExternalUserID] = struct{}{}
+		}
+		if i < len(recipients)-1 {
+			time.Sleep(dmRateLimit)
+		}
+	}
+	return sent, nil
+}
+
+func (d *Dispatcher) dispatchPersonalPlayerDMs(ctx context.Context, messageTypeKey string, vars map[string]string, rendered template.RenderedMessage, alreadySent map[string]struct{}) error {
+	if d.Prefs == nil {
+		return nil
+	}
+	provider, ok := d.directProvider()
+	if !ok {
+		return nil
+	}
+
+	playerName := strings.TrimSpace(vars["PlayerName"])
+	recipients, err := d.Prefs.FindPersonalPlayerRecipients(ctx, playerName)
+	if err != nil {
+		return fmt.Errorf("personal player recipients: %w", err)
+	}
+	if len(recipients) == 0 {
+		return nil
+	}
+
+	personal := personalPlayerMessage(messageTypeKey, rendered)
+	preview := notifyRenderedPreview(personal)
+	for i, recipient := range recipients {
+		if alreadySent != nil {
+			if _, ok := alreadySent[recipient.ExternalUserID]; ok {
+				continue
+			}
+		}
+		sendErr := provider.SendDirect(ctx, "discord", recipient.ExternalUserID, personal)
+		d.recordDMLog(ctx, messageTypeKey, recipient.ExternalUserID, preview, sendErr == nil, sendErr)
+		if i < len(recipients)-1 {
+			time.Sleep(dmRateLimit)
+		}
+	}
+	return nil
+}
+
+func personalPlayerMessage(messageTypeKey string, rendered template.RenderedMessage) RenderedMessage {
+	msg := providerMessage("discord", rendered)
+	if msg.Embed == nil {
+		return msg
+	}
+	embed := *msg.Embed
+	switch messageTypeKey {
+	case "player_joined":
+		embed.Title = "👤 Your character joined the server"
+	case "player_left":
+		embed.Title = "👤 Your character disconnected"
+	}
+	msg.Embed = &embed
+	return msg
+}
+
+func (d *Dispatcher) directProvider() (DirectMessageProvider, bool) {
+	for _, provider := range d.Providers {
+		if dm, ok := provider.(DirectMessageProvider); ok {
+			return dm, true
+		}
+	}
+	return nil, false
 }
 
 func providerMessage(providerType string, rendered template.RenderedMessage) RenderedMessage {
@@ -214,6 +378,7 @@ func formatDispatchTimestamp(t time.Time) string {
 }
 
 func renderedPreview(providerType string, rendered template.RenderedMessage) string {
+	var preview string
 	if providerType == "discord" && rendered.Embed != nil {
 		parts := make([]string, 0, 2)
 		if rendered.Embed.Title != "" {
@@ -222,12 +387,31 @@ func renderedPreview(providerType string, rendered template.RenderedMessage) str
 		if rendered.Embed.Description != "" {
 			parts = append(parts, rendered.Embed.Description)
 		}
-		return strings.Join(parts, " — ")
+		preview = strings.Join(parts, " — ")
+	} else {
+		preview = rendered.Plain
 	}
-	return rendered.Plain
+	return RedactForLog(preview)
 }
 
-func (d *Dispatcher) recordLog(ctx context.Context, messageTypeKey string, targetID int64, preview string, success bool, sendErr error) {
+func notifyRenderedPreview(msg RenderedMessage) string {
+	var preview string
+	if msg.Embed != nil {
+		parts := make([]string, 0, 2)
+		if msg.Embed.Title != "" {
+			parts = append(parts, msg.Embed.Title)
+		}
+		if msg.Embed.Description != "" {
+			parts = append(parts, msg.Embed.Description)
+		}
+		preview = strings.Join(parts, " — ")
+	} else {
+		preview = msg.Plain
+	}
+	return RedactForLog(preview)
+}
+
+func (d *Dispatcher) recordChannelLog(ctx context.Context, messageTypeKey string, targetID int64, preview string, success bool, sendErr error) {
 	var errText sql.NullString
 	if sendErr != nil {
 		errText = sql.NullString{String: sendErr.Error(), Valid: true}
@@ -235,12 +419,28 @@ func (d *Dispatcher) recordLog(ctx context.Context, messageTypeKey string, targe
 
 	sentAt := d.Now().UTC().Format(time.RFC3339)
 	_, err := d.DB.ExecContext(ctx, `
-		INSERT INTO notification_log (message_type_key, target_id, rendered_preview, success, error, sent_at)
-		VALUES (?, ?, ?, ?, ?, ?)`,
+		INSERT INTO notification_log (message_type_key, target_id, rendered_preview, success, error, sent_at, delivery_mode)
+		VALUES (?, ?, ?, ?, ?, ?, 'channel')`,
 		messageTypeKey, targetID, preview, success, errText, sentAt,
 	)
 	if err != nil {
-		// Best-effort audit log; do not fail the poll loop.
-		_ = err
+		log.Printf("notify: record channel log for %q: %v", messageTypeKey, err)
+	}
+}
+
+func (d *Dispatcher) recordDMLog(ctx context.Context, messageTypeKey, externalUserID, preview string, success bool, sendErr error) {
+	var errText sql.NullString
+	if sendErr != nil {
+		errText = sql.NullString{String: sendErr.Error(), Valid: true}
+	}
+
+	sentAt := d.Now().UTC().Format(time.RFC3339)
+	_, err := d.DB.ExecContext(ctx, `
+		INSERT INTO notification_log (message_type_key, target_id, rendered_preview, success, error, sent_at, delivery_mode, recipient_external_user_id)
+		VALUES (?, NULL, ?, ?, ?, ?, 'dm', ?)`,
+		messageTypeKey, preview, success, errText, sentAt, externalUserID,
+	)
+	if err != nil {
+		log.Printf("notify: record dm log for %q: %v", messageTypeKey, err)
 	}
 }

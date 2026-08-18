@@ -10,6 +10,7 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from "@/components/ui/chart"
+import { formatDateTime, formatTime } from "@/lib/format"
 
 export type TimeSeriesPoint = {
   timestamp: string
@@ -22,6 +23,7 @@ type TimeSeriesChartProps = {
   series: { key: string; label?: string }[]
   className?: string
   yAxisLabel?: string
+  compactTimeAxis?: boolean
 }
 
 export function TimeSeriesChart({
@@ -30,6 +32,7 @@ export function TimeSeriesChart({
   series,
   className,
   yAxisLabel,
+  compactTimeAxis = false,
 }: TimeSeriesChartProps) {
   return (
     <ChartContainer config={config} className={className ?? "aspect-auto h-[280px] w-full"}>
@@ -42,13 +45,8 @@ export function TimeSeriesChart({
           tickMargin={8}
           minTickGap={32}
           tickFormatter={(value) => {
-            const date = new Date(String(value))
-            return date.toLocaleDateString(undefined, {
-              month: "short",
-              day: "numeric",
-              hour: "2-digit",
-              minute: "2-digit",
-            })
+            const iso = String(value)
+            return compactTimeAxis ? formatTime(iso) : formatDateTime(iso)
           }}
         />
         <YAxis
@@ -70,9 +68,7 @@ export function TimeSeriesChart({
         <ChartTooltip
           content={
             <ChartTooltipContent
-              labelFormatter={(value) =>
-                new Date(String(value)).toLocaleString()
-              }
+              labelFormatter={(value) => formatDateTime(String(value))}
             />
           }
         />

@@ -217,6 +217,15 @@ func (c *Client) get(ctx context.Context, endpoint string, dest any) error {
 	return nil
 }
 
+// GetModList fetches installed server mods (§8.5).
+func (c *Client) GetModList(ctx context.Context) ([]Mod, error) {
+	var mods []Mod
+	if err := c.get(ctx, "getModList", &mods); err != nil {
+		return nil, err
+	}
+	return mods, nil
+}
+
 // GetSessionInfo fetches FRM getSessionInfo (save/session metadata).
 func (c *Client) GetSessionInfo(ctx context.Context) (SessionInfo, error) {
 	var info SessionInfo

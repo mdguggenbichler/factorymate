@@ -2,9 +2,14 @@
 
 import { useCallback, useMemo, useState } from "react"
 import { useTranslations } from "next-intl"
-import { PencilIcon, PlusIcon, SendIcon, Trash2Icon } from "lucide-react"
+import { AlertTriangleIcon, PencilIcon, PlusIcon, SendIcon, Trash2Icon } from "lucide-react"
 import { toast } from "sonner"
 
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "@/components/ui/alert"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -33,6 +38,14 @@ import {
 } from "@/components/ui/dialog"
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import {
   Table,
@@ -42,26 +55,30 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { apiFetch } from "@/lib/api"
+import { apiFetch, ApiError } from "@/lib/api"
 import type {
+  DiscordChannel,
+  DiscordTargetConfig,
   MessageType,
   NotificationTarget,
 } from "@/lib/api-types"
 
 type TargetFormState = {
   name: string
-  webhookUrl: string
-  usernameOverride: string
-  avatarUrlOverride: string
+  channelId: string
+  threadId: string
   enabled: boolean
 }
 
 const emptyForm: TargetFormState = {
   name: "",
-  webhookUrl: "",
-  usernameOverride: "",
-  avatarUrlOverride: "",
+  channelId: "",
+  threadId: "",
   enabled: true,
+}
+
+function isLegacyWebhookTarget(target: NotificationTarget): boolean {
+  return Boolean(target.config.webhook_url?.trim())
 }
 
 type NotificationTargetsViewProps = {
@@ -84,6 +101,14 @@ export function NotificationTargetsView({
   const [deleteTarget, setDeleteTarget] = useState<NotificationTarget | null>(
     null
   )
+  const [channels, setChannels] = useState<DiscordChannel[]>([])
+  const [channelsLoading, setChannelsLoading] = useState(false)
+  const [channelsError, setChannelsError] = useState(false)
+
+  const hasLegacyTargets = useMemo(
+    () => targets.some(isLegacyWebhookTarget),
+    [targets]
+  )
 
   const assignmentCounts = useMemo(() => {
     const counts = new Map<number, number>()
@@ -95,40 +120,67 @@ export function NotificationTargetsView({
     return counts
   }, [messageTypes])
 
+  const loadChannels = useCallback(async () => {
+    setChannelsLoading(true)
+    setChannelsError(false)
+    try {
+      const data = await apiFetch<{ channels: DiscordChannel[] }>(
+        "/discord/channels"
+      )
+      setChannels(data.channels)
+    } catch {
+      setChannels([])
+      setChannelsError(true)
+    } finally {
+      setChannelsLoading(false)
+    }
+  }, [])
+
   const openCreate = useCallback(() => {
     setEditingId(null)
     setForm(emptyForm)
     setDialogOpen(true)
-  }, [])
+    void loadChannels()
+  }, [loadChannels])
 
   const openEdit = useCallback((target: NotificationTarget) => {
     setEditingId(target.id)
     setForm({
       name: target.name,
-      webhookUrl: target.config.webhook_url ?? "",
-      usernameOverride: target.config.username_override ?? "",
-      avatarUrlOverride: target.config.avatar_url_override ?? "",
+      channelId: target.config.channel_id ?? "",
+      threadId: target.config.thread_id ?? "",
       enabled: target.enabled,
     })
     setDialogOpen(true)
-  }, [])
+    void loadChannels()
+  }, [loadChannels])
+
+  function channelLabel(target: NotificationTarget): string {
+    if (target.config.channel_id) {
+      const match = channels.find((ch) => ch.id === target.config.channel_id)
+      return match ? `#${match.name}` : target.config.channel_id
+    }
+    if (target.config.webhook_url) {
+      return t("legacyWebhook")
+    }
+    return "—"
+  }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setIsSubmitting(true)
 
+    const config: DiscordTargetConfig = {
+      channel_id: form.channelId,
+    }
+    if (form.threadId.trim()) {
+      config.thread_id = form.threadId.trim()
+    }
+
     const body = {
       name: form.name,
       providerType: "discord",
-      config: {
-        webhook_url: form.webhookUrl,
-        ...(form.usernameOverride
-          ? { username_override: form.usernameOverride }
-          : {}),
-        ...(form.avatarUrlOverride
-          ? { avatar_url_override: form.avatarUrlOverride }
-          : {}),
-      },
+      config,
       enabled: form.enabled,
     }
 
@@ -173,8 +225,8 @@ export function NotificationTargetsView({
         method: "POST",
       })
       toast.success(t("testSent"))
-    } catch {
-      toast.error(t("testFailed"))
+    } catch (error) {
+      toast.error(error instanceof ApiError ? error.message : t("testFailed"))
     } finally {
       setTestingId(null)
     }
@@ -200,6 +252,15 @@ export function NotificationTargetsView({
     }
   }
 
+  const channelSelectItems = useMemo(
+    () =>
+      channels.map((channel) => ({
+        label: `#${channel.name}`,
+        value: channel.id,
+      })),
+    [channels]
+  )
+
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -213,6 +274,14 @@ export function NotificationTargetsView({
         </Button>
       </div>
 
+      {hasLegacyTargets ? (
+        <Alert>
+          <AlertTriangleIcon />
+          <AlertTitle>{t("legacyBannerTitle")}</AlertTitle>
+          <AlertDescription>{t("legacyBannerDescription")}</AlertDescription>
+        </Alert>
+      ) : null}
+
       <Card>
         <CardHeader>
           <CardTitle>{t("tableTitle")}</CardTitle>
@@ -225,6 +294,7 @@ export function NotificationTargetsView({
               <TableHeader>
                 <TableRow>
                   <TableHead>{t("columns.name")}</TableHead>
+                  <TableHead>{t("columns.channel")}</TableHead>
                   <TableHead>{t("columns.provider")}</TableHead>
                   <TableHead>{t("columns.enabled")}</TableHead>
                   <TableHead className="text-right">{t("columns.actions")}</TableHead>
@@ -233,7 +303,17 @@ export function NotificationTargetsView({
               <TableBody>
                 {targets.map((target) => (
                   <TableRow key={target.id}>
-                    <TableCell className="font-medium">{target.name}</TableCell>
+                    <TableCell className="font-medium">
+                      <div className="flex items-center gap-2">
+                        {target.name}
+                        {isLegacyWebhookTarget(target) ? (
+                          <Badge variant="secondary">{t("legacyBadge")}</Badge>
+                        ) : null}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {channelLabel(target)}
+                    </TableCell>
                     <TableCell>
                       <Badge variant="outline">{target.providerType}</Badge>
                     </TableCell>
@@ -248,7 +328,10 @@ export function NotificationTargetsView({
                           variant="outline"
                           size="sm"
                           onClick={() => handleTest(target.id)}
-                          disabled={testingId === target.id}
+                          disabled={
+                            testingId === target.id ||
+                            isLegacyWebhookTarget(target)
+                          }
                         >
                           <SendIcon />
                           {t("test")}
@@ -306,52 +389,51 @@ export function NotificationTargetsView({
                 />
               </Field>
               <Field>
-                <FieldLabel htmlFor="webhook-url">
-                  {t("fields.webhookUrl")}
+                <FieldLabel htmlFor="target-channel">
+                  {t("fields.channel")}
                 </FieldLabel>
-                <Input
-                  id="webhook-url"
-                  type="url"
-                  value={form.webhookUrl}
-                  onChange={(event) =>
+                {channelsError ? (
+                  <p className="text-sm text-destructive">{t("channelsLoadFailed")}</p>
+                ) : null}
+                <Select
+                  value={form.channelId}
+                  onValueChange={(value) =>
                     setForm((current) => ({
                       ...current,
-                      webhookUrl: event.target.value,
+                      channelId: value ?? "",
                     }))
                   }
-                  required={editingId == null}
-                  placeholder={t("fields.webhookUrlPlaceholder")}
-                />
+                  items={channelSelectItems}
+                  disabled={channelsLoading || channels.length === 0}
+                >
+                  <SelectTrigger id="target-channel" className="w-full">
+                    <SelectValue placeholder={t("fields.channelPlaceholder")} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      {channelSelectItems.map((item) => (
+                        <SelectItem key={item.value} value={item.value}>
+                          {item.label}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
               </Field>
               <Field>
-                <FieldLabel htmlFor="username-override">
-                  {t("fields.usernameOverride")}
+                <FieldLabel htmlFor="target-thread">
+                  {t("fields.threadId")}
                 </FieldLabel>
                 <Input
-                  id="username-override"
-                  value={form.usernameOverride}
+                  id="target-thread"
+                  value={form.threadId}
                   onChange={(event) =>
                     setForm((current) => ({
                       ...current,
-                      usernameOverride: event.target.value,
+                      threadId: event.target.value,
                     }))
                   }
-                />
-              </Field>
-              <Field>
-                <FieldLabel htmlFor="avatar-url">
-                  {t("fields.avatarUrlOverride")}
-                </FieldLabel>
-                <Input
-                  id="avatar-url"
-                  type="url"
-                  value={form.avatarUrlOverride}
-                  onChange={(event) =>
-                    setForm((current) => ({
-                      ...current,
-                      avatarUrlOverride: event.target.value,
-                    }))
-                  }
+                  placeholder={t("fields.threadIdPlaceholder")}
                 />
               </Field>
               <Field className="flex items-center gap-3">
@@ -378,7 +460,10 @@ export function NotificationTargetsView({
               >
                 {tCommon("cancel")}
               </Button>
-              <Button type="submit" disabled={isSubmitting}>
+              <Button
+                type="submit"
+                disabled={isSubmitting || !form.channelId}
+              >
                 {tCommon("save")}
               </Button>
             </DialogFooter>

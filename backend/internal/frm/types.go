@@ -87,7 +87,7 @@ type ResearchNode struct {
 	State       string               `json:"State"`
 	TechTier    int                  `json:"TechTier"`
 	Cost        []Item               `json:"Cost"`
-	Coordinates ResearchCoordinate   `json:"Coordinates"`
+	Coordinates *ResearchCoordinate `json:"Coordinates"`
 	Parents     []ResearchCoordinate `json:"Parents"`
 }
 
@@ -157,6 +157,19 @@ func (v Vehicle) Fuels() []Item {
 		return v.Fuel
 	}
 	return v.FuelInventory
+}
+
+// Mod is a FRM getModList entry (§8.5).
+type Mod struct {
+	Name               string `json:"Name"`
+	SMRName            string `json:"SMRName"`
+	Version            string `json:"Version"`
+	Description        string `json:"Description"`
+	DocsURL            string `json:"DocsURL"`
+	SupportURL         string `json:"SupportURL"`
+	CreatedBy          string `json:"CreatedBy"`
+	RemoteVersionRange string `json:"RemoteVersionRange"`
+	RequiredOnRemote   bool   `json:"RequiredOnRemote"`
 }
 
 // --- Session info ---

@@ -27,7 +27,9 @@ curl -sS "http://192.168.178.42:8889/getPower" -o backend/testdata/frm/getPower.
 
 Committed fixtures live in `backend/testdata/frm/` (see README there). Large responses — query live rather than committing full dumps.
 
-## Discord webhook testing (M4, M6)
+## Discord webhook testing (legacy — pre-M15)
+
+> **M15+:** Game-event notifications use the Discord **bot** (`channel_id` + `SendDirect`), not incoming webhooks. Use the mock-session pattern in [Discord bot testing (M15)](#discord-bot-testing-m15) below for dispatch and provider tests. This section documents the old webhook approach for historical context only.
 
 Discord incoming webhooks are a single `POST` with a JSON body (`content` and/or `embeds`). You do **not** need Discord to verify payload shape.
 
@@ -66,9 +68,61 @@ services:
 
 FactoryMate v1 only POSTs to webhook URLs — **httptest is sufficient** and keeps CI dependency-free.
 
+> **M15 note:** Game-event notifications now use the Discord **bot** (`channel_id` in target config), not incoming webhooks. Webhook httptest patterns remain useful for regression tests on payload shape; new provider tests should mock `discordgo.Session` channel message sends instead.
+
 ### Manual smoke test (optional, human)
 
 Set `DISCORD_TEST_WEBHOOK_URL` in `.env` (private test channel). Not required for verifier PASS.
+
+## Discord bot testing (M15)
+
+The Discord bot runs inside the Go backend process. CI does **not** require a live Discord guild.
+
+### Unit tests (recommended)
+
+| Area | Approach |
+| --- | --- |
+| `DiscordProvider.Send` / `SendDirect` | Mock `discordgo.Session`; assert channel/user IDs and embed payload |
+| Slash command handlers | Permission logic + service integration in `interactions_test.go`; optional JSON interaction fixtures for full handler replay |
+| Registration / approval | Extend `auth` / `registration` tests; `pending_approval` blocks login |
+| Pending player auto-link | Poller test: upsert `player_state` → assert `player_id` set |
+| Connection broadcast | Assert `SendDirect` called for all active linked users |
+| Log redaction | Assert `notification_log` and `bot_command_log` never contain `game_password` |
+| Dispatcher regression | Existing `dispatch_test.go` with mock session instead of httptest webhook |
+
+### DM fan-out and preferences (M16)
+
+Game-event dispatch sends channel posts (admin-configured targets) **and** optional DMs per user prefs. Tests live in `backend/internal/notify/dispatch_dm_test.go`:
+
+| Test | Asserts |
+| --- | --- |
+| `TestDispatcher_DMFanOutRespectsPrefs` | User with `power` DM enabled receives fuse-trip DM; user with `power` off does not; channel send still occurs |
+| `TestDispatcher_PersonalPlayerDM` | User with `dm_player_personal` and linked player name receives personal join/leave DM |
+
+Prefs are stored in `user_notification_prefs` (per category) and `users.dm_player_personal`. New users inherit admin defaults from `app_settings` (`notifications.dm_defaults_json`, `notifications.dm_player_personal_default`). Frontend: `/account/notifications` (all active users) and `/settings/notifications/defaults` (admin).
+
+Connection-detail DMs bypass category prefs — see `ConnectionDetailsService` tests in `backend/internal/connection/`.
+
+### Optional integration test guild
+
+Configure CI secrets:
+
+```bash
+DISCORD_BOT_TOKEN=...
+DISCORD_GUILD_ID=...
+```
+
+Run tagged integration tests against a private test guild when validating slash commands end-to-end. Not required for autonomous verifier PASS.
+
+### Frontend smoke (manual)
+
+1. Settings → Discord — verify bot status badge and invite URL load
+2. Settings → Notifications → Targets — channel picker populated; legacy webhook banner if old targets exist
+3. Settings → Notifications → Defaults — category toggles load and save
+4. Settings → Notifications → Templates — `connection_details_changed` appears in message type list when seeded
+5. Account → Notifications (user menu) — per-user DM toggles load and save
+6. Settings → Users — pending approval queue and unmapped players panels
+7. `/mods` — mod table, download SMM profile, admin refresh
 
 ## FRM client testing (M2, M3)
 

@@ -8,6 +8,7 @@ import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { ApiError } from "@/lib/api"
 import { acceptInvite } from "@/lib/auth-client"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -18,7 +19,7 @@ import {
 } from "@/components/ui/card"
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
-import { formatDateTime } from "@/lib/format"
+import { useFormatDateTime } from "@/hooks/use-format-datetime"
 
 type InviteAcceptFormProps = {
   token: string
@@ -34,6 +35,7 @@ export function InviteAcceptForm({
   errorStatus,
 }: InviteAcceptFormProps) {
   const t = useTranslations("invite")
+  const { formatDateTime } = useFormatDateTime()
   const tAuth = useTranslations("auth")
   const router = useRouter()
   const [username, setUsername] = useState("")
@@ -85,6 +87,10 @@ export function InviteAcceptForm({
 
   return (
     <div className={cn("flex flex-col gap-6")}>
+      <Alert>
+        <AlertTitle>{t("title")}</AlertTitle>
+        <AlertDescription>{t("deprecatedNotice")}</AlertDescription>
+      </Alert>
       <Card>
         <CardHeader>
           <CardTitle>{t("title")}</CardTitle>

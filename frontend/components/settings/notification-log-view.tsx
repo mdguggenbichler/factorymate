@@ -17,7 +17,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { formatDateTime } from "@/lib/format"
+import { useFormatDateTime } from "@/hooks/use-format-datetime"
 import type { NotificationLogEntry } from "@/lib/api-types"
 
 type NotificationLogViewProps = {
@@ -30,6 +30,7 @@ export function NotificationLogView({
   total,
 }: NotificationLogViewProps) {
   const t = useTranslations("settings.log")
+  const { formatDateTime } = useFormatDateTime()
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
@@ -51,6 +52,7 @@ export function NotificationLogView({
                 <TableRow>
                   <TableHead>{t("columns.sentAt")}</TableHead>
                   <TableHead>{t("columns.messageType")}</TableHead>
+                  <TableHead>{t("columns.delivery")}</TableHead>
                   <TableHead>{t("columns.target")}</TableHead>
                   <TableHead>{t("columns.preview")}</TableHead>
                   <TableHead>{t("columns.status")}</TableHead>
@@ -64,7 +66,21 @@ export function NotificationLogView({
                       {entry.messageTypeKey}
                     </TableCell>
                     <TableCell>
-                      {entry.targetName ?? t("deletedTarget")}
+                      {entry.deliveryMode === "dm"
+                        ? t("deliveryDM")
+                        : t("deliveryChannel")}
+                    </TableCell>
+                    <TableCell>
+                      {entry.deliveryMode === "dm"
+                        ? entry.recipientExternalUserId
+                          ? t("dmRecipient", {
+                              id: entry.recipientExternalUserId,
+                            })
+                          : "—"
+                        : entry.targetName ??
+                          (entry.targetId != null
+                            ? t("deletedTarget")
+                            : "—")}
                     </TableCell>
                     <TableCell className="max-w-xs truncate text-sm">
                       {entry.renderedPreview}

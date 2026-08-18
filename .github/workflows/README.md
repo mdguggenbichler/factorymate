@@ -11,7 +11,7 @@ Entry-point workflows own triggers; reusable workflows (prefixed `_`) are called
 | `pr.yml` | `pull_request` | `_ci.yml` |
 | `dev.yml` | `push` → `dev` | `_ci.yml` → `_container-image.yml` |
 | `main.yml` | `push` → `main` | `_ci.yml` → `_release-draft.yml` |
-| `release.yml` | `release` → `published` (`v*`) | `_container-image.yml` |
+| `release.yml` | `release` → `published` (`v*`) | `_container-image.yml`, MkDocs → GitHub Pages |
 
 ## Trigger rules
 
@@ -27,10 +27,10 @@ Runs backend (`go build`, `go vet`, `go test`), frontend (`npm ci`, `lint`, `bui
 
 Single image: `ghcr.io/<owner>/factorymate` (repository name lowercased).
 
-| Trigger | Tags pushed |
-|---------|-------------|
-| `push` → `dev` | `nightly`, `{sha7}` |
-| `release` published (`v1.2.3`) | `v1.2.3`, `latest` |
+| Trigger | Tags pushed | Docs |
+|---------|-------------|------|
+| `push` → `dev` | `nightly`, `{sha7}` | — |
+| `release` published (`v1.2.3`) | `v1.2.3`, `latest` | Deploy to GitHub Pages |
 
 ## Releases (`_release-draft.yml`)
 

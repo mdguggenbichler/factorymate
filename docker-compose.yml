@@ -1,20 +1,24 @@
 # FactoryMate — production stack (spec §2.4, §9)
 # Single container: Next.js on :3000 proxies /api and /healthz to Go on localhost:8080.
-# Joins the existing satisfactory-server Docker network so the backend can reach FRM
-# at http://satisfactory-server:8080 (host-mapped :8889 on GuggiRaid).
+# Default: isolated factorymate network — set FRM_HOST/FRM_PORT to a reachable endpoint
+# (host LAN IP + mapped port, or attach to the game stack network — see README).
 
 services:
   factorymate:
-    image: ghcr.io/mdguggenbichler/factorymate:nightly
+    image: ghcr.io/ghotso/factorymate:nightly
     restart: unless-stopped
     ports:
       - "${FACTORYMATE_PORT:-3000}:3000"
     environment:
-      SESSION_SECRET: ${SESSION_SECRET:-dev-secret-change-me}
+      SESSION_SECRET: ${SESSION_SECRET:?SESSION_SECRET must be set}
       DATABASE_PATH: /data/factorymate.db
       FRM_HOST: ${FRM_HOST:-satisfactory-server}
       FRM_PORT: ${FRM_PORT:-8080}
       BACKEND_URL: http://127.0.0.1:8080
+      DISCORD_BOT_TOKEN: ${DISCORD_BOT_TOKEN:-}
+      DISCORD_GUILD_ID: ${DISCORD_GUILD_ID:-}
+      DISCORD_ADMIN_ROLE_IDS: ${DISCORD_ADMIN_ROLE_IDS:-}
+      FACTORYMATE_PUBLIC_URL: ${FACTORYMATE_PUBLIC_URL:-}
     volumes:
       - ./data:/data
     networks:

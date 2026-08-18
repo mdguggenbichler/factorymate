@@ -1,0 +1,124 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+# FactoryMate — CodeRabbit configuration
+# Docs: https://docs.coderabbit.ai/getting-started/yaml-configuration
+# On any PR comment: @coderabbitai configuration
+
+language: "en-US"
+
+tone_instructions: >-
+  Be concise and practical. Prioritize spec contract violations, security, SQLite/data
+  integrity, and FRM read-only boundaries over style nits. Reference docs/factorymate-spec.md
+  when flagging product behavior.
+
+reviews:
+  profile: chill
+  request_changes_workflow: false
+  high_level_summary: true
+  collapse_walkthrough: true
+  sequence_diagrams: true
+  poem: false
+  review_status: true
+  commit_status: true
+
+  auto_title_instructions: >-
+    Conventional commit style: type(scope): imperative summary (<= 72 chars, no trailing period).
+    Types: feat, fix, docs, style, refactor, test, chore, ci. For roadmap-scoped work use
+    feat(M3): ... milestone refs when applicable.
+
+  auto_review:
+    enabled: true
+    auto_incremental_review: true
+    drafts: false
+    base_branches:
+      - main
+      - dev
+
+  # Reduce noise from generated artifacts and local data
+  path_filters:
+    - "!**/node_modules/**"
+    - "!**/.next/**"
+    - "!**/data/*.db"
+    - "!**/.cursor/**"
+    - "!**/agent-transcripts/**"
+    - "!**/.agents/**"
+
+  path_instructions:
+    - path: "backend/**"
+      instructions: |
+        Go service: chi REST API, SQLite, FRM poller, Discord dispatch. Product contract: docs/factorymate-spec.md.
+
+        - Database DDL only in numbered `backend/internal/db/migrations/*.sql` files.
+        - FRM integration is **read-only** (GET on Read endpoints in docs/frm-docs). Never call Write endpoints or mutate game state.
+        - Discord/notify tests must use httptest mocks (see docs/testing.md), not live webhooks.
+        - Poller evaluates all edge-triggered transitions regardless of `message_types.enabled`; dispatch filters at send time.
+        - `message_templates` rows are explicit admin overrides—never delete or auto-clear on seed/migrate.
+        - Template engine uses `{VarName}` maps, not Go text/template.
+        - Keep changes scoped; match existing package style and error wrapping.
+
+    - path: "frontend/**"
+      instructions: |
+        Next.js App Router, shadcn/ui, Tailwind, next-intl (English MVP: frontend/messages/en.json).
+
+        - **No hardcoded user-facing strings** in JSX/TSX—use `useTranslations` / `getTranslations` and en.json (spec §8.2).
+        - Do not i18n raw API/game data (player names, FRM codes) or Discord template editor content.
+        - Use shadcn components from frontend/components/ui/; edit in place, avoid wrapper layers.
+        - UI route map lives in spec §8.1; viewer vs admin routes must respect role gating.
+
+    - path: "backend/data/message_defaults.json"
+      instructions: |
+        Shipped Discord default templates (admin-configurable content, not frontend i18n).
+        - Only use variables from the message type catalog (backend/internal/template/samples.go).
+        - Fixed per-type **title anchor emojis** (e.g. both player join/leave use 👤; power events always ⚡ in title).
+        - Structured embeds: inline fields for identity/context, full-width for lists; shared footer
+          `🏭 {ServerName} · {Timestamp}` with `show_timestamp: true`.
+
+    - path: "docs/**"
+      instructions: |
+        docs/factorymate-spec.md is the product source of truth. docs/factorymate-roadmap.md is milestone
+        sequence and DoD only—spec wins on product conflicts. Cross-check § refs when reviewing API/UI changes.
+
+    - path: ".github/workflows/**"
+      instructions: |
+        Reusable workflows: `_ci.yml` (backend go test/vet, frontend lint/build, Docker smoke build).
+        `dev` branch publishes `ghcr.io/ghotso/factorymate:nightly`; `main` drafts releases from VERSION.
+
+  finishing_touches:
+    docstrings:
+      enabled: false
+    unit_tests:
+      enabled: false
+
+  pre_merge_checks:
+    custom_checks:
+      - name: Frontend i18n
+        mode: warning
+        instructions: |
+          If this PR adds or changes user-facing UI under frontend/ (TSX), strings must use next-intl
+          (frontend/messages/en.json) rather than hardcoded literals in components. Exempt: raw API/game
+          data and Discord template body text.
+
+      - name: SQL migrations only
+        mode: warning
+        instructions: |
+          If this PR changes database schema, DDL must be in new numbered files under
+          backend/internal/db/migrations/. No ad-hoc schema changes outside migrations.
+
+      - name: FRM read-only
+        mode: warning
+        instructions: |
+          If this PR adds or changes FRM client usage, only Read (GET) endpoints documented in
+          docs/frm-docs are allowed. Fail if Write endpoints or game-mutating calls are introduced.
+
+knowledge_base:
+  code_guidelines:
+    enabled: true
+    filePatterns:
+      - "AGENTS.md"
+      - "README.md"
+      - "docs/development.md"
+      - "docs/testing.md"
+      - "docs/factorymate-spec.md"
+      - ".cursor/rules/**"
+
+chat:
+  auto_reply: true

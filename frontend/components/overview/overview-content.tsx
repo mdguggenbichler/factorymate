@@ -10,14 +10,17 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
-import { formatDateTime, formatPercent } from "@/lib/format"
-import type { StatusResponse } from "@/lib/api-types"
+import { MilestoneUnlockMeta } from "@/components/overview/milestone-unlock-meta"
+import { ConnectionJoinCard } from "@/components/connection/connection-details-view"
+import { formatPercent } from "@/lib/format"
+import type { ConnectionDetails, StatusResponse } from "@/lib/api-types"
 
 type OverviewContentProps = {
   status: StatusResponse
+  connection: ConnectionDetails
 }
 
-export async function OverviewContent({ status }: OverviewContentProps) {
+export async function OverviewContent({ status, connection }: OverviewContentProps) {
   const t = await getTranslations("home")
 
   return (
@@ -87,14 +90,16 @@ export async function OverviewContent({ status }: OverviewContentProps) {
             </CardTitle>
           </CardHeader>
           {status.latestMilestone ? (
-            <CardContent className="text-sm text-muted-foreground">
-              {t("milestoneMeta", {
-                tier: status.latestMilestone.techTier,
-                date: formatDateTime(status.latestMilestone.unlockedAt),
-              })}
+            <CardContent>
+              <MilestoneUnlockMeta
+                techTier={status.latestMilestone.techTier}
+                unlockedAt={status.latestMilestone.unlockedAt}
+              />
             </CardContent>
           ) : null}
         </Card>
+
+        <ConnectionJoinCard details={connection} />
       </div>
 
       <Card>

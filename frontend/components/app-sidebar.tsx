@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation"
 import { useTranslations } from "next-intl"
 
 import type { User } from "@/lib/auth-types"
+import { FactoryMateLogo } from "@/components/factorymate-logo"
 import { NavMain } from "@/components/nav-main"
 import { NavSettings } from "@/components/nav-settings"
 import { NavUser } from "@/components/nav-user"
@@ -25,6 +26,9 @@ import {
   FlaskConicalIcon,
   GaugeIcon,
   LayoutDashboardIcon,
+  LinkIcon,
+  MessageSquareIcon,
+  PackageIcon,
   RocketIcon,
   Settings2Icon,
   TrainFrontIcon,
@@ -101,12 +105,37 @@ export function AppSidebar({
       url: "/elevator",
       icon: <RocketIcon />,
     },
+    {
+      title: t("mods"),
+      url: "/mods",
+      icon: <PackageIcon />,
+    },
+    {
+      title: t("connection"),
+      url: "/connection",
+      icon: <LinkIcon />,
+    },
   ]
 
   const settingsItems: NavItem[] = [
     {
       title: t("settingsGeneral"),
       url: "/settings/general",
+      icon: <Settings2Icon />,
+    },
+    {
+      title: t("settingsDiscord"),
+      url: "/settings/discord",
+      icon: <MessageSquareIcon />,
+    },
+    {
+      title: t("settingsConnection"),
+      url: "/settings/connection",
+      icon: <LinkIcon />,
+    },
+    {
+      title: t("settingsNotificationDefaults"),
+      url: "/settings/notifications/defaults",
       icon: <Settings2Icon />,
     },
     {
@@ -138,15 +167,10 @@ export function AppSidebar({
           <SidebarMenuItem>
             <SidebarMenuButton
               size="lg"
-              render={<Link href="/" />}
+              render={<Link href="/" aria-label={tCommon("appName")} />}
               className="data-[slot=sidebar-menu-button]:p-1.5!"
             >
-              <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-                <FactoryIcon className="size-4" />
-              </div>
-              <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-semibold">{tCommon("appName")}</span>
-              </div>
+              <FactoryMateLogo variant="onDark" />
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
@@ -180,8 +204,14 @@ export function usePageTitle(): string {
     "/research": t("research"),
     "/vehicles": t("vehicles"),
     "/elevator": t("elevator"),
+    "/mods": t("mods"),
+    "/connection": t("connection"),
     "/account": t("account"),
+    "/account/notifications": t("accountNotifications"),
     "/settings/general": t("settingsGeneral"),
+    "/settings/discord": t("settingsDiscord"),
+    "/settings/connection": t("settingsConnection"),
+    "/settings/notifications/defaults": t("settingsNotificationDefaults"),
     "/settings/notifications/targets": t("settingsNotificationTargets"),
     "/settings/notifications/templates": t("settingsNotificationTemplates"),
     "/settings/notifications/log": t("settingsNotificationLog"),

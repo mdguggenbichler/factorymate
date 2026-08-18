@@ -314,9 +314,106 @@ export type AppSettings = {
 }
 
 export type DiscordTargetConfig = {
-  webhook_url: string
+  channel_id?: string
+  thread_id?: string
+  webhook_url?: string
   username_override?: string
   avatar_url_override?: string
+}
+
+export type DiscordChannel = {
+  id: string
+  name: string
+}
+
+export type DiscordChannelsResponse = {
+  channels: DiscordChannel[]
+}
+
+export type DiscordSettings = {
+  botEnabled: boolean
+  botConnected: boolean
+  tokenConfigured: boolean
+  guildId: string
+  roleMappings: RoleMappingsConfig
+  autoApprove: boolean
+}
+
+export type RoleMappingEntry = {
+  discord_role_id: string
+  fm_role: "admin" | "viewer"
+  bot_commands: string[]
+}
+
+export type RoleMappingsConfig = {
+  guild_id?: string
+  role_mappings: RoleMappingEntry[]
+  default_fm_role: "admin" | "viewer"
+  default_bot_commands: string[]
+  allow_self_register: boolean
+  admin_discord_role_ids: string[]
+}
+
+export type ConnectionDetails = {
+  gameHost: string
+  gamePort: number
+  gamePassword?: string
+  notes?: string
+  updatedAt?: string
+  updatedByUserId?: number
+  smmProfileName?: string
+}
+
+export type ModEntry = {
+  name: string
+  smrName: string
+  version: string
+  description?: string
+  docsUrl?: string
+  supportUrl?: string
+  createdBy?: string
+  remoteVersionRange?: string
+  requiredOnRemote: boolean
+}
+
+export type ModsResponse = {
+  gameBuild: string
+  smlVersion: string
+  mods: ModEntry[]
+  cachedAt: string
+  frmReachable: boolean
+}
+
+export type PendingRegistration = {
+  id: number
+  username: string
+  pendingPlayerName: string
+  externalUsername: string
+  externalDisplayName: string
+  createdAt: string
+}
+
+export type PendingRegistrationsResponse = {
+  registrations: PendingRegistration[]
+}
+
+export type UnmappedPlayer = {
+  playerId: string
+  name: string
+  online: boolean
+  lastSeenAt?: string
+}
+
+export type UnmappedPlayersResponse = {
+  players: UnmappedPlayer[]
+}
+
+export type ExternalIdentity = {
+  externalPlatform?: string | null
+  externalUserId?: string | null
+  externalUsername?: string | null
+  externalDisplayName?: string | null
+  externalLinkedAt?: string | null
 }
 
 export type NotificationTarget = {
@@ -369,8 +466,10 @@ export type MessageTypesResponse = {
 export type NotificationLogEntry = {
   id: number
   messageTypeKey: string
-  targetId: number
+  targetId: number | null
   targetName: string | null
+  deliveryMode: "channel" | "dm"
+  recipientExternalUserId: string | null
   renderedPreview: string
   success: boolean
   error: string | null
@@ -378,6 +477,27 @@ export type NotificationLogEntry = {
 }
 
 export type NotificationLogResponse = PaginatedResponse<NotificationLogEntry>
+
+export const NOTIFICATION_DM_CATEGORIES = [
+  "server",
+  "player",
+  "power",
+  "progression",
+  "vehicle",
+] as const
+
+export type NotificationDMCategory =
+  (typeof NOTIFICATION_DM_CATEGORIES)[number]
+
+export type UserNotificationPrefs = {
+  categories: Record<string, boolean>
+  dmPlayerPersonal: boolean
+}
+
+export type AdminNotificationDefaults = {
+  categories: Record<string, boolean>
+  dmPlayerPersonalDefault: boolean
+}
 
 export type AppUser = {
   id: number
@@ -387,6 +507,13 @@ export type AppUser = {
   createdAt: string
   playerId?: string | null
   playerName?: string | null
+  pendingPlayerName?: string | null
+  externalPlatform?: string | null
+  externalUserId?: string | null
+  externalUsername?: string | null
+  externalDisplayName?: string | null
+  externalLinkedAt?: string | null
+  registrationSource?: string | null
 }
 
 export type UsersResponse = {

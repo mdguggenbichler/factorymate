@@ -144,7 +144,15 @@ type Provider interface {
     Type() string
     Send(ctx context.Context, target NotificationTarget, msg RenderedMessage) error
 }
+
+// DirectMessageProvider extends Provider with per-user DM delivery (bot token transport).
+type DirectMessageProvider interface {
+    Provider
+    SendDirect(ctx context.Context, platform, externalUserID string, msg RenderedMessage) error
+}
 ```
+
+Discord is the v1 implementation: channel posts use `Send` with `notification_targets.config_json.channel_id`; player DMs (welcome, connection details, password reset, notification prefs) use `SendDirect` with the user's `external_user_id` when `external_platform = 'discord'`.
 
 ### 2.4 Frontend / backend wiring
 
@@ -172,9 +180,24 @@ CREATE TABLE users (
     username TEXT UNIQUE NOT NULL,
     password_hash TEXT NOT NULL,
     role TEXT NOT NULL CHECK (role IN ('admin', 'viewer')),
-    player_id TEXT REFERENCES player_state(player_id),  -- optional admin mapping to game player
-    created_at TEXT NOT NULL
+    player_id TEXT REFERENCES player_state(player_id),  -- optional mapping to game player
+    created_at TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'active'
+        CHECK (status IN ('pending_approval', 'active')),
+    external_platform TEXT
+        CHECK (external_platform IS NULL OR external_platform IN ('discord', 'slack')),
+    external_user_id TEXT,
+    external_username TEXT,
+    external_display_name TEXT,
+    external_linked_at TEXT,
+    pending_player_name TEXT,
+    registration_source TEXT NOT NULL DEFAULT 'web_invite'
+        CHECK (registration_source IN ('setup', 'web_invite', 'discord')),
+    dm_player_personal BOOLEAN NOT NULL DEFAULT 0
 );
+CREATE UNIQUE INDEX idx_users_external_identity
+    ON users(external_platform, external_user_id)
+    WHERE external_user_id IS NOT NULL;
 
 CREATE TABLE invites (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -244,11 +267,14 @@ CREATE TABLE message_type_targets (
 CREATE TABLE notification_log (
     id INTEGER PRIMARY KEY,
     message_type_key TEXT NOT NULL,
-    target_id INTEGER NOT NULL,         -- intentionally no FK / ON DELETE CASCADE: audit history must survive target deletion; this value may reference a deleted notification_targets row (UI: §8.1; GET /api/notification-log LEFT JOIN: §7)
+    target_id INTEGER,                  -- NULL for DM rows; may reference deleted notification_targets for channel rows (no FK)
     rendered_preview TEXT NOT NULL,
     success BOOLEAN NOT NULL,
     error TEXT,
-    sent_at TEXT NOT NULL
+    sent_at TEXT NOT NULL,
+    delivery_mode TEXT NOT NULL DEFAULT 'channel'
+        CHECK (delivery_mode IN ('channel', 'dm')),
+    recipient_external_user_id TEXT    -- populated when delivery_mode = 'dm'
 );
 
 -- Discrete player join/leave events for /api/players/history (written by M3 on
@@ -534,6 +560,9 @@ Two separate cadences: the **fast poll** drives notification/event detection (§
 | `GET /getFactory` | Every producer-type building (Assembler, Foundry, Smelter, Constructor, Manufacturer, Blender, Packager, Refinery, Converter, Encoder, Particle Accelerator) → `factory_machine_state`, "Detailed Prod" table. `getFactory` is a single aggregated endpoint covering all of these — not one call per building type. Derive `building_type` from `ClassName` using the mapping table below. |
 | `GET /getDrone` | All drones → `drone_state` |
 | `GET /getDoggo` | All Lizard Doggos → `doggo_state`, storing the `Inventory[]` array as-is — each item already has a display `Name` (e.g. "SAM"), so no separate "found SAM" flag or ClassName matching is needed |
+| `GET /getModList` | Server mod manifest (dashboard `/mods`, SMM profile export, Discord `/mods`) |
+
+**`getModList` notes:** Returns game build, SML version, and per-mod metadata (`Name`, `Version`, `RemoteVersionRange`, `CreatedBy`, docs URL, `RequiredOnRemote`). Fetched on demand via `frm.Client.GetModList()` and cached in memory (15-minute TTL, shared by API + Discord); admin `POST /api/mods/refresh` busts the cache. Not part of the recurring slow-poll loop.
 
 **`getFactory` `building_type` mapping:** `factory_machine_state.building_type` is derived from each machine's `ClassName`. FRM's per-type endpoints (`getAssembler`, `getFoundry`, `getSmelter`, `getConstructor`, `getManufacturer`, `getBlender`, `getPackager`, `getRefinery`, `getConverter`, `getEncoder`, `getParticle`) have **no separate `.adoc` files** in `docs/frm-docs` — they all xref to `getFactory.adoc`, whose example response contains only a Constructor. ClassNames below are only those that appear as a `"ClassName"` field in vendored docs; Mk2/Mk3 (and any other) variants are listed only when found. Do not invent missing ClassNames.
 
@@ -741,11 +770,12 @@ A **Notification Target** is a named destination with a provider type and provid
 
 ```json
 {
-  "webhook_url": "https://discord.com/api/webhooks/{id}/{token}",
-  "username_override": "F.I.C.S.I.T. Oracle",
-  "avatar_url_override": "https://.../avatar.png"
+  "channel_id": "123456789012345678",
+  "thread_id": "optional"
 }
 ```
+
+Legacy webhook targets (`webhook_url`, `username_override`, `avatar_url_override`) are deprecated as of M15. After upgrade, admins re-select a Discord channel for each target in the UI.
 
 API request/response bodies for targets use `{ "name", "providerType", "config", "enabled" }` where `config` matches the shape above (§7.2).
 
@@ -860,20 +890,21 @@ Two render paths exist, selected automatically by the target's `provider_type` a
 
 ### 5.5 Default template catalog
 
-All 13 message types: see `backend/data/message_defaults.json`. M1 seed reads this file verbatim into `message_types.default_template_json` per key.
+All 14 message types (13 game events plus optional `connection_details_changed` for template editing): see `backend/data/message_defaults.json`. M1 seed reads this file verbatim into `message_types.default_template_json` per key. The `connection_details_changed` type is editable in the template UI but delivery remains via `ConnectionDetailsService` (mandatory DM broadcast), not the game-event dispatcher.
 
 ---
 
 ## 6. Authentication & Authorization
 
 - Username + password login, session cookie (HTTP-only, secure, SameSite=Lax), backed by the **`sessions` table in SQLite** (§3) — sessions survive process restarts; expired rows cleaned up periodically.
+- New passwords (setup, invite accept, admin reset, self-service change) require at least **8 characters**.
 - **Session cookie:** name `factorymate_session`; value = opaque session ID (matches `sessions.id`). **Max age:** 30 days (`expires_at = now + 30d` on login). **Flags:** `HttpOnly`, `Secure` when request is HTTPS (omit in local HTTP dev), `SameSite=Lax`, `Path=/`. **Cleanup:** background job every hour deletes rows where `expires_at < now()` and invalidates matching cookies on next request.
 - Passwords hashed with bcrypt.
 - Two roles:
   - **admin** — full access: settings, notification targets, message templates, target assignment, user management.
   - **viewer** — read-only access to all dashboard pages (status, players, production, power, resource sink, drones, doggos, milestones, research, vehicles, elevator); no access to settings/templates/targets/users pages (these routes 403 for viewers, and are hidden from navigation).
 - First-run: if the `users` table is empty, the app serves a one-time setup page to create the first admin account instead of the login page.
-- Additional accounts are created via **invite links** only: admins generate single-use links (preset role, 7-day TTL); invitees set their own username and password at `/invite/:token`. No admin-set passwords.
+- Additional accounts are created primarily via **Discord `/register`** (M15). Admins generate break-glass **web invite links** only when Discord registration is unavailable: single-use links (preset role, 7-day TTL); invitees set their own username and password at `/invite/:token`. No admin-set passwords.
 
 ---
 
@@ -895,6 +926,8 @@ All endpoints under `/api`, JSON in/out, session-cookie authenticated unless not
 | POST | `/api/auth/logout` | session | Clear session |
 | GET | `/api/auth/me` | session | Current user + role |
 | PUT | `/api/account/password` | session | Change the current user's own password (any role — this is distinct from `/api/users/:id`, which is admin-only and manages *other* users) |
+| GET | `/api/account/notifications` | session, active | Per-user DM category preferences and personal player-event toggle (see §7.1) |
+| PUT | `/api/account/notifications` | session, active | Update current user's DM preferences |
 | GET | `/api/status` | session | Server online state, online player count, active fuse trips, latest milestone summary, elevator phase summary (see §7.1) |
 | GET | `/api/players` | session | Current player list with online status |
 | GET | `/api/players/history` | session | Join/leave events from `player_session_events`, paginated |
@@ -913,6 +946,9 @@ All endpoints under `/api`, JSON in/out, session-cookie authenticated unless not
 | GET | `/api/research` | session | Current M.A.M. research tree state, grouped by tree/category |
 | GET | `/api/vehicles` | session | Current trains and wheeled vehicles, with derailed/fuel/stuck status |
 | GET | `/api/elevator` | session | Current elevator phase state |
+| GET | `/api/mods` | session, active | Cached server mod list + `gameBuild`, `smlVersion`, `cachedAt`, `frmReachable` |
+| GET | `/api/mods/smmprofile` | session, active | Downloadable `.smmprofile` file |
+| GET | `/api/connection-details` | session, active | Game join details (`gameHost`, `gamePort`, `gamePassword`, `notes`, `smmProfileName`) |
 | GET | `/api/elevator/unknown-log` | admin | Unresolved entries plus resolved entries from the last 30 days (`resolved_at` within window), max 50 rows total |
 | POST | `/api/elevator/unknown-log/:id/resolve` | admin | Mark a diagnostic entry as resolved (after correcting the reference table) |
 | GET | `/api/notification-targets` | admin | List targets |
@@ -926,9 +962,11 @@ All endpoints under `/api`, JSON in/out, session-cookie authenticated unless not
 | POST | `/api/message-types/:key/template/reset?variant=plain\|embed\|all` | admin | Delete override for the given variant (or both), revert to default |
 | POST | `/api/message-types/:key/template/preview` | admin | Render given (unsaved) template against sample data, return rendered result for live preview |
 | PUT | `/api/message-types/:key/targets` | admin | Replace target assignment set for this message type |
-| GET | `/api/notification-log?type=&target=&limit=&offset=` | admin | Recent sent-notification audit log (`notification_log`), paginated. Query with a LEFT JOIN on `notification_targets` (not INNER JOIN) so rows whose `target_id` no longer exists are still returned; `target_id` has no FK (§3). |
+| GET | `/api/notification-log?type=&target=&delivery=&limit=&offset=` | admin | Recent sent-notification audit log (`notification_log`), paginated. Response items include `deliveryMode` (`channel` \| `dm`), nullable `targetId`, `targetName`, and `recipientExternalUserId` (DM rows). Query with a LEFT JOIN on `notification_targets` (not INNER JOIN) so rows whose `target_id` no longer exists are still returned; `target_id` has no FK (§3). |
 | GET | `/api/settings` | admin | App settings (FRM host/port, poll intervals, retention, cached serverName) |
 | PUT | `/api/settings` | admin | Update app settings; when `frmHost` is set, probes FRM `getSessionInfo` and updates `serverName` |
+| GET | `/api/settings/notification-defaults` | admin | Admin DM category defaults for new users (see §7.1) |
+| PUT | `/api/settings/notification-defaults` | admin | Update admin DM defaults for new users |
 | POST | `/api/settings/frm/test` | admin | `{ frmHost, frmPort, frmAuthToken? }` → `{ sessionName, reachable: true }` (preview only) |
 | GET | `/api/users` | admin | List users (includes `status`, optional `playerId`/`playerName`) |
 | PUT | `/api/users/:id` | admin | Update user (`role?`, `password?`, `playerId?` — `null` clears mapping) |
@@ -936,6 +974,17 @@ All endpoints under `/api`, JSON in/out, session-cookie authenticated unless not
 | POST | `/api/invites` | admin | `{ role }` → invite with `invitePath`, `token`, `expiresAt` |
 | GET | `/api/invites` | admin | List invites with derived status |
 | DELETE | `/api/invites/:id` | admin | Revoke pending invite |
+| POST | `/api/mods/refresh` | admin | Re-fetch mod list from FRM and bust SMM cache |
+| PUT | `/api/connection-details` | admin | Update join details; triggers mandatory DM broadcast to linked users |
+| GET | `/api/discord/settings` | admin | Bot status, guild ID, role mappings, `autoApprove` |
+| PUT | `/api/discord/settings` | admin | Update guild ID, role mappings, `autoApprove` |
+| GET | `/api/discord/channels` | admin | Guild text channels for notification target picker |
+| GET | `/api/discord/invite-url` | admin | OAuth URL to add the bot to the guild |
+| GET | `/api/registrations/pending` | admin | Pending registration approval queue |
+| POST | `/api/registrations/:id/approve` | admin | Approve pending registration |
+| POST | `/api/registrations/:id/reject` | admin | `{ comment? }` — reject and notify registrant |
+| GET | `/api/players/unmapped` | admin | Server players with no linked FactoryMate user |
+| PUT | `/api/users/:id/external` | admin | Override or unlink external identity |
 
 ### 7.1 Response schemas
 
@@ -1014,6 +1063,36 @@ JSON field names use **camelCase** in API responses; DB columns remain snake_cas
 }
 ```
 
+**`GET /api/account/notifications`** and **`PUT /api/account/notifications`** response:
+```json
+{
+  "categories": {
+    "server": false,
+    "player": false,
+    "power": false,
+    "progression": false,
+    "vehicle": false
+  },
+  "dmPlayerPersonal": false
+}
+```
+
+**`GET /api/settings/notification-defaults`** and **`PUT /api/settings/notification-defaults`** response:
+```json
+{
+  "categories": {
+    "server": false,
+    "player": false,
+    "power": false,
+    "progression": false,
+    "vehicle": false
+  },
+  "dmPlayerPersonalDefault": false
+}
+```
+
+Category keys match `message_types.category` groupings (§9.3 in discord-bot-plan). Missing per-user rows inherit admin defaults on read.
+
 **Errors:** `400` validation, `401` unauthenticated, `403` forbidden, `404` not found, `500` internal. Error body: `{ "error": "message" }`.
 
 ### 7.2 Request bodies (mutating endpoints)
@@ -1023,13 +1102,17 @@ JSON field names use **camelCase** in API responses; DB columns remain snake_cas
 | `POST /api/auth/setup` | `{ "username", "password" }` |
 | `POST /api/auth/login` | `{ "username", "password" }` |
 | `PUT /api/account/password` | `{ "password" }` (new password) |
-| `POST /api/notification-targets` | `{ "name", "providerType": "discord", "config": { webhook_url, username_override?, avatar_url_override? }, "enabled": true }` |
+| `PUT /api/account/notifications` | `{ "categories": { "server"?: bool, "player"?: bool, "power"?: bool, "progression"?: bool, "vehicle"?: bool }, "dmPlayerPersonal": bool }` |
+| `POST /api/notification-targets` | `{ "name", "providerType": "discord", "config": { "channel_id", "thread_id?" }, "enabled": true }` |
 | `PUT /api/notification-targets/:id` | same fields, partial update allowed |
+| `PUT /api/connection-details` | `{ "gameHost", "gamePort", "gamePassword?", "notes?", "clearPassword?", "smmProfileName?" }` |
+| `PUT /api/discord/settings` | `{ "guildId?", "autoApprove?", "roleMappings": { ... } }` per discord-bot-plan §10.2 |
 | `PUT /api/message-types/:key/enabled` | `{ "enabled": boolean }` |
 | `PUT /api/message-types/:key/template` | Partial `{ "plain"?: "...", "embed"?: { title, description, color, fields } }` — merge into the existing override; omitted variants are left unchanged (not a full replace; see §5.4, §7) |
 | `POST /api/message-types/:key/template/preview` | `{ "variant", "template" }` |
 | `PUT /api/message-types/:key/targets` | `{ "targetIds": [1, 2, ...] }` |
 | `PUT /api/settings` | subset of settings fields from `GET /api/settings` (excluding `serverName` — read-only, auto-synced) |
+| `PUT /api/settings/notification-defaults` | `{ "categories": { "server"?: bool, "player"?: bool, "power"?: bool, "progression"?: bool, "vehicle"?: bool }, "dmPlayerPersonalDefault": bool }` |
 | `POST /api/settings/frm/test` | `{ "frmHost", "frmPort", "frmAuthToken"? }` |
 | `POST /api/invites` | `{ "role": "admin" \| "viewer" }` |
 | `POST /api/invites/:token/accept` | `{ "username", "password" }` |
@@ -1055,12 +1138,17 @@ JSON field names use **camelCase** in API responses; DB columns remain snake_cas
 | `/research` | viewer, admin | M.A.M. research trees grouped by tree name, each node showing purchase state, tech tier, and cost — flat grouped view for v1, not the visual node-graph the underlying coordinate/parent data would technically support (possible future enhancement, not built now) | Accordion (grouped by tree), Table, Badge |
 | `/vehicles` | viewer, admin | Trains (derailed/pending-derail flags, self-driving status, current station) and wheeled vehicles (type, driver, fuel status, autopilot/route status) as two grouped tables | Tabs (Trains / Wheeled Vehicles), Table, Badge |
 | `/elevator` | viewer, admin | Current phase required-items progress bars, upgrade-ready indicator; admins additionally see an alert banner if `elevator_phase_unknown_log` has unresolved entries, with the raw mismatched data and a "mark resolved" action | Progress bars, card, admin-only alert |
-| `/settings/notifications/targets` | admin only | CRUD for Notification Targets, per-target "Send test" button | Data table, dialog forms |
-| `/settings/notifications/templates` | admin only | List of message types; selecting one opens the template editor (plain-text + embed fields, variable picker, live preview, target assignment checkboxes for that type, reset-to-default) | Data table + detail panel, live preview card |
+| `/mods` | viewer, admin (active users) | Full server mod list from FRM `getModList`; game build + SML header; disclaimer; download SMM profile; admin refresh | Table, cards, alert |
+| `/settings/notifications/targets` | admin only | CRUD for Notification Targets (Discord channel picker), per-target "Send test" button; legacy webhook deprecation banner | Data table, dialog forms |
+| `/settings/notifications/defaults` | admin only | Admin DM category defaults for newly registered users (`dmPlayerPersonalDefault` included) | Form, switches |
+| `/settings/notifications/templates` | admin only | List of message types (14 keys including optional `connection_details_changed`); selecting one opens the template editor (plain-text + embed fields, variable picker, live preview, target assignment checkboxes for that type, reset-to-default) | Data table + detail panel, live preview card |
 | `/settings/notifications/log` | admin only | Recent sent notifications with success/failure status | Data table |
 | `/settings/general` | admin only | FRM host/port/token, poll interval, production snapshot interval/retention; server display name shown read-only (auto-fetched from FRM) | Form, test-connection button |
-| `/settings/users` | admin only | User management: invite links, state column, promote to admin, optional player mapping, edit/delete | Data table, dialog forms |
+| `/settings/discord` | admin only | Bot status, invite URL, guild ID, role mapping editor, auto-approve toggle | Form, table, badges |
+| `/settings/connection` | admin only | Game join details + SMM profile name | Form |
+| `/settings/users` | admin only | User management: Discord-first onboarding copy, break-glass invites, pending approval queue, unmapped players panel, external identity columns, promote to admin, optional player mapping, edit/delete | Data table, dialog forms |
 | `/account` | viewer, admin | Change own password | Form |
+| `/account/notifications` | viewer, admin (active users) | Per-user DM category toggles and personal player-event toggle | Form, switches |
 
 Navigation: a persistent sidebar (shadcn `Sidebar` pattern) with the dashboard pages always visible to both roles, and a "Settings" section only rendered/routable for admins.
 
@@ -1084,11 +1172,13 @@ Concrete shadcn/ui components — and, where one exists, a full shadcn **block**
 | `/vehicles` | — | `Tabs` (Trains / Wheeled Vehicles), `Table` (both groups), `Badge` (derailed/fuel-empty/stuck states) | None |
 | `/elevator` | — | `Card`, `Progress` (per required item), `Alert` (destructive variant, admin-only unresolved diagnostics) | None |
 | `/settings/notifications/targets` | — | `Table`, `Dialog` (create/edit form), `AlertDialog` (delete confirmation — important given cascade-delete warning in §5.1), `Form`, `Input`, `Select` (provider type), `Switch` (enabled) | None |
+| `/settings/notifications/defaults` | — | `Card`, `Form`, `Switch` (per category + personal default) | None |
 | `/settings/notifications/templates` | — | `Table`/list (left pane, with `Switch` per row for `enabled`), `Tabs` (Plain / Embed sub-editor), `Textarea` (plain template, embed description), `Input` (embed title, footer), `Switch` (show timestamp), `Command`+`Popover` (variable-insert picker), `Checkbox`/`Toggle Group` (target assignment), `Card`+`Separator` (embed live-preview with footer row) | **Three real gaps here, no stock component:** (1) a repeatable "Fields" array editor for embed fields (build with `react-hook-form`'s `useFieldArray` + `Input` pairs + an "Add field" `Button`); (2) a hex color picker (shadcn has none — pair a `Popover` with a small custom swatch grid, or a plain `Input type="color"`); (3) the Discord-embed-style preview card itself (colored left border, title/description/fields/footer layout) is a custom composition of `Card`+`Separator`, not a stock look |
-| `/settings/notifications/log` | — | `Table`, `Badge` (success/fail) | When a log row's `target_id` no longer resolves to a `notification_targets` row (target was deleted; `target_id` has no FK, §3), render "Deleted target" (or similar) instead of crashing or showing a blank. `GET /api/notification-log` LEFT JOINs so these rows are present (§7). |
+| `/settings/notifications/log` | — | `Table`, `Badge` (success/fail) | Channel rows: when `target_id` no longer resolves to a `notification_targets` row (target was deleted; `target_id` has no FK, §3), render "Deleted target" (or similar) instead of crashing or showing a blank. DM rows: show delivery mode and `recipientExternalUserId`. `GET /api/notification-log` LEFT JOINs so channel rows are present (§7). |
 | `/settings/general` | — | `Form`, `Input`, `Label` | None |
 | `/settings/users` | — | `Table`, `Dialog`, `AlertDialog`, `Select` (role) | None |
 | `/account` | — | `Card`, `Form`, `Input`, `Button` | None |
+| `/account/notifications` | — | `Card`, `Form`, `Switch` (per category + personal player events) | None |
 | Global | — | `Sonner` (toast: save confirmations, test-send results, errors) | None |
 
 **Net effect:** most of the app — auth, shell/navigation, tables, dialogs, forms, charts, badges — is genuinely copy-paste from shadcn's registry with no custom styling work. The one page that needs real hand-built UI is the notification template editor (`/settings/notifications/templates`), specifically the repeatable embed-fields array, the color picker, and the Discord-style preview card — all straightforward compositions of existing primitives, just not single-command installs.
@@ -1149,7 +1239,7 @@ Verifier checks for M11 edge cases — concrete acceptance beyond "renders real 
 
 **Startup behavior:** If `SESSION_SECRET` is unset, the backend exits with a clear error. If `FRM_HOST` is unset, seed `app_settings` with empty `frm_host` — poller logs errors until configured via `/settings/general`.
 
-Notification target credentials (Discord webhook URLs) are **not** environment variables — they live in the `notification_targets` table, configured via the UI, so they can be managed without redeploying the container.
+Notification target credentials (Discord **channel IDs** for channel posts) live in the `notification_targets` table, configured via the UI — not environment variables. The Discord bot token (`DISCORD_BOT_TOKEN`) enables channel posts via the bot API and direct messages; webhook URLs are **not** used in v1.
 
 ---
 

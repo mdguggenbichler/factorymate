@@ -60,6 +60,12 @@ func SampleVariables(messageTypeKey string) map[string]string {
 			"Driver":       "Michael",
 			"ForwardSpeed": "0.0 km/h",
 		})
+	case "connection_details_changed", "connection_details":
+		return withSystemVars(map[string]string{
+			"GameHost": "factory.example.com",
+			"GamePort": "7777",
+			"Notes":    "Use Epic login",
+		})
 	default:
 		return withSystemVars(map[string]string{})
 	}
@@ -103,6 +109,8 @@ func AllowedVariables(messageTypeKey string) []string {
 		return append(system, "TrainName", "StationName", "TrainStatus", "SelfDriving")
 	case "vehicle_out_of_fuel", "vehicle_stuck":
 		return append(system, "VehicleType", "VehicleName", "Driver", "ForwardSpeed")
+	case "connection_details_changed", "connection_details":
+		return append(system, "GameHost", "GamePort", "Notes")
 	default:
 		return nil
 	}

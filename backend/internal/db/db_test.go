@@ -152,7 +152,9 @@ func assertTables(t *testing.T, ctx context.Context, database *sql.DB) {
 	t.Helper()
 
 	want := []string{
+		"app_setting_kv",
 		"app_settings",
+		"bot_command_log",
 		"circuit_snapshots",
 		"circuit_state",
 		"doggo_state",
@@ -171,6 +173,7 @@ func assertTables(t *testing.T, ctx context.Context, database *sql.DB) {
 		"power_circuit_events",
 		"prod_stats_state",
 		"production_snapshots",
+		"registration_audit_log",
 		"research_node_state",
 		"resource_sink_snapshots",
 		"resource_sink_state",
@@ -179,6 +182,7 @@ func assertTables(t *testing.T, ctx context.Context, database *sql.DB) {
 		"server_state",
 		"sessions",
 		"train_state",
+		"user_notification_prefs",
 		"users",
 		"vehicle_state",
 	}
@@ -221,8 +225,8 @@ func assertMessageTypes(t *testing.T, ctx context.Context, database *sql.DB) {
 	if err := database.QueryRowContext(ctx, `SELECT COUNT(*) FROM message_types`).Scan(&count); err != nil {
 		t.Fatalf("count message_types: %v", err)
 	}
-	if count != 13 {
-		t.Fatalf("message_types count = %d, want 13", count)
+	if count != 15 {
+		t.Fatalf("message_types count = %d, want 15", count)
 	}
 
 	defaultsBody, err := os.ReadFile("data/message_defaults.json")

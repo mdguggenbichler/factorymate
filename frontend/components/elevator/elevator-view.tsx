@@ -11,9 +11,9 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { apiFetch } from "@/lib/api"
+import { useFormatDateTime } from "@/hooks/use-format-datetime"
 import {
   elevatorPercentComplete,
-  formatDateTime,
   formatPercent,
   phaseProgress,
 } from "@/lib/format"
@@ -36,6 +36,7 @@ export function ElevatorView({
 }: ElevatorViewProps) {
   const t = useTranslations("elevator")
   const tCommon = useTranslations("common")
+  const { formatDateTime } = useFormatDateTime()
   const [unknownLog, setUnknownLog] = useState(initialUnknownLog)
   const [resolvingId, setResolvingId] = useState<number | null>(null)
 
@@ -148,15 +149,16 @@ export function ElevatorView({
           ) : (
             elevator.currentPhase.map((item) => {
               const progress = phaseProgress(item)
+              const delivered = item.totalCost - item.remainingCost
               return (
                 <div key={item.className} className="space-y-2">
                   <div className="flex items-center justify-between gap-2 text-sm">
                     <span className="font-medium">{item.name}</span>
                     <span className="tabular-nums text-muted-foreground">
                       {t("itemProgress", {
-                        remaining: item.remainingCost,
+                        delivered,
                         total: item.totalCost,
-                        amount: item.amount,
+                        remaining: item.remainingCost,
                       })}
                     </span>
                   </div>

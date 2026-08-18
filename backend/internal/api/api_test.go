@@ -5,6 +5,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -14,7 +15,12 @@ import (
 
 	"factorymate/internal/api"
 	"factorymate/internal/auth"
+	"factorymate/internal/connection"
 	"factorymate/internal/db"
+	"factorymate/internal/frm"
+	"factorymate/internal/mods"
+	"factorymate/internal/notify"
+	"factorymate/internal/registration"
 )
 
 func TestHealthz(t *testing.T) {
@@ -50,11 +56,12 @@ func TestReadEndpoints(t *testing.T) {
 	seedAPIFixtures(t, ctx, database)
 
 	svc := auth.NewService(database)
-	handler := api.NewHandler(database, svc)
+	regSvc := registration.NewService(database, svc)
+	handler := newTestHandler(database, svc, regSvc, notify.NewMockDiscordSession())
 	router := newTestRouter(handler, svc)
 
 	setupAdmin(t, router)
-	adminCookie := loginCookie(t, router, "admin", "secret")
+	adminCookie := loginCookie(t, router, "admin", "secret123")
 
 	t.Run("GET /api/status", func(t *testing.T) {
 		resp := getWithCookie(t, router, "/api/status", adminCookie)
@@ -464,6 +471,7 @@ func TestReadEndpoints(t *testing.T) {
 		createInviteResp := postJSONWithCookie(t, router, "/api/invites", viewerCookie, map[string]string{
 			"role": "viewer",
 		})
+		defer createInviteResp.Body.Close()
 		if createInviteResp.StatusCode != http.StatusForbidden {
 			t.Fatalf("viewer create invite status = %d, want 403", createInviteResp.StatusCode)
 		}
@@ -481,7 +489,9 @@ func TestAdminEndpoints(t *testing.T) {
 	}
 
 	svc := auth.NewService(database)
-	handler := api.NewHandler(database, svc)
+	regSvc := registration.NewService(database, svc)
+	mockDiscord := notify.NewMockDiscordSession()
+	handler := newTestHandler(database, svc, regSvc, mockDiscord)
 	router := newTestRouter(handler, svc)
 	adminCookie := setupAdmin(t, router)
 	seedAdminAPIFixtures(t, ctx, database)
@@ -524,24 +534,18 @@ func TestAdminEndpoints(t *testing.T) {
 			"frmHost": host,
 			"frmPort": port,
 		})
+		defer testResp.Body.Close()
 		if testResp.StatusCode != http.StatusOK {
 			t.Fatalf("frm test status = %d body=%s", testResp.StatusCode, readBody(t, testResp))
 		}
 	})
 
 	t.Run("notification target CRUD and test send", func(t *testing.T) {
-		var gotWebhook bool
-		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			gotWebhook = true
-			w.WriteHeader(http.StatusNoContent)
-		}))
-		defer srv.Close()
-
 		createResp := postJSONWithCookie(t, router, "/api/notification-targets", adminCookie, map[string]any{
 			"name":         "Main Discord",
 			"providerType": "discord",
 			"config": map[string]string{
-				"webhook_url": srv.URL,
+				"channelId": "123456789",
 			},
 			"enabled": true,
 		})
@@ -589,8 +593,8 @@ func TestAdminEndpoints(t *testing.T) {
 		if testResp.Code != http.StatusNoContent {
 			t.Fatalf("test send status = %d body=%s", testResp.Code, testResp.Body.String())
 		}
-		if !gotWebhook {
-			t.Fatal("expected webhook to be called")
+		if len(mockDiscord.ChannelCalls) == 0 {
+			t.Fatal("expected discord send to be called")
 		}
 
 		delReq := httptest.NewRequest(http.MethodDelete, "/api/notification-targets/1", nil)
@@ -602,17 +606,70 @@ func TestAdminEndpoints(t *testing.T) {
 		}
 	})
 
-	t.Run("message types list template reset targets and validation", func(t *testing.T) {
-		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.WriteHeader(http.StatusNoContent)
-		}))
-		defer srv.Close()
+	t.Run("notification target threadId clear and trim", func(t *testing.T) {
+		createResp := postJSONWithCookie(t, router, "/api/notification-targets", adminCookie, map[string]any{
+			"name":         "Thread Target",
+			"providerType": "discord",
+			"config": map[string]string{
+				"channelId": " 123456789 ",
+				"threadId":  " 987654321 ",
+			},
+			"enabled": true,
+		})
+		if createResp.StatusCode != http.StatusCreated {
+			t.Fatalf("create target status = %d body=%s", createResp.StatusCode, readBody(t, createResp))
+		}
+		var created struct {
+			ID     int64          `json:"id"`
+			Config map[string]any `json:"config"`
+		}
+		decodeJSON(t, createResp, &created)
+		if created.Config["channelId"] != "123456789" {
+			t.Fatalf("create channelId = %v, want trimmed", created.Config["channelId"])
+		}
+		if created.Config["threadId"] != "987654321" {
+			t.Fatalf("create threadId = %v, want trimmed", created.Config["threadId"])
+		}
 
+		clearResp := putJSONWithCookie(t, router, fmt.Sprintf("/api/notification-targets/%d", created.ID), adminCookie, map[string]any{
+			"config": map[string]string{
+				"threadId": "",
+			},
+		})
+		if clearResp.StatusCode != http.StatusOK {
+			t.Fatalf("clear thread status = %d body=%s", clearResp.StatusCode, readBody(t, clearResp))
+		}
+		var cleared struct {
+			Config map[string]any `json:"config"`
+		}
+		decodeJSON(t, clearResp, &cleared)
+		if _, ok := cleared.Config["threadId"]; ok {
+			t.Fatalf("expected threadId omitted after clear, got %+v", cleared.Config)
+		}
+
+		updateResp := putJSONWithCookie(t, router, fmt.Sprintf("/api/notification-targets/%d", created.ID), adminCookie, map[string]any{
+			"config": map[string]string{
+				"channelId": " 111222333 ",
+			},
+		})
+		if updateResp.StatusCode != http.StatusOK {
+			t.Fatalf("update channel status = %d body=%s", updateResp.StatusCode, readBody(t, updateResp))
+		}
+		var updated struct {
+			Config map[string]any `json:"config"`
+		}
+		decodeJSON(t, updateResp, &updated)
+		if updated.Config["channelId"] != "111222333" {
+			t.Fatalf("updated channelId = %v, want trimmed", updated.Config["channelId"])
+		}
+	})
+
+	t.Run("message types list template reset targets and validation", func(t *testing.T) {
 		createResp := postJSONWithCookie(t, router, "/api/notification-targets", adminCookie, map[string]any{
 			"name":         "Alerts",
 			"providerType": "discord",
 			"config": map[string]string{
-				"webhook_url": srv.URL,
+				"channelId": "987654321",
 			},
 			"enabled": true,
 		})
@@ -747,7 +804,7 @@ func TestAdminEndpoints(t *testing.T) {
 
 		acceptResp := postJSON(t, router, "/api/invites/"+inviteBody.Token+"/accept", map[string]string{
 			"username": "bob",
-			"password": "bobpass",
+			"password": "bobpass12",
 		})
 		if acceptResp.StatusCode != http.StatusCreated {
 			t.Fatalf("accept invite status = %d body=%s", acceptResp.StatusCode, readBody(t, acceptResp))
@@ -802,16 +859,35 @@ func TestAdminEndpoints(t *testing.T) {
 		}
 		var logBody struct {
 			Items []struct {
-				MessageTypeKey  string  `json:"messageTypeKey"`
-				TargetID        int64   `json:"targetId"`
-				TargetName      *string `json:"targetName"`
-				RenderedPreview string  `json:"renderedPreview"`
-				Success         bool    `json:"success"`
+				MessageTypeKey          string  `json:"messageTypeKey"`
+				TargetID                *int64  `json:"targetId"`
+				TargetName              *string `json:"targetName"`
+				DeliveryMode            string  `json:"deliveryMode"`
+				RecipientExternalUserID *string `json:"recipientExternalUserId"`
+				RenderedPreview         string  `json:"renderedPreview"`
+				Success                 bool    `json:"success"`
 			} `json:"items"`
 			Total int `json:"total"`
 		}
 		decodeJSONRecorder(t, logResp, &logBody)
-		if logBody.Total != 1 || logBody.Items[0].MessageTypeKey != "player_joined" || !logBody.Items[0].Success {
+		if logBody.Total != 2 {
+			t.Fatalf("notification log total = %d, want 2: %+v", logBody.Total, logBody)
+		}
+		var playerJoinedOK, targetTestOK bool
+		for _, item := range logBody.Items {
+			if item.DeliveryMode != "channel" {
+				t.Fatalf("deliveryMode = %q, want channel", item.DeliveryMode)
+			}
+			switch item.MessageTypeKey {
+			case "player_joined":
+				playerJoinedOK = item.Success
+			case "target_test":
+				targetTestOK = item.Success
+			default:
+				t.Fatalf("unexpected message type in log: %q", item.MessageTypeKey)
+			}
+		}
+		if !playerJoinedOK || !targetTestOK {
 			t.Fatalf("notification log = %+v", logBody)
 		}
 
@@ -852,29 +928,13 @@ func TestAdminEndpoints(t *testing.T) {
 	})
 
 	t.Run("message type template test send", func(t *testing.T) {
-		var gotTitle string
-		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			var payload struct {
-				Embeds []struct {
-					Title string `json:"title"`
-				} `json:"embeds"`
-			}
-			if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
-				t.Fatalf("decode webhook: %v", err)
-			}
-			if len(payload.Embeds) != 1 {
-				t.Fatalf("embeds len = %d, want 1", len(payload.Embeds))
-			}
-			gotTitle = payload.Embeds[0].Title
-			w.WriteHeader(http.StatusNoContent)
-		}))
-		defer srv.Close()
+		beforeCalls := len(mockDiscord.ChannelCalls)
 
 		createResp := postJSONWithCookie(t, router, "/api/notification-targets", adminCookie, map[string]any{
 			"name":         "Template Test",
 			"providerType": "discord",
 			"config": map[string]string{
-				"webhook_url": srv.URL,
+				"channelId": "template-channel",
 			},
 			"enabled": true,
 		})
@@ -905,8 +965,12 @@ func TestAdminEndpoints(t *testing.T) {
 		if testResp.StatusCode != http.StatusNoContent {
 			t.Fatalf("template test status = %d body=%s", testResp.StatusCode, readBody(t, testResp))
 		}
+		if len(mockDiscord.ChannelCalls) <= beforeCalls {
+			t.Fatal("expected discord send for template test")
+		}
+		gotTitle := mockDiscord.ChannelCalls[len(mockDiscord.ChannelCalls)-1].Message.Embeds[0].Title
 		if gotTitle != testTitle {
-			t.Fatalf("webhook title = %q, want %q", gotTitle, testTitle)
+			t.Fatalf("embed title = %q, want %q", gotTitle, testTitle)
 		}
 
 		var logCount int
@@ -952,7 +1016,7 @@ func TestAdminEndpoints(t *testing.T) {
 func setupAdmin(t *testing.T, router http.Handler) *http.Cookie {
 	resp := postJSON(t, router, "/api/auth/setup", map[string]string{
 		"username": "admin",
-		"password": "secret",
+		"password": "secret123",
 	})
 	if resp.StatusCode != http.StatusCreated {
 		t.Fatalf("setup status = %d", resp.StatusCode)
@@ -1163,8 +1227,11 @@ func seedAdminAPIFixtures(t *testing.T, ctx context.Context, database *sql.DB) {
 	now := time.Date(2026, 8, 17, 10, 0, 0, 0, time.UTC).Format(time.RFC3339)
 
 	_, err := database.ExecContext(ctx, `
-		INSERT INTO notification_log (message_type_key, target_id, rendered_preview, success, error, sent_at)
-		VALUES ('player_joined', 1, 'Player Guggi joined', 1, NULL, ?)`, now)
+		INSERT INTO notification_log (
+			message_type_key, target_id, rendered_preview, success, error, sent_at,
+			delivery_mode, recipient_external_user_id
+		)
+		VALUES ('player_joined', 1, 'Player Guggi joined', 1, NULL, ?, 'channel', NULL)`, now)
 	if err != nil {
 		t.Fatalf("seed notification log: %v", err)
 	}
@@ -1176,6 +1243,18 @@ func seedAdminAPIFixtures(t *testing.T, ctx context.Context, database *sql.DB) {
 	if err != nil {
 		t.Fatalf("seed elevator unknown log: %v", err)
 	}
+}
+
+func newTestHandler(database *sql.DB, svc *auth.Service, regSvc *registration.Service, session notify.DiscordSession) *api.Handler {
+	if session == nil {
+		session = notify.NewMockDiscordSession()
+	}
+	provider := notify.NewDiscordProvider(session)
+	connSvc := connection.NewService(database, provider)
+	modsSvc := mods.NewService(database, func(ctx context.Context) (*frm.Client, error) {
+		return frm.NewClient(frm.Config{Host: "127.0.0.1", Port: 1}), nil
+	})
+	return api.NewHandlerWithDiscordSession(database, svc, regSvc, connSvc, modsSvc, session)
 }
 
 func newMockFRMServer(t *testing.T, responses map[string][]byte) *httptest.Server {

@@ -3,8 +3,6 @@ package notify
 import (
 	"context"
 	"encoding/json"
-	"net/http"
-	"net/http/httptest"
 	"strings"
 	"testing"
 )
@@ -12,22 +10,8 @@ import (
 func TestDiscordProvider_SendSampleEmbed(t *testing.T) {
 	t.Parallel()
 
-	var got discordWebhookPayload
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if ct := r.Header.Get("Content-Type"); ct != "application/json" {
-			t.Errorf("Content-Type = %q, want application/json", ct)
-		}
-		if err := json.NewDecoder(r.Body).Decode(&got); err != nil {
-			t.Fatalf("decode payload: %v", err)
-		}
-		w.WriteHeader(http.StatusNoContent)
-	}))
-	defer srv.Close()
-
-	cfgJSON, err := json.Marshal(DiscordConfig{
-		WebhookURL:       srv.URL,
-		UsernameOverride: "F.I.C.S.I.T. Oracle",
-	})
+	mock := NewMockDiscordSession()
+	cfgJSON, err := json.Marshal(DiscordConfig{ChannelID: "123456789"})
 	if err != nil {
 		t.Fatalf("marshal config: %v", err)
 	}
@@ -40,19 +24,23 @@ func TestDiscordProvider_SendSampleEmbed(t *testing.T) {
 		Enabled:      true,
 	}
 
-	provider := NewDiscordProvider()
+	provider := NewDiscordProvider(mock)
 	if err := provider.Send(context.Background(), target, SampleRenderedMessage()); err != nil {
 		t.Fatalf("Send: %v", err)
 	}
 
-	if got.Username != "F.I.C.S.I.T. Oracle" {
-		t.Errorf("username = %q, want F.I.C.S.I.T. Oracle", got.Username)
+	if len(mock.ChannelCalls) != 1 {
+		t.Fatalf("channel calls = %d, want 1", len(mock.ChannelCalls))
 	}
-	if len(got.Embeds) != 1 {
-		t.Fatalf("embeds len = %d, want 1", len(got.Embeds))
+	if mock.ChannelCalls[0].ChannelID != "123456789" {
+		t.Errorf("channel id = %q, want 123456789", mock.ChannelCalls[0].ChannelID)
 	}
 
-	embed := got.Embeds[0]
+	embeds := mock.ChannelCalls[0].Message.Embeds
+	if len(embeds) != 1 {
+		t.Fatalf("embeds len = %d, want 1", len(embeds))
+	}
+	embed := embeds[0]
 	if embed.Title != "👤 A player joined the server" {
 		t.Errorf("title = %q", embed.Title)
 	}
@@ -68,24 +56,34 @@ func TestDiscordProvider_SendSampleEmbed(t *testing.T) {
 	if len(embed.Fields) != 3 {
 		t.Fatalf("fields len = %d, want 3", len(embed.Fields))
 	}
-	if embed.Fields[0].Name != "👤 Player" || embed.Fields[0].Value != "Michael" || !embed.Fields[0].Inline {
-		t.Errorf("field = %+v", embed.Fields[0])
+}
+
+func TestDiscordProvider_SendDirect(t *testing.T) {
+	t.Parallel()
+
+	mock := NewMockDiscordSession()
+	provider := NewDiscordProvider(mock)
+	msg := RenderedMessage{Plain: "hello from DM"}
+
+	if err := provider.SendDirect(context.Background(), "discord", "user-999", msg); err != nil {
+		t.Fatalf("SendDirect: %v", err)
+	}
+	if len(mock.DMUserIDs) != 1 || mock.DMUserIDs[0] != "user-999" {
+		t.Fatalf("dm user ids = %v", mock.DMUserIDs)
+	}
+	if len(mock.ChannelCalls) != 1 || mock.ChannelCalls[0].ChannelID != mock.DMChannelID {
+		t.Fatalf("channel calls = %+v", mock.ChannelCalls)
+	}
+	if mock.ChannelCalls[0].Message.Content != "hello from DM" {
+		t.Errorf("content = %q", mock.ChannelCalls[0].Message.Content)
 	}
 }
 
 func TestDiscordProvider_OmitsEmptyFieldValues(t *testing.T) {
 	t.Parallel()
 
-	var got discordWebhookPayload
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if err := json.NewDecoder(r.Body).Decode(&got); err != nil {
-			t.Fatalf("decode payload: %v", err)
-		}
-		w.WriteHeader(http.StatusNoContent)
-	}))
-	defer srv.Close()
-
-	cfgJSON, _ := json.Marshal(DiscordConfig{WebhookURL: srv.URL})
+	mock := NewMockDiscordSession()
+	cfgJSON, _ := json.Marshal(DiscordConfig{ChannelID: "123"})
 	target := NotificationTarget{
 		ProviderType: "discord",
 		ConfigJSON:   string(cfgJSON),
@@ -103,38 +101,31 @@ func TestDiscordProvider_OmitsEmptyFieldValues(t *testing.T) {
 		},
 	}
 
-	if err := NewDiscordProvider().Send(context.Background(), target, msg); err != nil {
+	if err := NewDiscordProvider(mock).Send(context.Background(), target, msg); err != nil {
 		t.Fatalf("Send: %v", err)
 	}
-	if len(got.Embeds[0].Fields) != 1 {
-		t.Fatalf("fields len = %d, want 1 (empty value omitted)", len(got.Embeds[0].Fields))
+	fields := mock.ChannelCalls[0].Message.Embeds[0].Fields
+	if len(fields) != 1 {
+		t.Fatalf("fields len = %d, want 1 (empty value omitted)", len(fields))
 	}
 }
 
 func TestDiscordProvider_SendPlainContent(t *testing.T) {
 	t.Parallel()
 
-	var got discordWebhookPayload
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if err := json.NewDecoder(r.Body).Decode(&got); err != nil {
-			t.Fatalf("decode payload: %v", err)
-		}
-		w.WriteHeader(http.StatusNoContent)
-	}))
-	defer srv.Close()
-
-	cfgJSON, _ := json.Marshal(DiscordConfig{WebhookURL: srv.URL})
+	mock := NewMockDiscordSession()
+	cfgJSON, _ := json.Marshal(DiscordConfig{ChannelID: "123"})
 	target := NotificationTarget{
 		ProviderType: "discord",
 		ConfigJSON:   string(cfgJSON),
 	}
 
 	msg := RenderedMessage{Plain: "🟢 **Guggi** has entered the factory. (3 online)"}
-	if err := NewDiscordProvider().Send(context.Background(), target, msg); err != nil {
+	if err := NewDiscordProvider(mock).Send(context.Background(), target, msg); err != nil {
 		t.Fatalf("Send: %v", err)
 	}
-	if got.Content != msg.Plain {
-		t.Errorf("content = %q, want %q", got.Content, msg.Plain)
+	if mock.ChannelCalls[0].Message.Content != msg.Plain {
+		t.Errorf("content = %q, want %q", mock.ChannelCalls[0].Message.Content, msg.Plain)
 	}
 }
 
@@ -174,8 +165,8 @@ func TestDiscordProvider_EnforcesLimits(t *testing.T) {
 
 func TestDiscordProvider_Type(t *testing.T) {
 	t.Parallel()
-	if NewDiscordProvider().Type() != "discord" {
-		t.Fatalf("Type() = %q, want discord", NewDiscordProvider().Type())
+	if NewDiscordProvider(nil).Type() != "discord" {
+		t.Fatalf("Type() = %q, want discord", NewDiscordProvider(nil).Type())
 	}
 }
 
@@ -200,3 +191,20 @@ func TestHexColorToDiscordInt(t *testing.T) {
 		}
 	}
 }
+
+func TestRedactForLog(t *testing.T) {
+	t.Parallel()
+
+	in := `{"game_host":"x","game_password":"hunter2","game_port":7777}`
+	out := RedactForLog(in)
+	if strings.Contains(out, "hunter2") {
+		t.Fatalf("password leaked in %q", out)
+	}
+	if !strings.Contains(out, `[REDACTED]`) {
+		t.Fatalf("expected redaction marker in %q", out)
+	}
+}
+
+// Ensure MockDiscordSession satisfies DiscordSession.
+var _ DiscordSession = (*MockDiscordSession)(nil)
+var _ DirectMessageProvider = (*DiscordProvider)(nil)

@@ -4,8 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
-	"net/http"
-	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"testing"
@@ -50,7 +48,160 @@ func TestFirstPollBaselineNoEvents(t *testing.T) {
 	assertCircuitBaseline(t, ctx, database, 1, true)
 	assertSchematicBaseline(t, ctx, database, "milestone-1", true)
 	assertResearchBaseline(t, ctx, database, "node-1", "Purchased", 4, 0, "[]")
+	assertResearchCoordsNull(t, ctx, database, "node-2")
 	assertElevatorPhase(t, ctx, database, "elevator-1", 2)
+}
+
+func TestResearchUnlockedCompositeKeyNoRepeat(t *testing.T) {
+	t.Chdir("../..")
+
+	ctx := context.Background()
+	database := openTestDB(t)
+	defer database.Close()
+
+	if err := db.Init(ctx, database, db.SeedConfig{}); err != nil {
+		t.Fatalf("init: %v", err)
+	}
+
+	phases, err := poller.LoadElevatorPhases("data/elevator_phases.json")
+	if err != nil {
+		t.Fatalf("load phases: %v", err)
+	}
+
+	engine := &poller.Engine{DB: database, ElevatorPhases: phases}
+	now := time.Date(2026, 8, 17, 12, 0, 0, 0, time.UTC)
+	sharedID := "BPD_ResearchTreeNode_C_33"
+
+	baseline := frm.FastPollResult{
+		Research: []frm.ResearchTree{{
+			Name: "Alien Megafauna",
+			Nodes: []frm.ResearchNode{{
+				ID: sharedID, Name: "Inflated Pocket Dimension", State: "Purchased", TechTier: 3,
+			}},
+		}, {
+			Name: "Sulfur",
+			Nodes: []frm.ResearchNode{{
+				ID: sharedID, Name: "Smokeless Powder", State: "Available", TechTier: 3,
+			}},
+		}},
+	}
+	if _, err := engine.PollOnce(ctx, baseline, now); err != nil {
+		t.Fatalf("baseline poll: %v", err)
+	}
+
+	events, err := engine.PollOnce(ctx, baseline, now.Add(20*time.Second))
+	if err != nil {
+		t.Fatalf("second poll: %v", err)
+	}
+	for _, ev := range events {
+		if ev.MessageTypeKey == "research_unlocked" {
+			t.Fatalf("unexpected research_unlocked on unchanged poll: %+v", ev)
+		}
+	}
+
+	unlock := frm.FastPollResult{
+		Research: []frm.ResearchTree{{
+			Name: "Alien Megafauna",
+			Nodes: []frm.ResearchNode{{
+				ID: sharedID, Name: "Inflated Pocket Dimension", State: "Purchased", TechTier: 3,
+			}},
+		}, {
+			Name: "Sulfur",
+			Nodes: []frm.ResearchNode{{
+				ID: sharedID, Name: "Smokeless Powder", State: "Purchased", TechTier: 3,
+			}},
+		}},
+	}
+	events, err = engine.PollOnce(ctx, unlock, now.Add(40*time.Second))
+	if err != nil {
+		t.Fatalf("unlock poll: %v", err)
+	}
+	var unlocked []poller.Event
+	for _, ev := range events {
+		if ev.MessageTypeKey == "research_unlocked" {
+			unlocked = append(unlocked, ev)
+		}
+	}
+	if len(unlocked) != 1 {
+		t.Fatalf("expected 1 research_unlocked, got %d: %+v", len(unlocked), unlocked)
+	}
+	if unlocked[0].Variables["NodeName"] != "Smokeless Powder" || unlocked[0].Variables["TreeName"] != "Sulfur" {
+		t.Fatalf("unexpected unlock event: %+v", unlocked[0])
+	}
+
+	events, err = engine.PollOnce(ctx, unlock, now.Add(60*time.Second))
+	if err != nil {
+		t.Fatalf("steady poll: %v", err)
+	}
+	for _, ev := range events {
+		if ev.MessageTypeKey == "research_unlocked" {
+			t.Fatalf("unexpected repeat research_unlocked: %+v", ev)
+		}
+	}
+}
+
+func TestResearchTreePrunesStaleNodes(t *testing.T) {
+	t.Chdir("../..")
+
+	ctx := context.Background()
+	database := openTestDB(t)
+	defer database.Close()
+
+	if err := db.Init(ctx, database, db.SeedConfig{}); err != nil {
+		t.Fatalf("init: %v", err)
+	}
+
+	phases, err := poller.LoadElevatorPhases("data/elevator_phases.json")
+	if err != nil {
+		t.Fatalf("load phases: %v", err)
+	}
+
+	engine := &poller.Engine{DB: database, ElevatorPhases: phases}
+	now := time.Date(2026, 8, 17, 12, 0, 0, 0, time.UTC)
+
+	firstPoll := frm.FastPollResult{
+		Research: []frm.ResearchTree{{
+			Name: "Mycelia",
+			Nodes: []frm.ResearchNode{
+				{ID: "node-a", Name: "A", State: "Purchased", TechTier: 1,
+					Coordinates: &frm.ResearchCoordinate{X: 0, Y: 0}},
+				{ID: "node-b", Name: "B", State: "Available", TechTier: 1,
+					Coordinates: &frm.ResearchCoordinate{X: 1, Y: 0}},
+				{ID: "node-c", Name: "C", State: "Available", TechTier: 1,
+					Coordinates: &frm.ResearchCoordinate{X: 2, Y: 0}},
+			},
+		}},
+	}
+	if _, err := engine.PollOnce(ctx, firstPoll, now); err != nil {
+		t.Fatalf("first PollOnce: %v", err)
+	}
+	assertResearchTreeNodeCount(t, ctx, database, "Mycelia", 3)
+
+	secondPoll := frm.FastPollResult{
+		Research: []frm.ResearchTree{{
+			Name: "Mycelia",
+			Nodes: []frm.ResearchNode{
+				{ID: "node-d", Name: "D", State: "Purchased", TechTier: 1,
+					Coordinates: &frm.ResearchCoordinate{X: 3, Y: 0}},
+				{ID: "node-e", Name: "E", State: "Available", TechTier: 1,
+					Coordinates: &frm.ResearchCoordinate{X: 4, Y: 0}},
+			},
+		}},
+	}
+	if _, err := engine.PollOnce(ctx, secondPoll, now.Add(time.Minute)); err != nil {
+		t.Fatalf("second PollOnce: %v", err)
+	}
+	assertResearchTreeNodeCount(t, ctx, database, "Mycelia", 2)
+
+	var staleCount int
+	if err := database.QueryRowContext(ctx,
+		`SELECT COUNT(*) FROM research_node_state WHERE tree_name = 'Mycelia' AND node_id IN ('node-a', 'node-b', 'node-c')`,
+	).Scan(&staleCount); err != nil {
+		t.Fatalf("count stale: %v", err)
+	}
+	if staleCount != 0 {
+		t.Fatalf("expected stale nodes removed, found %d", staleCount)
+	}
 }
 
 func TestElevatorPhaseLookup(t *testing.T) {
@@ -184,14 +335,8 @@ func TestDispatchWiredInPollLoop(t *testing.T) {
 		t.Fatalf("init: %v", err)
 	}
 
-	var webhookCalls int
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		webhookCalls++
-		w.WriteHeader(http.StatusNoContent)
-	}))
-	defer srv.Close()
-
-	cfgJSON, _ := json.Marshal(notify.DiscordConfig{WebhookURL: srv.URL})
+	mock := notify.NewMockDiscordSession()
+	cfgJSON, _ := json.Marshal(notify.DiscordConfig{ChannelID: "channel-1"})
 	res, err := database.ExecContext(ctx, `
 		INSERT INTO notification_targets (name, provider_type, config_json, enabled, created_at)
 		VALUES (?, ?, ?, 1, ?)`,
@@ -208,7 +353,7 @@ func TestDispatchWiredInPollLoop(t *testing.T) {
 
 	phases, _ := poller.LoadElevatorPhases("data/elevator_phases.json")
 	dispatcher := notify.NewDispatcher(database, map[string]notify.Provider{
-		"discord": notify.NewDiscordProvider(),
+		"discord": notify.NewDiscordProvider(mock),
 	})
 
 	fetcher := &sequenceFetcher{
@@ -229,8 +374,8 @@ func TestDispatchWiredInPollLoop(t *testing.T) {
 		t.Fatalf("poll 2: %v", err)
 	}
 
-	if webhookCalls != 1 {
-		t.Fatalf("webhook calls = %d, want 1", webhookCalls)
+	if len(mock.ChannelCalls) != 1 {
+		t.Fatalf("discord sends = %d, want 1", len(mock.ChannelCalls))
 	}
 
 	var logCount int
@@ -466,8 +611,11 @@ func firstObservationFixture(t *testing.T) frm.FastPollResult {
 			Name: "Test Tree",
 			Nodes: []frm.ResearchNode{{
 				ID: "node-1", Name: "Test Node", State: "Purchased", TechTier: 2,
-				Coordinates: frm.ResearchCoordinate{X: 4, Y: 0},
+				Coordinates: &frm.ResearchCoordinate{X: 4, Y: 0},
 				Parents:     []frm.ResearchCoordinate{},
+			}, {
+				ID: "node-2", Name: "No Layout Node", State: "Available", TechTier: 1,
+				Parents: []frm.ResearchCoordinate{},
 			}},
 		}},
 		Trains: []frm.Train{{
@@ -540,6 +688,32 @@ func assertSchematicBaseline(t *testing.T, ctx context.Context, database *sql.DB
 	}
 	if purchased != wantPurchased {
 		t.Fatalf("schematic %s purchased = %v, want %v", id, purchased, wantPurchased)
+	}
+}
+
+func assertResearchCoordsNull(t *testing.T, ctx context.Context, database *sql.DB, id string) {
+	t.Helper()
+	var coordX, coordY sql.NullInt64
+	if err := database.QueryRowContext(ctx,
+		`SELECT coord_x, coord_y FROM research_node_state WHERE node_id = ?`, id,
+	).Scan(&coordX, &coordY); err != nil {
+		t.Fatalf("research_node_state: %v", err)
+	}
+	if coordX.Valid || coordY.Valid {
+		t.Fatalf("node %s coords = (%v,%v), want NULL", id, coordX, coordY)
+	}
+}
+
+func assertResearchTreeNodeCount(t *testing.T, ctx context.Context, database *sql.DB, treeName string, want int) {
+	t.Helper()
+	var count int
+	if err := database.QueryRowContext(ctx,
+		`SELECT COUNT(*) FROM research_node_state WHERE tree_name = ?`, treeName,
+	).Scan(&count); err != nil {
+		t.Fatalf("research_node_state count: %v", err)
+	}
+	if count != want {
+		t.Fatalf("tree %q node count = %d, want %d", treeName, count, want)
 	}
 }
 

@@ -18,9 +18,61 @@ import (
 )
 
 type discordTargetConfig struct {
-	WebhookURL        string `json:"webhook_url"`
-	UsernameOverride  string `json:"username_override,omitempty"`
-	AvatarURLOverride string `json:"avatar_url_override,omitempty"`
+	ChannelID string `json:"channelId"`
+	ThreadID  string `json:"threadId,omitempty"`
+}
+
+func discordConfigToStored(cfg discordTargetConfig) (string, error) {
+	stored := notify.DiscordConfig{
+		ChannelID: strings.TrimSpace(cfg.ChannelID),
+		ThreadID:  strings.TrimSpace(cfg.ThreadID),
+	}
+	raw, err := json.Marshal(stored)
+	if err != nil {
+		return "", err
+	}
+	return string(raw), nil
+}
+
+func discordConfigFromStored(raw string) map[string]any {
+	var stored notify.DiscordConfig
+	if err := json.Unmarshal([]byte(raw), &stored); err != nil {
+		return map[string]any{}
+	}
+	out := map[string]any{"channelId": stored.ChannelID}
+	if strings.TrimSpace(stored.ThreadID) != "" {
+		out["threadId"] = stored.ThreadID
+	}
+	return out
+}
+
+func mergeDiscordConfigUpdate(existing notify.DiscordConfig, patch json.RawMessage) (notify.DiscordConfig, error) {
+	if len(patch) == 0 {
+		return existing, nil
+	}
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal(patch, &fields); err != nil {
+		return existing, err
+	}
+	merged := existing
+	if raw, ok := fields["channelId"]; ok {
+		var channelID string
+		if err := json.Unmarshal(raw, &channelID); err != nil {
+			return existing, err
+		}
+		trimmed := strings.TrimSpace(channelID)
+		if trimmed != "" {
+			merged.ChannelID = trimmed
+		}
+	}
+	if raw, ok := fields["threadId"]; ok {
+		var threadID string
+		if err := json.Unmarshal(raw, &threadID); err != nil {
+			return existing, err
+		}
+		merged.ThreadID = strings.TrimSpace(threadID)
+	}
+	return merged, nil
 }
 
 type notificationTargetRequest struct {
@@ -54,9 +106,9 @@ type settingsResponse struct {
 }
 
 type updateUserRequest struct {
-	Role     *auth.Role `json:"role"`
-	Password *string    `json:"password"`
-	PlayerID **string   `json:"playerId"`
+	Role         *auth.Role      `json:"role"`
+	Password     *string         `json:"password"`
+	PlayerIDJSON json.RawMessage `json:"playerId"`
 }
 
 type frmTestRequest struct {
@@ -90,7 +142,7 @@ func (h *Handler) ListNotificationTargets(w http.ResponseWriter, r *http.Request
 			"id":           id,
 			"name":         name,
 			"providerType": providerType,
-			"config":       config,
+			"config":       discordConfigFromStored(configJSON),
 			"enabled":      enabled,
 			"createdAt":    createdAt,
 		})
@@ -117,8 +169,8 @@ func (h *Handler) CreateNotificationTarget(w http.ResponseWriter, r *http.Reques
 		writeError(w, r, http.StatusBadRequest, "unsupported provider type")
 		return
 	}
-	if strings.TrimSpace(req.Config.WebhookURL) == "" {
-		writeError(w, r, http.StatusBadRequest, "webhook_url is required")
+	if strings.TrimSpace(req.Config.ChannelID) == "" {
+		writeError(w, r, http.StatusBadRequest, "channelId is required")
 		return
 	}
 	enabled := true
@@ -126,9 +178,13 @@ func (h *Handler) CreateNotificationTarget(w http.ResponseWriter, r *http.Reques
 		enabled = *req.Enabled
 	}
 
-	configJSON, err := json.Marshal(req.Config)
+	configJSON, err := discordConfigToStored(req.Config)
 	if err != nil {
 		writeError(w, r, http.StatusInternalServerError, "internal error")
+		return
+	}
+	if err := h.validateDiscordTargetChannel(r.Context(), configJSON); err != nil {
+		writeError(w, r, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -136,7 +192,7 @@ func (h *Handler) CreateNotificationTarget(w http.ResponseWriter, r *http.Reques
 	res, err := h.db.ExecContext(r.Context(), `
 		INSERT INTO notification_targets (name, provider_type, config_json, enabled, created_at)
 		VALUES (?, ?, ?, ?, ?)`,
-		req.Name, req.ProviderType, string(configJSON), enabled, now,
+		req.Name, req.ProviderType, configJSON, enabled, now,
 	)
 	if err != nil {
 		writeError(w, r, http.StatusInternalServerError, "internal error")
@@ -148,7 +204,7 @@ func (h *Handler) CreateNotificationTarget(w http.ResponseWriter, r *http.Reques
 		"id":           id,
 		"name":         req.Name,
 		"providerType": req.ProviderType,
-		"config":       req.Config,
+		"config":       discordConfigFromStored(configJSON),
 		"enabled":      enabled,
 		"createdAt":    now,
 	})
@@ -161,7 +217,12 @@ func (h *Handler) UpdateNotificationTarget(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	var req notificationTargetRequest
+	var req struct {
+		Name         string          `json:"name"`
+		ProviderType string          `json:"providerType"`
+		Config       json.RawMessage `json:"config"`
+		Enabled      *bool           `json:"enabled"`
+	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, r, http.StatusBadRequest, "invalid request body")
 		return
@@ -195,20 +256,23 @@ func (h *Handler) UpdateNotificationTarget(w http.ResponseWriter, r *http.Reques
 		enabled = *req.Enabled
 	}
 
-	var existing discordTargetConfig
+	var existing notify.DiscordConfig
 	_ = json.Unmarshal([]byte(configJSON), &existing)
-	if strings.TrimSpace(req.Config.WebhookURL) != "" {
-		existing.WebhookURL = req.Config.WebhookURL
+	merged, err := mergeDiscordConfigUpdate(existing, req.Config)
+	if err != nil {
+		writeError(w, r, http.StatusBadRequest, "invalid config")
+		return
 	}
-	if req.Config.UsernameOverride != "" {
-		existing.UsernameOverride = req.Config.UsernameOverride
-	}
-	if req.Config.AvatarURLOverride != "" {
-		existing.AvatarURLOverride = req.Config.AvatarURLOverride
-	}
-	newConfigJSON, err := json.Marshal(existing)
+	newConfigJSON, err := discordConfigToStored(discordTargetConfig{
+		ChannelID: merged.ChannelID,
+		ThreadID:  merged.ThreadID,
+	})
 	if err != nil {
 		writeError(w, r, http.StatusInternalServerError, "internal error")
+		return
+	}
+	if err := h.validateDiscordTargetChannel(r.Context(), string(newConfigJSON)); err != nil {
+		writeError(w, r, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -220,13 +284,11 @@ func (h *Handler) UpdateNotificationTarget(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	var config map[string]any
-	_ = parseJSONColumn(string(newConfigJSON), &config)
 	writeJSON(w, http.StatusOK, map[string]any{
 		"id":           id,
 		"name":         name,
 		"providerType": providerType,
-		"config":       config,
+		"config":       discordConfigFromStored(string(newConfigJSON)),
 		"enabled":      enabled,
 	})
 }
@@ -278,14 +340,12 @@ func (h *Handler) TestNotificationTarget(w http.ResponseWriter, r *http.Request)
 		ConfigJSON:   configJSON,
 		Enabled:      enabled,
 	}
-	msg := notify.SampleRenderedMessage()
-	provider, ok := h.dispatcher.Providers[providerType]
-	if !ok {
-		writeError(w, r, http.StatusBadRequest, "unsupported provider type")
+	if err := h.validateDiscordTargetChannel(r.Context(), configJSON); err != nil {
+		writeError(w, r, http.StatusBadRequest, err.Error())
 		return
 	}
-	if err := provider.Send(r.Context(), target, msg); err != nil {
-		writeError(w, r, http.StatusBadRequest, err.Error())
+	if err := h.dispatcher.DeliverToTarget(r.Context(), "target_test", target, notify.SampleTemplateRenderedMessage()); err != nil {
+		writeError(w, r, http.StatusBadRequest, notify.FormatDiscordSendError(err))
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -625,6 +685,10 @@ func (h *Handler) PreviewMessageTypeTemplate(w http.ResponseWriter, r *http.Requ
 
 func (h *Handler) TestMessageTypeTemplate(w http.ResponseWriter, r *http.Request) {
 	key := chi.URLParam(r, "key")
+	if notify.IsDMOnlyMessageType(key) {
+		writeError(w, r, http.StatusBadRequest, "this message type is DM-only and cannot be test-sent to channel targets")
+		return
+	}
 
 	var req templatePreviewRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -663,7 +727,7 @@ func (h *Handler) TestMessageTypeTemplate(w http.ResponseWriter, r *http.Request
 			writeError(w, r, http.StatusBadRequest, "no targets assigned")
 			return
 		}
-		writeError(w, r, http.StatusBadRequest, err.Error())
+		writeError(w, r, http.StatusBadRequest, notify.FormatDiscordSendError(err))
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -671,6 +735,10 @@ func (h *Handler) TestMessageTypeTemplate(w http.ResponseWriter, r *http.Request
 
 func (h *Handler) UpdateMessageTypeTargets(w http.ResponseWriter, r *http.Request) {
 	key := chi.URLParam(r, "key")
+	if notify.IsDMOnlyMessageType(key) {
+		writeError(w, r, http.StatusBadRequest, "this message type is DM-only and cannot be assigned to channel targets")
+		return
+	}
 	var req targetIDsRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, r, http.StatusBadRequest, "invalid request body")
@@ -721,9 +789,10 @@ func (h *Handler) GetNotificationLog(w http.ResponseWriter, r *http.Request) {
 	p := parsePagination(r)
 	typeFilter := strings.TrimSpace(r.URL.Query().Get("type"))
 	targetFilter := strings.TrimSpace(r.URL.Query().Get("target"))
+	deliveryFilter := strings.TrimSpace(r.URL.Query().Get("delivery"))
 
 	where := "WHERE 1=1"
-	args := make([]any, 0, 4)
+	args := make([]any, 0, 5)
 	if typeFilter != "" {
 		where += " AND nl.message_type_key = ?"
 		args = append(args, typeFilter)
@@ -731,6 +800,10 @@ func (h *Handler) GetNotificationLog(w http.ResponseWriter, r *http.Request) {
 	if targetFilter != "" {
 		where += " AND nl.target_id = ?"
 		args = append(args, targetFilter)
+	}
+	if deliveryFilter != "" {
+		where += " AND nl.delivery_mode = ?"
+		args = append(args, deliveryFilter)
 	}
 
 	var total int
@@ -742,7 +815,8 @@ func (h *Handler) GetNotificationLog(w http.ResponseWriter, r *http.Request) {
 
 	query := `
 		SELECT nl.id, nl.message_type_key, nl.target_id, nt.name,
-			nl.rendered_preview, nl.success, nl.error, nl.sent_at
+			nl.rendered_preview, nl.success, nl.error, nl.sent_at,
+			nl.delivery_mode, nl.recipient_external_user_id
 		FROM notification_log nl
 		LEFT JOIN notification_targets nt ON nt.id = nl.target_id
 		` + where + `
@@ -758,25 +832,38 @@ func (h *Handler) GetNotificationLog(w http.ResponseWriter, r *http.Request) {
 
 	items := make([]map[string]any, 0)
 	for rows.Next() {
-		var id, targetID int64
-		var messageTypeKey, preview, sentAt string
+		var id int64
+		var messageTypeKey, preview, sentAt, deliveryMode string
+		var targetID sql.NullInt64
 		var targetName sql.NullString
+		var recipientExternalUserID sql.NullString
 		var success bool
 		var errText sql.NullString
-		if err := rows.Scan(&id, &messageTypeKey, &targetID, &targetName, &preview, &success, &errText, &sentAt); err != nil {
+		if err := rows.Scan(
+			&id, &messageTypeKey, &targetID, &targetName,
+			&preview, &success, &errText, &sentAt,
+			&deliveryMode, &recipientExternalUserID,
+		); err != nil {
 			writeError(w, r, http.StatusInternalServerError, "internal error")
 			return
 		}
-		items = append(items, map[string]any{
-			"id":               id,
-			"messageTypeKey":   messageTypeKey,
-			"targetId":         targetID,
-			"targetName":       nullStringPtr(targetName),
-			"renderedPreview":  preview,
-			"success":          success,
-			"error":            nullStringPtr(errText),
-			"sentAt":           sentAt,
-		})
+		item := map[string]any{
+			"id":              id,
+			"messageTypeKey":  messageTypeKey,
+			"renderedPreview": preview,
+			"success":         success,
+			"error":           nullStringPtr(errText),
+			"sentAt":          sentAt,
+			"deliveryMode":    deliveryMode,
+		}
+		if targetID.Valid {
+			item["targetId"] = targetID.Int64
+		} else {
+			item["targetId"] = nil
+		}
+		item["targetName"] = nullStringPtr(targetName)
+		item["recipientExternalUserId"] = nullStringPtr(recipientExternalUserID)
+		items = append(items, item)
 	}
 	if err := rows.Err(); err != nil {
 		writeError(w, r, http.StatusInternalServerError, "internal error")
@@ -957,48 +1044,34 @@ func (h *Handler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 			writeError(w, r, http.StatusBadRequest, "invalid role")
 			return
 		}
-		if err := h.auth.UpdateUserRole(r.Context(), id, *req.Role); err != nil {
-			if errors.Is(err, auth.ErrUserNotFound) {
-				writeError(w, r, http.StatusNotFound, "not found")
-				return
-			}
-			if errors.Is(err, auth.ErrLastAdmin) {
-				writeError(w, r, http.StatusBadRequest, "cannot demote the last admin")
-				return
-			}
-			writeError(w, r, http.StatusInternalServerError, "internal error")
-			return
-		}
-	}
-	if req.PlayerID != nil {
-		if err := h.auth.UpdatePlayerID(r.Context(), id, *req.PlayerID); err != nil {
-			if errors.Is(err, auth.ErrUserNotFound) {
-				writeError(w, r, http.StatusNotFound, "not found")
-				return
-			}
-			if strings.Contains(err.Error(), "player not found") {
-				writeError(w, r, http.StatusBadRequest, "player not found")
-				return
-			}
-			writeError(w, r, http.StatusInternalServerError, "internal error")
-			return
-		}
-	}
-	if req.Password != nil && *req.Password != "" {
-		if err := h.auth.UpdatePassword(r.Context(), id, *req.Password); err != nil {
-			if errors.Is(err, auth.ErrUserNotFound) {
-				writeError(w, r, http.StatusNotFound, "not found")
-				return
-			}
-			writeError(w, r, http.StatusInternalServerError, "internal error")
-			return
-		}
 	}
 
-	user, err := h.auth.GetUserByID(r.Context(), id)
+	playerIDUpdate, err := auth.ParseOptionalPlayerID(req.PlayerIDJSON)
+	if err != nil {
+		writeError(w, r, http.StatusBadRequest, "invalid playerId")
+		return
+	}
+
+	user, err := h.auth.UpdateUser(r.Context(), id, auth.UserUpdate{
+		Role:     req.Role,
+		Password: req.Password,
+		PlayerID: playerIDUpdate,
+	})
 	if err != nil {
 		if errors.Is(err, auth.ErrUserNotFound) {
 			writeError(w, r, http.StatusNotFound, "not found")
+			return
+		}
+		if errors.Is(err, auth.ErrLastAdmin) {
+			writeError(w, r, http.StatusBadRequest, "cannot demote the last admin")
+			return
+		}
+		if errors.Is(err, auth.ErrWeakPassword) {
+			writeError(w, r, http.StatusBadRequest, err.Error())
+			return
+		}
+		if strings.Contains(err.Error(), "player not found") {
+			writeError(w, r, http.StatusBadRequest, "player not found")
 			return
 		}
 		writeError(w, r, http.StatusInternalServerError, "internal error")

@@ -1,0 +1,64 @@
+site_name: FactoryMate
+site_url: https://ghotso.github.io/factorymate/
+repo_url: https://github.com/ghotso/factorymate
+repo_name: ghotso/factorymate
+edit_uri: edit/main/docs/guide/
+
+docs_dir: docs/guide
+site_dir: site
+
+theme:
+  name: material
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+  palette:
+    - scheme: default
+      primary: deep orange
+      accent: orange
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: deep orange
+      accent: orange
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - tables
+  - toc:
+      permalink: true
+
+nav:
+  - Home: index.md
+  - Requirements: requirements.md
+  - Installation:
+      - Docker Compose: installation/docker-compose.md
+      - Docker Run: installation/docker-run.md
+  - FRM connectivity: frm-connectivity.md
+  - Discord:
+      - Developer Portal setup: discord/setup.md
+      - Configuration: discord/configuration.md
+      - Slash commands: discord/commands.md
+  - First run: first-run.md
+  - Managing:
+      - Settings overview: managing/settings.md
+      - Notifications: managing/notifications.md
+      - Users & registration: managing/users.md
+  - Upgrading: upgrading.md
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/ghotso/factorymate

@@ -14,6 +14,8 @@ import (
 	"factorymate/internal/api"
 	"factorymate/internal/auth"
 	"factorymate/internal/db"
+	"factorymate/internal/notify"
+	"factorymate/internal/registration"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -30,7 +32,8 @@ func TestAuthFlow(t *testing.T) {
 	}
 
 	svc := auth.NewService(database)
-	handler := api.NewHandler(database, svc)
+	regSvc := registration.NewService(database, svc)
+	handler := newTestHandler(database, svc, regSvc, notify.NewMockDiscordSession())
 	router := newTestRouter(handler, svc)
 
 	t.Run("setup once", func(t *testing.T) {
@@ -191,7 +194,7 @@ func TestSessionCleanupRemovesExpiredRows(t *testing.T) {
 	}
 
 	svc := auth.NewService(database)
-	user, err := svc.CreateUser(ctx, "admin", "secret", auth.RoleAdmin)
+	user, err := svc.CreateUser(ctx, "admin", "secret123", auth.RoleAdmin)
 	if err != nil {
 		t.Fatalf("create user: %v", err)
 	}

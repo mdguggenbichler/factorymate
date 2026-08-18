@@ -21,6 +21,23 @@ func (s *Service) RequireSession(writeError errorWriter) func(http.Handler) http
 	}
 }
 
+func (s *Service) RequireActiveUser(writeError errorWriter) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			user, ok := UserFromContext(r.Context())
+			if !ok {
+				writeError(w, r, http.StatusUnauthorized, "unauthenticated")
+				return
+			}
+			if user.Status == StatusPendingApproval {
+				writeError(w, r, http.StatusForbidden, "account pending approval")
+				return
+			}
+			next.ServeHTTP(w, r)
+		})
+	}
+}
+
 func (s *Service) RequireAdmin(writeError errorWriter) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

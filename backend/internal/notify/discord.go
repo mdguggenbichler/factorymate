@@ -1,154 +1,192 @@
 package notify
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
+	"regexp"
 	"strconv"
 	"strings"
-	"time"
+
+	"github.com/bwmarrin/discordgo"
 )
 
 const discordProviderType = "discord"
 
 // DiscordConfig is the inner config object stored in notification_targets.config_json (§5.1).
 type DiscordConfig struct {
-	WebhookURL        string `json:"webhook_url"`
-	UsernameOverride  string `json:"username_override,omitempty"`
-	AvatarURLOverride string `json:"avatar_url_override,omitempty"`
+	ChannelID string `json:"channel_id"`
+	ThreadID  string `json:"thread_id,omitempty"`
 }
 
-// DiscordProvider posts rendered messages to Discord incoming webhooks (§5.1).
+// DiscordSession is the subset of discordgo.Session used for outbound messaging.
+type DiscordSession interface {
+	ChannelMessageSendComplex(channelID string, data *discordgo.MessageSend, options ...discordgo.RequestOption) (*discordgo.Message, error)
+	UserChannelCreate(recipientID string, options ...discordgo.RequestOption) (*discordgo.Channel, error)
+}
+
+// DiscordProvider posts rendered messages via a live discordgo session (§5.1).
 type DiscordProvider struct {
-	httpClient *http.Client
+	session   DiscordSession
+	sessionFn func() DiscordSession
 }
 
-// NewDiscordProvider constructs a Discord webhook provider.
-func NewDiscordProvider() *DiscordProvider {
-	return &DiscordProvider{
-		httpClient: &http.Client{Timeout: 10 * time.Second},
+// NewDiscordProvider constructs a Discord bot provider with a fixed session (tests).
+func NewDiscordProvider(session DiscordSession) *DiscordProvider {
+	return &DiscordProvider{session: session}
+}
+
+// NewDiscordProviderWithSessionFn constructs a provider that resolves the session on each send.
+func NewDiscordProviderWithSessionFn(sessionFn func() DiscordSession) *DiscordProvider {
+	return &DiscordProvider{sessionFn: sessionFn}
+}
+
+func (p *DiscordProvider) liveSession() DiscordSession {
+	if p.sessionFn != nil {
+		return p.sessionFn()
 	}
+	return p.session
 }
 
-// Type returns the provider identifier.
+// SendEnabled, when set, gates outbound Discord sends on the bot kill switch.
+var SendEnabled func(ctx context.Context) (bool, error)
+
+// FormatDiscordSendError maps common Discord API failures to actionable messages.
+func FormatDiscordSendError(err error) string {
+	if err == nil {
+		return ""
+	}
+	msg := err.Error()
+	if strings.Contains(msg, "50001") || strings.Contains(msg, "Missing Access") {
+		return "Bot cannot see this channel. Allow View Channel, Send Messages, and Embed Links for the bot role on this channel (and its parent category)."
+	}
+	return msg
+}
+
 func (p *DiscordProvider) Type() string {
 	return discordProviderType
 }
 
-type discordWebhookPayload struct {
-	Content   string            `json:"content,omitempty"`
-	Embeds    []discordAPIEmbed `json:"embeds,omitempty"`
-	Username  string            `json:"username,omitempty"`
-	AvatarURL string            `json:"avatar_url,omitempty"`
-}
-
-type discordAPIEmbed struct {
-	Title       string            `json:"title,omitempty"`
-	Description string            `json:"description,omitempty"`
-	Color       int               `json:"color,omitempty"`
-	Fields      []discordAPIField `json:"fields,omitempty"`
-	Footer      *discordAPIFooter `json:"footer,omitempty"`
-	Timestamp   string            `json:"timestamp,omitempty"`
-}
-
-type discordAPIFooter struct {
-	Text string `json:"text"`
-}
-
-type discordAPIField struct {
-	Name   string `json:"name"`
-	Value  string `json:"value"`
-	Inline bool   `json:"inline,omitempty"`
-}
-
-// Send posts msg to the target's Discord webhook URL.
+// Send posts msg to the target's Discord channel.
 func (p *DiscordProvider) Send(ctx context.Context, target NotificationTarget, msg RenderedMessage) error {
+	if err := p.checkSendEnabled(ctx); err != nil {
+		return err
+	}
 	if target.ProviderType != discordProviderType {
 		return fmt.Errorf("discord provider cannot send to target type %q", target.ProviderType)
+	}
+	session := p.liveSession()
+	if session == nil {
+		return fmt.Errorf("discord bot is not connected")
 	}
 
 	var cfg DiscordConfig
 	if err := json.Unmarshal([]byte(target.ConfigJSON), &cfg); err != nil {
 		return fmt.Errorf("parse discord config: %w", err)
 	}
-	if strings.TrimSpace(cfg.WebhookURL) == "" {
-		return fmt.Errorf("discord webhook_url is required")
+	channelID := strings.TrimSpace(cfg.ChannelID)
+	if channelID == "" {
+		return fmt.Errorf("discord channel_id is required")
+	}
+	if cfg.ThreadID != "" {
+		channelID = strings.TrimSpace(cfg.ThreadID)
 	}
 
-	payload, err := buildDiscordPayload(msg)
+	send, err := buildDiscordMessageSend(msg)
 	if err != nil {
 		return err
 	}
-	if cfg.UsernameOverride != "" {
-		payload.Username = cfg.UsernameOverride
-	}
-	if cfg.AvatarURLOverride != "" {
-		payload.AvatarURL = cfg.AvatarURLOverride
-	}
 
-	body, err := json.Marshal(payload)
+	_, err = session.ChannelMessageSendComplex(channelID, send, discordgo.WithContext(ctx))
 	if err != nil {
-		return fmt.Errorf("marshal discord payload: %w", err)
-	}
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, cfg.WebhookURL, bytes.NewReader(body))
-	if err != nil {
-		return fmt.Errorf("create discord request: %w", err)
-	}
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := p.httpClient.Do(req)
-	if err != nil {
-		return fmt.Errorf("discord webhook request: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusNoContent && resp.StatusCode != http.StatusOK {
-		respBody, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
-		return fmt.Errorf("discord webhook HTTP %d: %s", resp.StatusCode, strings.TrimSpace(string(respBody)))
+		return fmt.Errorf("discord channel send: %w", err)
 	}
 	return nil
 }
 
-func buildDiscordPayload(msg RenderedMessage) (discordWebhookPayload, error) {
-	var payload discordWebhookPayload
+// SendDirect delivers msg to an external user via DM.
+func (p *DiscordProvider) SendDirect(ctx context.Context, platform, externalUserID string, msg RenderedMessage) error {
+	if err := p.checkSendEnabled(ctx); err != nil {
+		return err
+	}
+	if platform != "" && platform != discordProviderType {
+		return fmt.Errorf("discord provider cannot DM platform %q", platform)
+	}
+	if strings.TrimSpace(externalUserID) == "" {
+		return fmt.Errorf("external user id is required")
+	}
+	session := p.liveSession()
+	if session == nil {
+		return fmt.Errorf("discord bot is not connected")
+	}
+
+	channel, err := session.UserChannelCreate(externalUserID, discordgo.WithContext(ctx))
+	if err != nil {
+		return fmt.Errorf("discord create dm channel: %w", err)
+	}
+
+	send, err := buildDiscordMessageSend(msg)
+	if err != nil {
+		return err
+	}
+
+	_, err = session.ChannelMessageSendComplex(channel.ID, send, discordgo.WithContext(ctx))
+	if err != nil {
+		return fmt.Errorf("discord dm send: %w", err)
+	}
+	return nil
+}
+
+func (p *DiscordProvider) checkSendEnabled(ctx context.Context) error {
+	if SendEnabled == nil {
+		return nil
+	}
+	enabled, err := SendEnabled(ctx)
+	if err != nil {
+		return fmt.Errorf("discord enabled check: %w", err)
+	}
+	if !enabled {
+		return fmt.Errorf("discord bot is disabled")
+	}
+	return nil
+}
+
+func buildDiscordMessageSend(msg RenderedMessage) (*discordgo.MessageSend, error) {
+	send := &discordgo.MessageSend{}
 
 	if msg.Embed != nil {
 		embed, err := toDiscordAPIEmbed(*msg.Embed)
 		if err != nil {
-			return payload, err
+			return nil, err
 		}
-		payload.Embeds = []discordAPIEmbed{embed}
+		send.Embeds = []*discordgo.MessageEmbed{embed}
 	}
 
 	if msg.Plain != "" {
-		payload.Content = msg.Plain
+		send.Content = truncate(msg.Plain, discordContentMaxLen)
 	}
 
-	if payload.Content == "" && len(payload.Embeds) == 0 {
-		return payload, fmt.Errorf("rendered message has no plain text or embed content")
+	if send.Content == "" && len(send.Embeds) == 0 {
+		return nil, fmt.Errorf("rendered message has no plain text or embed content")
 	}
 
-	return payload, nil
+	return send, nil
 }
 
-func toDiscordAPIEmbed(embed DiscordEmbed) (discordAPIEmbed, error) {
+func toDiscordAPIEmbed(embed DiscordEmbed) (*discordgo.MessageEmbed, error) {
 	color, err := hexColorToDiscordInt(embed.Color)
 	if err != nil {
-		return discordAPIEmbed{}, err
+		return nil, err
 	}
 
-	apiEmbed := discordAPIEmbed{
+	apiEmbed := &discordgo.MessageEmbed{
 		Title:       truncate(embed.Title, discordTitleMaxLen),
 		Description: truncate(embed.Description, discordDescriptionMaxLen),
 		Color:       color,
 	}
 
 	if footer := strings.TrimSpace(embed.Footer); footer != "" {
-		apiEmbed.Footer = &discordAPIFooter{
+		apiEmbed.Footer = &discordgo.MessageEmbedFooter{
 			Text: truncate(footer, discordFooterMaxLen),
 		}
 	}
@@ -163,7 +201,7 @@ func toDiscordAPIEmbed(embed DiscordEmbed) (discordAPIEmbed, error) {
 		if len(apiEmbed.Fields) >= discordMaxFields {
 			break
 		}
-		apiEmbed.Fields = append(apiEmbed.Fields, discordAPIField{
+		apiEmbed.Fields = append(apiEmbed.Fields, &discordgo.MessageEmbedField{
 			Name:   truncate(field.Name, discordFieldNameMaxLen),
 			Value:  truncate(field.Value, discordFieldValueMaxLen),
 			Inline: field.Inline,
@@ -185,13 +223,29 @@ func hexColorToDiscordInt(color string) (int, error) {
 	return int(value), nil
 }
 
+var (
+	gamePasswordJSONString = regexp.MustCompile(`"game_password"\s*:\s*"(?:[^"\\]|\\.)*"`)
+	gamePasswordJSONOther  = regexp.MustCompile(`"game_password"\s*:\s*[^,}\s]+`)
+	passwordPlainLine      = regexp.MustCompile(`(?i)(Password:\s*)\|\|[^|]+\|\|`)
+	passwordPlainUnspoiler  = regexp.MustCompile(`(?i)(Password:\s*)\S+`)
+)
+
+// RedactForLog removes sensitive values (e.g. game_password) from log-oriented strings (§8.6).
+func RedactForLog(s string) string {
+	s = gamePasswordJSONString.ReplaceAllString(s, `"game_password":"[REDACTED]"`)
+	s = gamePasswordJSONOther.ReplaceAllString(s, `"game_password":[REDACTED]`)
+	s = passwordPlainLine.ReplaceAllString(s, `${1}[REDACTED]`)
+	s = passwordPlainUnspoiler.ReplaceAllString(s, `${1}[REDACTED]`)
+	return s
+}
+
 // SampleRenderedMessage returns a hardcoded player_joined embed for manual and automated tests.
 func SampleRenderedMessage() RenderedMessage {
 	return RenderedMessage{
 		Embed: &DiscordEmbed{
 			Title:     "👤 A player joined the server",
 			Color:     "#57F287",
-			Footer:    "🏭 CBC | Conveyor Belt Cult · Aug 17, 2026 · 14:37 UTC",
+			Footer:    "🏭 CBC | Conveyor Belt Cult",
 			Timestamp: "2026-08-17T14:37:00Z",
 			Fields: []DiscordEmbedField{
 				{Name: "👤 Player", Value: "Michael", Inline: true},

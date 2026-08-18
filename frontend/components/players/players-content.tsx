@@ -12,7 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { formatDateTime } from "@/lib/format"
+import { FormattedDateTime } from "@/components/formatted-datetime"
 import type { Player, PlayerHistoryEvent } from "@/lib/api-types"
 
 type PlayersContentProps = {
@@ -72,7 +72,7 @@ export async function PlayersContent({ players, history }: PlayersContentProps) 
                       </Badge>
                     </TableCell>
                     <TableCell className="text-muted-foreground">
-                      {formatDateTime(player.lastSeenAt)}
+                      <FormattedDateTime iso={player.lastSeenAt} />
                     </TableCell>
                   </TableRow>
                 ))}
@@ -104,12 +104,10 @@ export async function PlayersContent({ players, history }: PlayersContentProps) 
                         {t("event.onlineCount", { count: event.onlineCount })}
                       </p>
                     </div>
-                    <time
+                    <FormattedDateTime
                       className="text-sm text-muted-foreground"
-                      dateTime={event.occurredAt}
-                    >
-                      {formatDateTime(event.occurredAt)}
-                    </time>
+                      iso={event.occurredAt}
+                    />
                   </div>
                   {index < history.length - 1 ? <Separator /> : null}
                 </div>

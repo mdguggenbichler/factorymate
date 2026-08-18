@@ -42,6 +42,10 @@ func (h *Handler) Setup(w http.ResponseWriter, r *http.Request) {
 
 	user, err := h.auth.CreateUser(r.Context(), req.Username, req.Password, auth.RoleAdmin)
 	if err != nil {
+		if errors.Is(err, auth.ErrWeakPassword) {
+			writeError(w, r, http.StatusBadRequest, err.Error())
+			return
+		}
 		writeError(w, r, http.StatusInternalServerError, "internal error")
 		return
 	}
@@ -67,13 +71,24 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := h.auth.Authenticate(r.Context(), req.Username, req.Password)
+	user, err := h.auth.CheckCredentials(r.Context(), req.Username, req.Password)
 	if err != nil {
 		if errors.Is(err, auth.ErrInvalidCredentials) {
 			writeError(w, r, http.StatusUnauthorized, "invalid credentials")
 			return
 		}
 		writeError(w, r, http.StatusInternalServerError, "internal error")
+		return
+	}
+
+	if user.Status == auth.StatusPendingApproval {
+		sess, err := h.auth.CreateSession(r.Context(), user.ID)
+		if err != nil {
+			writeError(w, r, http.StatusInternalServerError, "internal error")
+			return
+		}
+		auth.SetSessionCookie(w, r, sess.ID)
+		writeError(w, r, http.StatusForbidden, "account pending approval")
 		return
 	}
 
@@ -100,7 +115,12 @@ func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
 		writeError(w, r, http.StatusUnauthorized, "unauthenticated")
 		return
 	}
-	writeJSON(w, http.StatusOK, user)
+	me, err := h.auth.GetMeUser(r.Context(), user.ID)
+	if err != nil {
+		writeError(w, r, http.StatusInternalServerError, "internal error")
+		return
+	}
+	writeJSON(w, http.StatusOK, me)
 }
 
 func (h *Handler) ChangePassword(w http.ResponseWriter, r *http.Request) {
@@ -123,6 +143,10 @@ func (h *Handler) ChangePassword(w http.ResponseWriter, r *http.Request) {
 	if err := h.auth.UpdatePassword(r.Context(), user.ID, req.Password); err != nil {
 		if errors.Is(err, auth.ErrUserNotFound) {
 			writeError(w, r, http.StatusNotFound, "not found")
+			return
+		}
+		if errors.Is(err, auth.ErrWeakPassword) {
+			writeError(w, r, http.StatusBadRequest, err.Error())
 			return
 		}
 		writeError(w, r, http.StatusInternalServerError, "internal error")

@@ -10,6 +10,9 @@
   },
   "charts": {
     "intervalLabel": "Select time range",
+    "interval6h": "Last 6 hours",
+    "interval12h": "Last 12 hours",
+    "interval24h": "Last 24 hours",
     "interval7d": "Last 7 days",
     "interval30d": "Last 30 days",
     "interval90d": "Last 90 days",
@@ -30,14 +33,31 @@
     "trippedCircuits": "Tripped circuits: {circuits}",
     "latestMilestone": "Latest milestone",
     "noMilestone": "No milestones unlocked yet",
-    "milestoneMeta": "Tier {tier} · Unlocked {date}",
+    "milestoneMetaPrefix": "Tier {tier} · Unlocked",
     "elevatorTitle": "Space Elevator",
     "elevatorPhase": "Phase {phase}",
     "elevatorPhaseUnknown": "Phase unknown",
     "upgradeReady": "Upgrade ready",
     "phaseProgress": "Phase progress",
     "powerAlertTitle": "Fuse trips detected",
-    "powerAlertDescription": "One or more power circuits have tripped. Check the Power page for details."
+    "powerAlertDescription": "One or more power circuits have tripped. Check the Power page for details.",
+    "joinTitle": "How to join",
+    "joinPasswordHint": "A join password is required — see Connection for details.",
+    "joinViewDetails": "View connection details"
+  },
+  "connection": {
+    "title": "Connection",
+    "description": "Host, port, and password for joining the Satisfactory game server.",
+    "joinTitle": "Join the server",
+    "joinDescription": "Use these details in Satisfactory multiplayer — install matching mods from the Mods page.",
+    "notConfigured": "Connection details have not been configured yet. Ask an admin to set them in Settings → Connection.",
+    "lastUpdated": "Last updated {date}",
+    "fields": {
+      "gameHost": "Game host",
+      "gamePort": "Game port",
+      "gamePassword": "Game password",
+      "notes": "Notes"
+    }
   },
   "nav": {
     "overview": "Overview",
@@ -51,13 +71,19 @@
     "research": "Research",
     "vehicles": "Vehicles",
     "elevator": "Space Elevator",
+    "mods": "Mods",
+    "connection": "Connection",
     "settings": "Settings",
     "settingsGeneral": "General",
+    "settingsDiscord": "Discord",
+    "settingsConnection": "Connection",
+    "settingsNotificationDefaults": "Notification Defaults",
     "settingsNotificationTargets": "Notification Targets",
     "settingsNotificationTemplates": "Message Templates",
     "settingsNotificationLog": "Notification Log",
     "settingsUsers": "Users",
     "account": "Account",
+    "accountNotifications": "Notifications",
     "logout": "Log out"
   },
   "auth": {
@@ -81,10 +107,17 @@
     "passwordChanged": "Password updated successfully.",
     "passwordMismatch": "Passwords do not match.",
     "loginFailed": "Invalid username or password.",
+    "pendingApproval": "Your account is waiting for admin approval. You can sign out below once approved.",
     "setupFailed": "Could not create account. Setup may already be complete.",
     "genericError": "Something went wrong. Please try again.",
     "roleAdmin": "Admin",
-    "roleViewer": "Viewer"
+    "roleViewer": "Viewer",
+    "awaitingApproval": {
+      "title": "Awaiting approval",
+      "description": "An admin must approve your registration before you can use the dashboard.",
+      "hint": "You will receive a Discord DM when your account is approved. You can sign out below if needed.",
+      "logout": "Sign out"
+    }
   },
   "invite": {
     "title": "Accept invite",
@@ -93,7 +126,47 @@
     "notFound": "This invite link is invalid.",
     "invalid": "This invite link has expired or is no longer valid.",
     "usernameTaken": "That username is already taken.",
-    "genericError": "Something went wrong. Please try again."
+    "genericError": "Something went wrong. Please try again.",
+    "deprecatedNotice": "Web invites are for break-glass recovery only. New players should register in Discord with /register."
+  },
+  "mods": {
+    "title": "Server mods",
+    "description": "Live mod list from your Satisfactory server, including game build and SML version.",
+    "tableTitle": "Installed mods",
+    "empty": "No mods returned from the server yet.",
+    "gameBuild": "Game build",
+    "smlVersion": "SML version",
+    "cachedAt": "Last refreshed",
+    "downloadProfile": "Download SMM profile",
+    "downloadStarted": "SMM profile download started.",
+    "downloadFailed": "Could not download the SMM profile.",
+    "refresh": "Refresh from server",
+    "refreshed": "Mod list refreshed.",
+    "requiredYes": "Required",
+    "requiredNo": "Optional",
+    "requiredTooltip": "Mod-author flag only. Do not rely on this for join planning — install every mod on the server at matching versions.",
+    "disclaimerTitle": "Install mods before joining",
+    "disclaimerDescription": "This list shows every mod on the server. RequiredOnRemote is not always reliable — use Download SMM profile to sync Satisfactory Mod Manager before connecting.",
+    "frmUnreachableTitle": "FRM unreachable",
+    "frmUnreachableDescription": "FactoryMate could not reach the FRM server. Mod data may be stale until the connection is restored.",
+    "searchPlaceholder": "Search mods by name",
+    "searchEmpty": "No mods match your search.",
+    "sortLabel": "Sort by",
+    "sortName": "Name",
+    "sortVersion": "Version",
+    "docsLink": "Docs",
+    "supportLink": "Support",
+    "columns": {
+      "name": "Mod",
+      "version": "Version",
+      "remoteVersionRange": "Remote version",
+      "createdBy": "Author",
+      "description": "Description",
+      "docs": "Docs",
+      "support": "Support",
+      "smrName": "SMR name",
+      "required": "Required on remote"
+    }
   },
   "players": {
     "title": "Players",
@@ -249,9 +322,19 @@
   },
   "milestones": {
     "title": "Milestones",
-    "description": "Schematics grouped by type and tech tier.",
+    "description": "HUB milestones, hard drives, and alternate recipes by tech tier.",
     "empty": "No schematics in this category.",
     "tierGroup": "Tier {tier}",
+    "tierLabel": "Tier {tier}",
+    "tierComplete": "Complete",
+    "tierPartial": "In progress",
+    "progressSummary": "{purchased} of {total} milestones unlocked",
+    "highestTierComplete": "Highest tier fully complete: {tier}",
+    "nextTierHint": "Next up: Tier {tier}",
+    "tabProgress": "{purchased}/{total}",
+    "unlockedAt": "Unlocked {date}",
+    "hardDriveReady": "Ready to scan",
+    "hardDriveReadyDescription": "These hard drives are available — pick a recipe in the M.A.M.",
     "schematicCount": "{count, plural, one {# schematic} other {# schematics}}",
     "recipes": "Recipes",
     "tabs": {
@@ -270,7 +353,7 @@
     "description": "M.A.M. research trees with node layout, prerequisites, and costs.",
     "empty": "No research data available.",
     "layoutPending": "Tree layout data is not available yet. It will appear after the next fast poll.",
-    "nodeCount": "{count, plural, one {# node} other {# nodes}}",
+    "nodeProgress": "{purchased}/{total}",
     "costItem": "{name} × {amount}",
     "nodeDetails": {
       "tier": "Tech tier {tier}",
@@ -298,14 +381,60 @@
     "overallProgress": "Overall phase progress",
     "itemsTitle": "Required items",
     "itemsEmpty": "No phase items recorded.",
-    "itemProgress": "{remaining} / {total} remaining · Need {amount}",
+    "itemProgress": "{delivered} / {total} delivered · Need {remaining}",
     "unknownAlertTitle": "Unknown elevator phase detected",
     "unknownAlertDescription": "{count, plural, one {# unresolved diagnostic entry requires admin attention.} other {# unresolved diagnostic entries require admin attention.}}",
     "unknownDetectedAt": "Detected {date}",
     "resolve": "Mark resolved",
     "resolveSuccess": "Diagnostic entry marked as resolved."
   },
+  "notifications": {
+    "categories": {
+      "server": {
+        "label": "Server status",
+        "description": "Direct messages when the game server goes online or offline."
+      },
+      "player": {
+        "label": "Players",
+        "description": "Direct messages when players join or leave the server."
+      },
+      "power": {
+        "label": "Power",
+        "description": "Direct messages for fuse trips and power restoration."
+      },
+      "progression": {
+        "label": "Progression",
+        "description": "Direct messages for milestones, hard drives, elevator phases, and research unlocks."
+      },
+      "vehicle": {
+        "label": "Vehicles",
+        "description": "Direct messages for derailed trains, out-of-fuel vehicles, and stuck vehicles."
+      }
+    },
+    "personalDm": {
+      "label": "Personal player events",
+      "description": "When your linked character joins or leaves, send a personal DM to you even if the Players category is off.",
+      "defaultLabel": "Personal player events (default)",
+      "defaultDescription": "Default for new users: send a personal DM when their linked character joins or leaves."
+    }
+  },
+  "account": {
+    "notifications": {
+      "title": "Notification preferences",
+      "description": "Choose which game events also reach you as Discord direct messages.",
+      "formTitle": "Direct message preferences",
+      "formDescription": "Channel notifications are configured by admins. These toggles only affect DMs sent to your linked Discord account.",
+      "saved": "Notification preferences saved."
+    }
+  },
   "settings": {
+    "notificationDefaults": {
+      "title": "Notification defaults",
+      "description": "Default DM preferences applied to newly registered users.",
+      "formTitle": "DM defaults for new users",
+      "formDescription": "Existing users keep their own preferences. Connection-detail DMs are always mandatory and are not controlled here.",
+      "saved": "Notification defaults saved."
+    },
     "general": {
       "title": "General settings",
       "description": "FRM connection details and polling intervals.",
@@ -329,14 +458,14 @@
     },
     "targets": {
       "title": "Notification targets",
-      "description": "Discord webhook destinations for outbound notifications.",
+      "description": "Discord channels where the bot posts game-event notifications.",
       "tableTitle": "Configured targets",
       "empty": "No notification targets configured yet.",
       "create": "Add target",
       "createTitle": "Create notification target",
-      "createDescription": "Add a Discord webhook destination.",
+      "createDescription": "Select a Discord channel for the bot to post into.",
       "editTitle": "Edit notification target",
-      "editDescription": "Update webhook settings for this target.",
+      "editDescription": "Update the channel for this target.",
       "edit": "Edit",
       "delete": "Delete",
       "test": "Test",
@@ -347,23 +476,109 @@
       "deleted": "Target deleted.",
       "testSent": "Test notification sent.",
       "testFailed": "Test notification failed.",
+      "legacyBannerTitle": "Webhook targets are deprecated",
+      "legacyBannerDescription": "Webhook targets are no longer supported. Edit each legacy target and re-select a Discord channel.",
+      "legacyBadge": "Legacy webhook",
+      "legacyWebhook": "Legacy webhook URL",
+      "channelsLoadFailed": "Could not load Discord channels. Check that the bot is connected.",
       "deleteTitle": "Delete notification target?",
       "deleteDescription": "This will permanently delete {name}.",
       "deleteCascadeWarning": "{count, plural, one {This target is assigned to # message type. That assignment will be removed.} other {This target is assigned to # message types. Those assignments will be removed.}}",
       "deleteConfirm": "Delete target",
       "columns": {
         "name": "Name",
+        "channel": "Channel",
         "provider": "Provider",
         "enabled": "Status",
         "actions": "Actions"
       },
       "fields": {
         "name": "Name",
-        "webhookUrl": "Webhook URL",
-        "webhookUrlPlaceholder": "https://discord.com/api/webhooks/...",
-        "usernameOverride": "Username override",
-        "avatarUrlOverride": "Avatar URL override",
+        "channel": "Discord channel",
+        "channelPlaceholder": "Select a channel",
+        "threadId": "Thread ID (optional)",
+        "threadIdPlaceholder": "Post into a forum thread",
         "enabled": "Enabled"
+      }
+    },
+    "discord": {
+      "title": "Discord bot",
+      "description": "Bot status, invite link, guild configuration, and role mappings.",
+      "statusTitle": "Bot status",
+      "statusDescription": "The bot handles registration, connection DMs, and channel notifications.",
+      "recommendedAvatarTitle": "Recommended bot avatar",
+      "recommendedAvatarDescription": "Upload this image in the Discord Developer Portal under Bot → Avatar. Right-click the preview to save it, or open /discord-bot-avatar.png while FactoryMate is running.",
+      "recommendedAvatarAlt": "FactoryMate Discord bot avatar",
+      "recommendedAvatarLink": "Discord Developer Portal",
+      "configTitle": "Guild configuration",
+      "configDescription": "These settings control slash-command permissions and registration defaults.",
+      "roleMappingsTitle": "Role mappings",
+      "roleMappingsDescription": "Map Discord roles to FactoryMate roles and allowed command groups.",
+      "roleMappingsEmpty": "No role mappings configured. Default role and command rules apply.",
+      "addRoleMapping": "Add mapping",
+      "removeRoleMapping": "Remove",
+      "saved": "Discord settings saved.",
+      "inviteUrl": "Bot invite URL",
+      "inviteUnavailable": "Invite URL unavailable until the bot is configured.",
+      "loadInvite": "Load invite URL",
+      "copyInvite": "Copy invite URL",
+      "inviteCopied": "Invite URL copied.",
+      "inviteLoadFailed": "Could not load the bot invite URL.",
+      "tokenWarningTitle": "Discord bot token not configured",
+      "tokenWarningDescription": "Set DISCORD_BOT_TOKEN in the environment to enable bot commands, channel posts, and DMs.",
+      "status": {
+        "connected": "Connected",
+        "disconnected": "Disconnected",
+        "disabled": "Bot disabled in settings",
+        "tokenMissing": "Token not configured",
+        "enabled": "Bot enabled",
+        "botDisabled": "Bot disabled"
+      },
+      "fields": {
+        "guildId": "Guild ID",
+        "guildIdPlaceholder": "Discord server ID",
+        "autoApprove": "Auto-approve new registrations",
+        "allowSelfRegister": "Allow self-registration via /register",
+        "defaultFmRole": "Default FactoryMate role",
+        "adminDiscordRoleIds": "Admin Discord role IDs",
+        "adminDiscordRoleIdsPlaceholder": "Comma-separated role IDs",
+        "discordRoleIdPlaceholder": "Discord role ID",
+        "discordRoleIdHint": "For @everyone, use your Guild ID (same value as above)."
+      },
+      "columns": {
+        "discordRoleId": "Discord role",
+        "fmRole": "FactoryMate role",
+        "commands": "Command groups",
+        "actions": "Actions"
+      },
+      "commandGroups": {
+        "admin": "Admin",
+        "register": "Register",
+        "player": "Player",
+        "connection": "Connection",
+        "mods": "Mods"
+      }
+    },
+    "connection": {
+      "title": "Connection details",
+      "description": "Game join host, port, and password shared with registered players.",
+      "formTitle": "Join details",
+      "formDescription": "Saving changes broadcasts updated connection details to all linked Discord users.",
+      "saved": "Connection details saved.",
+      "lastUpdated": "Last updated {date}",
+      "fields": {
+        "gameHost": "Game host",
+        "gameHostPlaceholder": "factory.example.com",
+        "gamePort": "Game port",
+        "gamePortPlaceholder": "7777",
+        "gamePassword": "Game password",
+        "gamePasswordPlaceholder": "Leave blank to keep unchanged",
+        "clearPassword": "Clear stored password",
+        "notes": "Notes",
+        "notesPlaceholder": "Optional instructions for players",
+        "smmProfileName": "SMM profile name",
+        "smmProfileNamePlaceholder": "FactoryMate Server",
+        "smmProfileNameHint": "Used as the profile name when players download the SMM profile from /mods."
       }
     },
     "templates": {
@@ -381,8 +596,7 @@
       "embedDescription": "Embed description",
       "embedColor": "Embed color",
       "embedFooter": "Embed footer",
-      "embedShowTimestamp": "Show timestamp",
-      "previewTimestampSample": "14:37 UTC",
+      "embedShowTimestamp": "Show Discord timestamp (each user sees their local time)",
       "embedFields": "Embed fields",
       "addField": "Add field",
       "removeField": "Remove",
@@ -416,20 +630,44 @@
       "tableTitle": "Recent notifications ({total})",
       "empty": "No notifications have been sent yet.",
       "deletedTarget": "Deleted target",
+      "deliveryChannel": "Channel",
+      "deliveryDM": "Direct message",
+      "dmRecipient": "Discord user {id}",
       "statusSuccess": "Success",
       "statusFailed": "Failed",
       "columns": {
         "sentAt": "Sent at",
         "messageType": "Message type",
         "target": "Target",
+        "delivery": "Delivery",
         "preview": "Preview",
         "status": "Status"
       }
     },
     "users": {
       "title": "Users",
-      "description": "Manage dashboard accounts, invites, and roles.",
+      "description": "Manage dashboard accounts, Discord registrations, and player mappings.",
       "tableTitle": "Accounts",
+      "discordFirstTitle": "Discord registration is primary",
+      "discordFirstDescription": "Ask new players to run /register in your Discord server. Web invite links below are break-glass recovery only.",
+      "breakGlassTitle": "Break-glass web invites",
+      "breakGlassDescription": "Create a single-use invite link when Discord registration is unavailable.",
+      "showBreakGlass": "Show break-glass invites",
+      "hideBreakGlass": "Hide break-glass invites",
+      "pendingApprovalsTitle": "Pending registrations",
+      "unmappedPlayersTitle": "Unmapped server players",
+      "approveRegistration": "Approve",
+      "rejectRegistration": "Reject",
+      "registrationApproved": "Registration approved.",
+      "registrationRejected": "Registration rejected.",
+      "rejectRegistrationTitle": "Reject registration?",
+      "rejectRegistrationDescription": "Reject {username}'s registration request? They will be notified on Discord.",
+      "rejectRegistrationConfirm": "Reject registration",
+      "rejectCommentLabel": "Optional comment",
+      "rejectCommentPlaceholder": "Reason shown to the registrant",
+      "pendingPlayerBadge": "Pending: {name}",
+      "statusOnline": "Online",
+      "statusOffline": "Offline",
       "createInvite": "Create invite",
       "createInviteTitle": "Create invite link",
       "createInviteDescription": "Generate a single-use link for a new account.",
@@ -439,7 +677,13 @@
       "copyLink": "Copy link",
       "revokeInvite": "Revoke",
       "revokeInviteTitle": "Revoke invite?",
-      "revokeInviteDescription": "This invite link will no longer work.",
+      "revokeInviteDescription": "Revoke this {role} invite created {createdAt}? This link will no longer work.",
+      "revokeInviteDescriptionFallback": "This invite link will no longer work.",
+      "playersLoadFailed": "Could not load players.",
+      "linkToUser": "Link",
+      "linkUserPlaceholder": "Select user",
+      "linkUserRequired": "Select a user to link.",
+      "playerLinked": "Linked {name} to the selected user.",
       "revokeInviteConfirm": "Revoke invite",
       "editTitle": "Edit user",
       "editDescription": "Update role, player mapping, or reset password.",
@@ -458,6 +702,7 @@
       "deleteConfirm": "Delete user",
       "state": {
         "pending": "Pending",
+        "pendingApproval": "Awaiting approval",
         "active": "Active",
         "accepted": "Accepted",
         "expired": "Expired",
@@ -465,17 +710,36 @@
       },
       "columns": {
         "username": "Username",
+        "discord": "Discord",
+        "registrationSource": "Registration",
+        "linkedAt": "Discord linked",
         "role": "Role",
         "state": "State",
         "player": "Player",
+        "pendingPlayer": "Pending player",
+        "status": "Status",
+        "lastSeen": "Last seen",
         "createdAt": "Created",
         "actions": "Actions"
       },
       "fields": {
         "role": "Role",
         "player": "Game player",
-        "noPlayer": "None"
-      }
+        "noPlayer": "None",
+        "externalPlatform": "Platform",
+        "externalPlatformPlaceholder": "discord",
+        "externalUserId": "External user ID",
+        "externalUsername": "External username",
+        "externalDisplayName": "Display name"
+      },
+      "externalTitle": "Discord identity",
+      "externalDescription": "Override or unlink the external chat account linked to this user.",
+      "unlinkDiscord": "Unlink Discord",
+      "unlinkDiscordTitle": "Unlink Discord?",
+      "unlinkDiscordDescription": "Remove the Discord link from {username}. They can link again with /link.",
+      "unlinkDiscordConfirm": "Unlink",
+      "discordUnlinked": "Discord identity unlinked.",
+      "externalUpdated": "External identity updated."
     }
   }
 }

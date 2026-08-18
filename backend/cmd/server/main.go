@@ -4,18 +4,24 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"factorymate/internal/api"
 	"factorymate/internal/auth"
+	"factorymate/internal/connection"
 	"factorymate/internal/db"
+	"factorymate/internal/discord"
 	"factorymate/internal/frm"
+	"factorymate/internal/mods"
 	"factorymate/internal/notify"
 	"factorymate/internal/poller"
+	"factorymate/internal/registration"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -39,10 +45,30 @@ func main() {
 		log.Fatalf("load elevator phases: %v", err)
 	}
 
-	go runPoller(ctx, database, phases)
-	go runSlowPoller(ctx, database)
-
 	authSvc := auth.NewService(database)
+	regSvc := registration.NewService(database, authSvc)
+	modsSvc := mods.NewService(database, func(ctx context.Context) (*frm.Client, error) {
+		return poller.FRMClientFromSettings(ctx, database)
+	})
+
+	bot, err := discord.NewBot(database, regSvc, nil, modsSvc)
+	if err != nil {
+		log.Fatalf("discord bot: %v", err)
+	}
+
+	connSvc := connection.NewService(database, bot)
+	bot.SetConnection(connSvc)
+
+	notify.SendEnabled = func(ctx context.Context) (bool, error) {
+		return discord.BotEnabled(ctx, database)
+	}
+
+	if err := bot.Start(ctx); err != nil {
+		log.Printf("discord bot start: %v — dashboard and FRM polling will continue without bot features", err)
+	}
+
+	go runPoller(ctx, database, phases, bot)
+	go runSlowPoller(ctx, database)
 	go authSvc.StartCleanupJob(ctx)
 
 	port := os.Getenv("PORT")
@@ -53,14 +79,24 @@ func main() {
 	r := chi.NewRouter()
 	r.Get("/healthz", healthz)
 	r.Route("/api", func(r chi.Router) {
-		api.NewHandler(database, authSvc).Mount(r)
+		api.NewHandler(database, authSvc, bot, regSvc, connSvc, modsSvc).Mount(r)
 	})
 
 	addr := ":" + port
-	log.Printf("listening on %s", addr)
-	if err := http.ListenAndServe(addr, r); err != nil {
-		log.Fatal(err)
-	}
+	srv := &http.Server{Addr: addr, Handler: r}
+	go func() {
+		log.Printf("listening on %s", addr)
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Fatal(err)
+		}
+	}()
+
+	<-ctx.Done()
+	log.Printf("shutting down")
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	_ = srv.Shutdown(shutdownCtx)
+	bot.Stop()
 }
 
 func runSlowPoller(ctx context.Context, database *sql.DB) {
@@ -81,11 +117,27 @@ func (f *settingsSlowFetcher) GetSlow(ctx context.Context) frm.SlowPollResult {
 	return client.GetSlow(ctx)
 }
 
-func runPoller(ctx context.Context, database *sql.DB, phases *poller.ElevatorPhases) {
+func runPoller(ctx context.Context, database *sql.DB, phases *poller.ElevatorPhases, bot *discord.Bot) {
 	fetcher := &settingsFetcher{db: database}
-	dispatcher := notify.NewDispatcher(database, map[string]notify.Provider{
-		"discord": notify.NewDiscordProvider(),
+	provider := notify.NewDiscordProviderWithSessionFn(func() notify.DiscordSession {
+		if bot == nil {
+			return nil
+		}
+		return bot.Session()
 	})
+	dispatcher := notify.NewDispatcher(database, map[string]notify.Provider{
+		"discord": provider,
+	})
+	poller.OnPlayersAutoLinked = func(ctx context.Context, links []auth.ResolvedPlayerLink) error {
+		autoLinks := make([]notify.PlayerAutoLink, 0, len(links))
+		for _, link := range links {
+			autoLinks = append(autoLinks, notify.PlayerAutoLink{
+				ExternalUserID: link.ExternalUserID,
+				PlayerName:     link.PlayerName,
+			})
+		}
+		return dispatcher.NotifyPlayerAutoLinked(ctx, autoLinks)
+	}
 	onEvent := func(ctx context.Context, ev poller.Event) error {
 		return dispatcher.HandleEvent(ctx, ev.MessageTypeKey, ev.Variables)
 	}

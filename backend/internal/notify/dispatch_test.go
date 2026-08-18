@@ -4,8 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
-	"net/http"
-	"net/http/httptest"
 	"path/filepath"
 	"testing"
 	"time"
@@ -22,32 +20,15 @@ func TestDispatcher_PlayerJoined(t *testing.T) {
 	database := openDispatchTestDB(t)
 	defer database.Close()
 
-	var gotTitle string
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		var payload struct {
-			Embeds []struct {
-				Title string `json:"title"`
-			} `json:"embeds"`
-		}
-		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
-			t.Fatalf("decode payload: %v", err)
-		}
-		if len(payload.Embeds) != 1 {
-			t.Fatalf("embeds len = %d, want 1", len(payload.Embeds))
-		}
-		gotTitle = payload.Embeds[0].Title
-		w.WriteHeader(http.StatusNoContent)
-	}))
-	defer srv.Close()
-
-	targetID := insertDiscordTarget(t, ctx, database, srv.URL)
+	mock := notify.NewMockDiscordSession()
+	targetID := insertDiscordTarget(t, ctx, database, "channel-1")
 	if err := assignTarget(t, ctx, database, "player_joined", targetID); err != nil {
 		t.Fatalf("assign target: %v", err)
 	}
 
 	fixedNow := time.Date(2026, 8, 17, 14, 0, 0, 0, time.UTC)
 	d := notify.NewDispatcher(database, map[string]notify.Provider{
-		"discord": notify.NewDiscordProvider(),
+		"discord": notify.NewDiscordProvider(mock),
 	})
 	d.Now = func() time.Time { return fixedNow }
 
@@ -59,8 +40,12 @@ func TestDispatcher_PlayerJoined(t *testing.T) {
 		t.Fatalf("HandleEvent: %v", err)
 	}
 
+	if len(mock.ChannelCalls) != 1 {
+		t.Fatalf("channel calls = %d, want 1", len(mock.ChannelCalls))
+	}
+	gotTitle := mock.ChannelCalls[0].Message.Embeds[0].Title
 	if gotTitle != "👤 A player joined the server" {
-		t.Fatalf("webhook title = %q, want player joined embed title", gotTitle)
+		t.Fatalf("embed title = %q, want player joined embed title", gotTitle)
 	}
 
 	var preview string
@@ -92,14 +77,8 @@ func TestDispatcher_SkipsDisabledMessageType(t *testing.T) {
 	database := openDispatchTestDB(t)
 	defer database.Close()
 
-	called := false
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		called = true
-		w.WriteHeader(http.StatusNoContent)
-	}))
-	defer srv.Close()
-
-	targetID := insertDiscordTarget(t, ctx, database, srv.URL)
+	mock := notify.NewMockDiscordSession()
+	targetID := insertDiscordTarget(t, ctx, database, "channel-1")
 	if err := assignTarget(t, ctx, database, "player_joined", targetID); err != nil {
 		t.Fatalf("assign target: %v", err)
 	}
@@ -109,7 +88,7 @@ func TestDispatcher_SkipsDisabledMessageType(t *testing.T) {
 	}
 
 	d := notify.NewDispatcher(database, map[string]notify.Provider{
-		"discord": notify.NewDiscordProvider(),
+		"discord": notify.NewDiscordProvider(mock),
 	})
 	if err := d.HandleEvent(ctx, "player_joined", map[string]string{
 		"PlayerName":  "Guggi",
@@ -117,8 +96,8 @@ func TestDispatcher_SkipsDisabledMessageType(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("HandleEvent: %v", err)
 	}
-	if called {
-		t.Fatal("webhook should not be called when message type is disabled")
+	if len(mock.ChannelCalls) != 0 {
+		t.Fatal("discord send should not be called when message type is disabled")
 	}
 
 	var count int
@@ -139,14 +118,8 @@ func TestDispatcher_SkipsDisabledTarget(t *testing.T) {
 	database := openDispatchTestDB(t)
 	defer database.Close()
 
-	called := false
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		called = true
-		w.WriteHeader(http.StatusNoContent)
-	}))
-	defer srv.Close()
-
-	targetID := insertDiscordTarget(t, ctx, database, srv.URL)
+	mock := notify.NewMockDiscordSession()
+	targetID := insertDiscordTarget(t, ctx, database, "channel-1")
 	if err := assignTarget(t, ctx, database, "player_joined", targetID); err != nil {
 		t.Fatalf("assign target: %v", err)
 	}
@@ -156,7 +129,7 @@ func TestDispatcher_SkipsDisabledTarget(t *testing.T) {
 	}
 
 	d := notify.NewDispatcher(database, map[string]notify.Provider{
-		"discord": notify.NewDiscordProvider(),
+		"discord": notify.NewDiscordProvider(mock),
 	})
 	if err := d.HandleEvent(ctx, "player_joined", map[string]string{
 		"PlayerName":  "Guggi",
@@ -164,8 +137,8 @@ func TestDispatcher_SkipsDisabledTarget(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("HandleEvent: %v", err)
 	}
-	if called {
-		t.Fatal("webhook should not be called when target is disabled")
+	if len(mock.ChannelCalls) != 0 {
+		t.Fatal("discord send should not be called when target is disabled")
 	}
 }
 
@@ -176,19 +149,13 @@ func TestDispatcher_LogsSendFailure(t *testing.T) {
 	database := openDispatchTestDB(t)
 	defer database.Close()
 
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusBadRequest)
-		_, _ = w.Write([]byte("invalid webhook"))
-	}))
-	defer srv.Close()
-
-	targetID := insertDiscordTarget(t, ctx, database, srv.URL)
+	targetID := insertDiscordTarget(t, ctx, database, "channel-1")
 	if err := assignTarget(t, ctx, database, "player_joined", targetID); err != nil {
 		t.Fatalf("assign target: %v", err)
 	}
 
 	d := notify.NewDispatcher(database, map[string]notify.Provider{
-		"discord": notify.NewDiscordProvider(),
+		"discord": notify.NewDiscordProvider(nil),
 	})
 	if err := d.HandleEvent(ctx, "player_joined", map[string]string{
 		"PlayerName":  "Guggi",
@@ -205,7 +172,7 @@ func TestDispatcher_LogsSendFailure(t *testing.T) {
 		t.Fatalf("query notification_log: %v", err)
 	}
 	if success {
-		t.Fatal("expected success = false for failed webhook")
+		t.Fatal("expected success = false for failed send")
 	}
 	if !errText.Valid || errText.String == "" {
 		t.Fatal("expected error text in notification_log")
@@ -219,25 +186,8 @@ func TestDispatcher_SendRenderedTest(t *testing.T) {
 	database := openDispatchTestDB(t)
 	defer database.Close()
 
-	var gotTitle string
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		var payload struct {
-			Embeds []struct {
-				Title string `json:"title"`
-			} `json:"embeds"`
-		}
-		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
-			t.Fatalf("decode payload: %v", err)
-		}
-		if len(payload.Embeds) != 1 {
-			t.Fatalf("embeds len = %d, want 1", len(payload.Embeds))
-		}
-		gotTitle = payload.Embeds[0].Title
-		w.WriteHeader(http.StatusNoContent)
-	}))
-	defer srv.Close()
-
-	targetID := insertDiscordTarget(t, ctx, database, srv.URL)
+	mock := notify.NewMockDiscordSession()
+	targetID := insertDiscordTarget(t, ctx, database, "channel-1")
 	if err := assignTarget(t, ctx, database, "player_joined", targetID); err != nil {
 		t.Fatalf("assign target: %v", err)
 	}
@@ -247,7 +197,7 @@ func TestDispatcher_SendRenderedTest(t *testing.T) {
 	}
 
 	d := notify.NewDispatcher(database, map[string]notify.Provider{
-		"discord": notify.NewDiscordProvider(),
+		"discord": notify.NewDiscordProvider(mock),
 	})
 
 	rendered := template.Render(template.Template{
@@ -257,8 +207,9 @@ func TestDispatcher_SendRenderedTest(t *testing.T) {
 	if err := d.SendRenderedTest(ctx, "player_joined", rendered); err != nil {
 		t.Fatalf("SendRenderedTest: %v", err)
 	}
+	gotTitle := mock.ChannelCalls[0].Message.Embeds[0].Title
 	if gotTitle != "Test Title" {
-		t.Fatalf("webhook title = %q, want Test Title", gotTitle)
+		t.Fatalf("embed title = %q, want Test Title", gotTitle)
 	}
 
 	if err := d.SendRenderedTest(ctx, "player_left", rendered); err != notify.ErrNoTargets {
@@ -279,9 +230,9 @@ func openDispatchTestDB(t *testing.T) *sql.DB {
 	return database
 }
 
-func insertDiscordTarget(t *testing.T, ctx context.Context, database *sql.DB, webhookURL string) int64 {
+func insertDiscordTarget(t *testing.T, ctx context.Context, database *sql.DB, channelID string) int64 {
 	t.Helper()
-	cfgJSON, err := json.Marshal(notify.DiscordConfig{WebhookURL: webhookURL})
+	cfgJSON, err := json.Marshal(notify.DiscordConfig{ChannelID: channelID})
 	if err != nil {
 		t.Fatalf("marshal config: %v", err)
 	}

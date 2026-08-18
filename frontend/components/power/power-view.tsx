@@ -28,10 +28,12 @@ import {
 import { apiFetch } from "@/lib/api"
 import {
   buildDateRangeQuery,
+  isShortTimePreset,
   presetToDateRange,
   type DateRangePreset,
 } from "@/lib/date-range"
-import { formatDateTime, formatMw, formatNumber, formatPercent } from "@/lib/format"
+import { useFormatDateTime } from "@/hooks/use-format-datetime"
+import { formatMw, formatNumber, formatPercent } from "@/lib/format"
 import type {
   Circuit,
   PowerHistoryEvent,
@@ -47,9 +49,9 @@ type PowerViewProps = {
 }
 
 const chartConfig = {
-  production: { label: "Production", color: "hsl(var(--chart-1))" },
-  consumed: { label: "Consumption", color: "hsl(var(--chart-2))" },
-  battery: { label: "Battery", color: "hsl(var(--chart-3))" },
+  production: { label: "Production", color: "var(--chart-1)" },
+  consumed: { label: "Consumption", color: "var(--chart-2)" },
+  battery: { label: "Battery", color: "var(--chart-3)" },
 } satisfies ChartConfig
 
 export function PowerView({
@@ -59,6 +61,7 @@ export function PowerView({
 }: PowerViewProps) {
   const t = useTranslations("power")
   const tCharts = useTranslations("charts")
+  const { formatDateTime } = useFormatDateTime()
   const [circuits] = useState(initialPower.circuits)
   const [history] = useState(initialHistory)
   const [selectedCircuit, setSelectedCircuit] = useState<string>(
@@ -202,6 +205,7 @@ export function PowerView({
                 { key: "battery" },
               ]}
               yAxisLabel="MW / %"
+              compactTimeAxis={isShortTimePreset(interval)}
             />
           )}
         </CardContent>

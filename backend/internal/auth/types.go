@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"encoding/json"
 	"time"
 )
 
@@ -18,14 +19,50 @@ const (
 	RoleViewer Role = "viewer"
 )
 
+const (
+	StatusActive          = "active"
+	StatusPendingApproval = "pending_approval"
+)
+
 type User struct {
-	ID       int64  `json:"id"`
-	Username string `json:"username"`
-	Role     Role   `json:"role"`
-	PlayerID *string `json:"playerId,omitempty"`
-	PlayerName *string `json:"playerName,omitempty"`
-	Status   string `json:"status,omitempty"`
-	CreatedAt string `json:"createdAt,omitempty"`
+	ID                 int64          `json:"id"`
+	Username           string         `json:"username"`
+	Role               Role           `json:"role"`
+	PlayerID           *string        `json:"playerId,omitempty"`
+	PlayerName         *string        `json:"playerName,omitempty"`
+	PendingPlayerName  *string        `json:"pendingPlayerName,omitempty"`
+	Status             string         `json:"status,omitempty"`
+	RegistrationSource *string        `json:"registrationSource,omitempty"`
+	CreatedAt          string         `json:"createdAt,omitempty"`
+	External           ExternalFields `json:"-"`
+}
+
+// MarshalJSON flattens external identity fields for API responses.
+func (u User) MarshalJSON() ([]byte, error) {
+	type userJSON struct {
+		ID                 int64   `json:"id"`
+		Username           string  `json:"username"`
+		Role               Role    `json:"role"`
+		PlayerID           *string `json:"playerId,omitempty"`
+		PlayerName         *string `json:"playerName,omitempty"`
+		PendingPlayerName  *string `json:"pendingPlayerName,omitempty"`
+		Status             string  `json:"status,omitempty"`
+		RegistrationSource *string `json:"registrationSource,omitempty"`
+		CreatedAt          string  `json:"createdAt,omitempty"`
+		ExternalFields
+	}
+	return json.Marshal(userJSON{
+		ID:                 u.ID,
+		Username:           u.Username,
+		Role:               u.Role,
+		PlayerID:           u.PlayerID,
+		PlayerName:         u.PlayerName,
+		PendingPlayerName:  u.PendingPlayerName,
+		Status:             u.Status,
+		RegistrationSource: u.RegistrationSource,
+		CreatedAt:          u.CreatedAt,
+		ExternalFields:     u.External,
+	})
 }
 
 type Session struct {

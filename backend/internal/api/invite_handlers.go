@@ -99,6 +99,8 @@ func (h *Handler) AcceptInvite(w http.ResponseWriter, r *http.Request) {
 			writeError(w, r, http.StatusGone, "not pending")
 		case errors.Is(err, auth.ErrDuplicateUsername):
 			writeError(w, r, http.StatusConflict, "username already exists")
+		case errors.Is(err, auth.ErrWeakPassword):
+			writeError(w, r, http.StatusBadRequest, err.Error())
 		default:
 			if strings.Contains(err.Error(), "required") {
 				writeError(w, r, http.StatusBadRequest, err.Error())
