@@ -13,13 +13,7 @@ permissions:
   contents: read
 
 jobs:
-  ci:
-    uses: ./.github/workflows/_ci.yml
-    permissions:
-      contents: read
-
   release-draft:
-    needs: ci
     permissions:
       contents: write
     uses: ./.github/workflows/_release-draft.yml

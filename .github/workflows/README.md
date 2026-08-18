@@ -10,7 +10,7 @@ Entry-point workflows own triggers; reusable workflows (prefixed `_`) are called
 |-------------|---------|-------|
 | `pr.yml` | `pull_request` | `_ci.yml` |
 | `dev.yml` | `push` → `dev` | `_ci.yml` → `_container-image.yml` |
-| `main.yml` | `push` → `main` | `_ci.yml` → `_release-draft.yml` |
+| `main.yml` | `push` → `main` | `_release-draft.yml` |
 | `release.yml` | `release` → `published` (`v*`) | `_container-image.yml`, MkDocs → GitHub Pages |
 
 ## Trigger rules
