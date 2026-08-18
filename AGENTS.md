@@ -9,6 +9,13 @@ This repo is built **milestone-by-milestone** from [`docs/factorymate-roadmap.md
 3. Check [`.agents/project/orchestrator/milestone-scopes.md`](.agents/project/orchestrator/milestone-scopes.md) for READ/WRITE scope and scoped CI commands.
 4. For frontend UI: follow [`.cursor/rules/shadcn.mdc`](.cursor/rules/shadcn.mdc) (shadcn MCP) and [`.cursor/rules/03-i18n.mdc`](.cursor/rules/03-i18n.mdc) (no hardcoded strings).
 
+## CodeRabbit PR reviews
+
+When the user runs `/review-coderabbit <PR#>` or asks to evaluate CodeRabbit findings:
+
+- Follow [`.agents/skills/review-coderabbit/SKILL.md`](.agents/skills/review-coderabbit/SKILL.md)
+- Reports go to `.agents/project/pr-reviews/pr-{N}-coderabbit-evaluation.md`
+
 ## Orchestrated runs
 
 When the user asks to orchestrate or run the roadmap autonomously:
