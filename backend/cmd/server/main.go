@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"errors"
 	"log"
 	"net/http"
@@ -18,6 +17,7 @@ import (
 	"factorymate/internal/db"
 	"factorymate/internal/discord"
 	"factorymate/internal/frm"
+	"factorymate/internal/health"
 	"factorymate/internal/mods"
 	"factorymate/internal/notify"
 	"factorymate/internal/poller"
@@ -25,6 +25,8 @@ import (
 
 	"github.com/go-chi/chi/v5"
 )
+
+var appVersion = "dev"
 
 func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
@@ -77,7 +79,7 @@ func main() {
 	}
 
 	r := chi.NewRouter()
-	r.Get("/healthz", healthz)
+	r.Get("/healthz", health.Handler(appVersion))
 	r.Route("/api", func(r chi.Router) {
 		api.NewHandler(database, authSvc, bot, regSvc, connSvc, modsSvc).Mount(r)
 	})
@@ -155,10 +157,4 @@ func (f *settingsFetcher) GetFast(ctx context.Context) frm.FastPollResult {
 		return frm.FastPollResult{Errors: map[string]error{"config": err}}
 	}
 	return client.GetFast(ctx)
-}
-
-func healthz(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	_ = json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
 }

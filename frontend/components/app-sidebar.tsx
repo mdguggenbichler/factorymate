@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl"
 
 import type { User } from "@/lib/auth-types"
 import { FactoryMateLogo } from "@/components/factorymate-logo"
+import { SidebarAbout } from "@/components/sidebar-about"
 import { NavMain } from "@/components/nav-main"
 import { NavSettings } from "@/components/nav-settings"
 import { NavUser } from "@/components/nav-user"
@@ -182,6 +183,7 @@ export function AppSidebar({
         ) : null}
       </SidebarContent>
       <SidebarFooter>
+        <SidebarAbout />
         <NavUser user={user} />
       </SidebarFooter>
     </Sidebar>

@@ -1,4 +1,5 @@
 import { FactoryMateLogo } from "@/components/factorymate-logo"
+import { SidebarAbout } from "@/components/sidebar-about"
 
 export default function AuthLayout({
   children,
@@ -12,6 +13,9 @@ export default function AuthLayout({
           <FactoryMateLogo variant="onLight" />
         </div>
         {children}
+        <div className="mt-8">
+          <SidebarAbout variant="auth" />
+        </div>
       </div>
     </div>
   )

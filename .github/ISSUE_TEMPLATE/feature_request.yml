@@ -1,0 +1,41 @@
+name: Feature request
+description: Suggest an improvement or new capability
+title: "[Feature]: "
+labels:
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Have an idea to make FactoryMate better for your factory group? We'd love to hear it.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or use case
+      description: What pain point are you trying to solve?
+      placeholder: We want to know when a specific production line drops below a threshold…
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: How would you like this to work?
+      placeholder: Add a Discord notification when item X production rate falls below Y/min…
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Any workarounds you've tried?
+
+  - type: checkboxes
+    id: audience
+    attributes:
+      label: Who would benefit?
+      options:
+        - label: Server admins
+        - label: All players (dashboard viewers)
+        - label: Discord users (notifications / bot commands)

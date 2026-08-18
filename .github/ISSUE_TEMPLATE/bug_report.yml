@@ -1,0 +1,87 @@
+name: Bug report
+description: Something isn't working as expected
+title: "[Bug]: "
+labels:
+  - bug
+  - triage
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping improve FactoryMate! The more detail you share, the faster we can track this down.
+
+        **Tip:** Your FactoryMate version is shown in the sidebar footer of the dashboard (e.g. `v0.1.0`).
+
+  - type: input
+    id: version
+    attributes:
+      label: FactoryMate version
+      description: From the sidebar footer, or run `curl -s http://localhost:3000/healthz`
+      placeholder: "0.1.0"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: deployment
+    attributes:
+      label: How are you running FactoryMate?
+      options:
+        - Docker (recommended)
+        - Local development (Go + Next.js)
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Describe the bug clearly — what did you see?
+      placeholder: Discord notifications stopped after a server restart…
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect?
+      placeholder: A player_joined embed should appear in the configured channel…
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Numbered steps help a lot
+      placeholder: |
+        1. Enable player_joined in Settings → Notifications → Templates
+        2. Join the Satisfactory server
+        3. No Discord message appears
+
+  - type: dropdown
+    id: frm-connectivity
+    attributes:
+      label: FRM connectivity
+      description: Can FactoryMate reach your FicsIt Remote Monitoring API?
+      options:
+        - Reachable (Settings → General test passes)
+        - Unreachable / connection errors
+        - Not sure
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: discord-involved
+    attributes:
+      label: Discord involved?
+      options:
+        - label: Notifications / embeds
+        - label: Slash commands (/register, /connection, etc.)
+        - label: Bot invite / role mapping
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or screenshots
+      description: |
+        Paste relevant output. For Docker: `docker compose logs factorymate --tail=100`
+      render: shell

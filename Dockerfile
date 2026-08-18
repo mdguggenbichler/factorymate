@@ -6,12 +6,16 @@ WORKDIR /src/backend
 
 RUN apk add --no-cache ca-certificates
 
+COPY VERSION /VERSION
 COPY backend/go.mod backend/go.sum ./
 RUN go mod download
 
 COPY backend/ .
 
-RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/server ./cmd/server
+RUN APP_VERSION="$(cat /VERSION | tr -d '[:space:]')" && \
+    CGO_ENABLED=0 GOOS=linux go build -trimpath \
+    -ldflags="-s -w -X main.appVersion=${APP_VERSION}" \
+    -o /out/server ./cmd/server
 
 FROM node:22-alpine AS node-deps
 
@@ -26,6 +30,7 @@ WORKDIR /app
 
 COPY --from=node-deps /app/node_modules ./node_modules
 COPY frontend/ .
+COPY VERSION /VERSION
 
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build
