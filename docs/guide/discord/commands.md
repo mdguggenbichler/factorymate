@@ -54,7 +54,7 @@ Username is derived from the Discord display name with automatic deduplication (
 
 ## Connection details
 
-- **`/connection get`** — sends join details (host, port, optional password) via DM. Add `public:true` to show ephemeral join details in the current channel instead.
+- **`/connection get`** — sends join details (host, port, optional password) via DM as an embed.
 - **`/connection set`** (admin) — updates join details and broadcasts a DM to all active linked players.
 
 Configure default join details in **Settings → Connection** on the web dashboard.

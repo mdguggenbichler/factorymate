@@ -538,7 +538,8 @@
         "defaultFmRole": "Default FactoryMate role",
         "adminDiscordRoleIds": "Admin Discord role IDs",
         "adminDiscordRoleIdsPlaceholder": "Comma-separated role IDs",
-        "discordRoleIdPlaceholder": "Discord role ID"
+        "discordRoleIdPlaceholder": "Discord role ID",
+        "discordRoleIdHint": "For @everyone, use your Guild ID (same value as above)."
       },
       "columns": {
         "discordRoleId": "Discord role",

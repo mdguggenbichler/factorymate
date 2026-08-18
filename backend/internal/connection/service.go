@@ -17,7 +17,8 @@ const (
 	settingKeyDetails    = "connection.details_json"
 	settingSMMProfileName = "mods.smm_profile_name"
 	defaultSMMProfileName = "FactoryMate Server"
-	messageTypeKey       = "connection_details_changed"
+	messageTypeKey        = "connection_details_changed"
+	messageTypeKeyDetails = "connection_details"
 	dmRateLimit          = 200 * time.Millisecond
 )
 
@@ -188,7 +189,7 @@ func (s *Service) BroadcastChange(ctx context.Context, old, new Details) error {
 
 	for i, extID := range recipients {
 		sendErr := s.sendDirectWithRetry(ctx, extID, msg)
-		s.recordDMLog(ctx, extID, preview, sendErr == nil, sendErr)
+		s.recordDMLog(ctx, messageTypeKey, extID, preview, sendErr == nil, sendErr)
 		if i < len(recipients)-1 {
 			time.Sleep(dmRateLimit)
 		}
@@ -221,9 +222,9 @@ func (s *Service) SendToUser(ctx context.Context, externalUserID string) error {
 	if strings.TrimSpace(details.GameHost) == "" {
 		return fmt.Errorf("connection details are not configured")
 	}
-	msg := FormatDetailsDM(details)
+	msg := s.renderDetailsMessage(ctx, details)
 	sendErr := s.SendDM.SendDirect(ctx, registration.PlatformDiscord, externalUserID, msg)
-	s.recordDMLog(ctx, externalUserID, dmLogPreview(msg), sendErr == nil, sendErr)
+	s.recordDMLog(ctx, messageTypeKeyDetails, externalUserID, dmLogPreview(msg), sendErr == nil, sendErr)
 	return sendErr
 }
 
@@ -268,7 +269,7 @@ func (s *Service) listActiveLinkedUsers(ctx context.Context) ([]string, error) {
 	return out, rows.Err()
 }
 
-func (s *Service) recordDMLog(ctx context.Context, externalUserID, preview string, success bool, sendErr error) {
+func (s *Service) recordDMLog(ctx context.Context, typeKey, externalUserID, preview string, success bool, sendErr error) {
 	var errText sql.NullString
 	if sendErr != nil {
 		errText = sql.NullString{String: sendErr.Error(), Valid: true}
@@ -279,7 +280,7 @@ func (s *Service) recordDMLog(ctx context.Context, externalUserID, preview strin
 			message_type_key, target_id, rendered_preview, success, error, sent_at,
 			delivery_mode, recipient_external_user_id
 		) VALUES (?, NULL, ?, ?, ?, ?, 'dm', ?)`,
-		messageTypeKey, preview, success, errText, sentAt, externalUserID,
+		typeKey, preview, success, errText, sentAt, externalUserID,
 	)
 	if err != nil {
 		_ = err

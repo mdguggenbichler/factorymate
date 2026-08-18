@@ -79,15 +79,7 @@ func slashCommands() []*discordgo.ApplicationCommand {
 				{
 					Type:        discordgo.ApplicationCommandOptionSubCommand,
 					Name:        "get",
-					Description: "Get join details (DM by default)",
-					Options: []*discordgo.ApplicationCommandOption{
-						{
-							Type:        discordgo.ApplicationCommandOptionBoolean,
-							Name:        "public",
-							Description: "Show join details in this channel instead of DM",
-							Required:    false,
-						},
-					},
+					Description: "Get join details via DM",
 				},
 				{
 					Type:        discordgo.ApplicationCommandOptionSubCommand,

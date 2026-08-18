@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"strings"
 
-	"factorymate/internal/connection"
 	"factorymate/internal/notify"
 	"factorymate/internal/registration"
 
@@ -29,7 +28,7 @@ func (b *Bot) SendWelcomeDM(ctx context.Context, externalUserID, username string
 	if b.connection != nil {
 		details, err := b.connection.Get(ctx)
 		if err == nil && strings.TrimSpace(details.GameHost) != "" {
-			connMsg := connection.FormatDetailsDM(details)
+			connMsg := b.connection.RenderDetailsMessage(ctx, details)
 			_ = provider.SendDirect(ctx, registration.PlatformDiscord, externalUserID, connMsg)
 		}
 	}

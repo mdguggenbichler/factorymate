@@ -36,31 +36,13 @@ func (b *Bot) handleConnectionCommand(ctx context.Context, s *discordgo.Session,
 			b.logAndDeny(ctx, s, i, externalID, "connection get", "forbidden")
 			return
 		}
-		public := false
-		for _, opt := range sub.Options {
-			if opt.Name == "public" {
-				public = opt.BoolValue()
-			}
-		}
-		b.handleConnectionGet(ctx, s, i, externalID, public)
+		b.handleConnectionGet(ctx, s, i, externalID)
 	default:
 		respondEphemeral(s, i, "Unknown subcommand.")
 	}
 }
 
-func (b *Bot) handleConnectionGet(ctx context.Context, s *discordgo.Session, i *discordgo.InteractionCreate, externalID string, public bool) {
-	if public {
-		details, err := b.connection.Get(ctx)
-		if err != nil || strings.TrimSpace(details.GameHost) == "" {
-			respondEphemeral(s, i, "Connection details are not configured yet.")
-			_ = LogBotCommand(ctx, b.db, externalID, "connection get", false, "not configured")
-			return
-		}
-		respondEphemeral(s, i, connection.FormatDetailsDM(details).Plain)
-		_ = LogBotCommand(ctx, b.db, externalID, "connection get", true, "ephemeral")
-		return
-	}
-
+func (b *Bot) handleConnectionGet(ctx context.Context, s *discordgo.Session, i *discordgo.InteractionCreate, externalID string) {
 	if err := b.connection.SendToUser(ctx, externalID); err != nil {
 		respondEphemeral(s, i, "Could not send connection details DM. Check that DMs are enabled.")
 		_ = LogBotCommand(ctx, b.db, externalID, "connection get", false, err.Error())

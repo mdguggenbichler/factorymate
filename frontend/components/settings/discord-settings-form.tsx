@@ -402,15 +402,20 @@ export function DiscordSettingsForm({
                   {roleMappings.role_mappings.map((entry, index) => (
                     <TableRow key={`mapping-${index}`}>
                       <TableCell>
-                        <Input
-                          value={entry.discord_role_id}
-                          onChange={(event) =>
-                            updateMapping(index, {
-                              discord_role_id: event.target.value,
-                            })
-                          }
-                          placeholder={t("fields.discordRoleIdPlaceholder")}
-                        />
+                        <div className="space-y-1">
+                          <Input
+                            value={entry.discord_role_id}
+                            onChange={(event) =>
+                              updateMapping(index, {
+                                discord_role_id: event.target.value,
+                              })
+                            }
+                            placeholder={t("fields.discordRoleIdPlaceholder")}
+                          />
+                          <p className="text-xs text-muted-foreground">
+                            {t("fields.discordRoleIdHint")}
+                          </p>
+                        </div>
                       </TableCell>
                       <TableCell>
                         <Select

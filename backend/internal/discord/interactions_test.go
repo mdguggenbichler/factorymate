@@ -117,6 +117,117 @@ func TestCanRunCommand_PendingApprovalBlocked(t *testing.T) {
 	}
 }
 
+func TestCanRunCommand_EveryoneRoleImplicitMatch(t *testing.T) {
+	t.Chdir("../..")
+	ctx := context.Background()
+	database := openTestDB(t)
+	defer database.Close()
+	if err := db.Init(ctx, database, db.SeedConfig{}); err != nil {
+		t.Fatalf("init db: %v", err)
+	}
+
+	const guildID = "guild-123"
+	mappings := map[string]any{
+		"guild_id": guildID,
+		"role_mappings": []map[string]any{
+			{
+				"discord_role_id": guildID,
+				"fm_role":         "viewer",
+				"bot_commands":    []string{"register", "player", "connection", "mods"},
+			},
+		},
+		"allow_self_register": true,
+	}
+	raw, _ := json.Marshal(mappings)
+	if _, err := database.ExecContext(ctx, `
+		INSERT INTO app_setting_kv (key, value) VALUES ('discord.role_mappings_json', ?)
+		ON CONFLICT(key) DO UPDATE SET value = excluded.value`, string(raw)); err != nil {
+		t.Fatalf("seed mappings: %v", err)
+	}
+
+	// Discord omits @everyone from member.Roles — member has no explicit roles.
+	perms, err := discord.ResolveMemberPermissions(ctx, database, nil)
+	if err != nil {
+		t.Fatalf("resolve perms: %v", err)
+	}
+	if !discord.CanRunCommand(perms, discord.CommandGroupRegister, discord.LinkStateUnregistered) {
+		t.Fatal("member with implicit @everyone should self-register")
+	}
+	if perms.FMRole != auth.RoleViewer {
+		t.Fatalf("fm role = %q, want viewer", perms.FMRole)
+	}
+}
+
+func TestCanRunCommand_SelfRegisterWithoutMappings(t *testing.T) {
+	t.Chdir("../..")
+	ctx := context.Background()
+	database := openTestDB(t)
+	defer database.Close()
+	if err := db.Init(ctx, database, db.SeedConfig{}); err != nil {
+		t.Fatalf("init db: %v", err)
+	}
+
+	mappings := map[string]any{
+		"allow_self_register": true,
+	}
+	raw, _ := json.Marshal(mappings)
+	if _, err := database.ExecContext(ctx, `
+		INSERT INTO app_setting_kv (key, value) VALUES ('discord.role_mappings_json', ?)
+		ON CONFLICT(key) DO UPDATE SET value = excluded.value`, string(raw)); err != nil {
+		t.Fatalf("seed mappings: %v", err)
+	}
+
+	perms, err := discord.ResolveMemberPermissions(ctx, database, nil)
+	if err != nil {
+		t.Fatalf("resolve perms: %v", err)
+	}
+	if !discord.CanRunCommand(perms, discord.CommandGroupRegister, discord.LinkStateUnregistered) {
+		t.Fatal("allow_self_register should grant register without role mappings")
+	}
+}
+
+func TestCanRunCommand_LinkedUserWithoutDiscordRoleMapping(t *testing.T) {
+	t.Chdir("../..")
+	ctx := context.Background()
+	database := openTestDB(t)
+	defer database.Close()
+	if err := db.Init(ctx, database, db.SeedConfig{}); err != nil {
+		t.Fatalf("init db: %v", err)
+	}
+
+	mappings := map[string]any{
+		"allow_self_register": true,
+		"role_mappings": []map[string]any{
+			{
+				"discord_role_id": "some-other-role",
+				"fm_role":         "viewer",
+				"bot_commands":    []string{"register"},
+			},
+		},
+	}
+	raw, _ := json.Marshal(mappings)
+	if _, err := database.ExecContext(ctx, `
+		INSERT INTO app_setting_kv (key, value) VALUES ('discord.role_mappings_json', ?)
+		ON CONFLICT(key) DO UPDATE SET value = excluded.value`, string(raw)); err != nil {
+		t.Fatalf("seed mappings: %v", err)
+	}
+
+	perms, err := discord.ResolveMemberPermissions(ctx, database, nil)
+	if err != nil {
+		t.Fatalf("resolve perms: %v", err)
+	}
+
+	for _, group := range []string{
+		discord.CommandGroupPlayer,
+		discord.CommandGroupConnection,
+		discord.CommandGroupMods,
+	} {
+		if !discord.CanRunCommand(perms, group, discord.LinkStateActiveLinked) {
+			t.Fatalf("linked user should run %q without Discord role mapping", group)
+		}
+	}
+}
+
 func TestParseNotificationsOptionsDefaultsToView(t *testing.T) {
 	action, category, enabled := discord.ParseNotificationsOptionsForTest(discordgo.ApplicationCommandInteractionData{})
 	if action != "view" || category != "" || enabled != "" {

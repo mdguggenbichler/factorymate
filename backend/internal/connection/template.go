@@ -13,7 +13,7 @@ import (
 )
 
 func (s *Service) renderChangeMessage(ctx context.Context, old, new Details) notify.RenderedMessage {
-	tmpl, err := s.loadEffectiveTemplate(ctx)
+	tmpl, err := s.loadEffectiveTemplate(ctx, messageTypeKey)
 	if err != nil {
 		return FormatChangeDM(new, old)
 	}
@@ -22,16 +22,31 @@ func (s *Service) renderChangeMessage(ctx context.Context, old, new Details) not
 	return enrichChangeDM(msg, old, new)
 }
 
-func (s *Service) loadEffectiveTemplate(ctx context.Context) (template.Template, error) {
+// RenderDetailsMessage builds the user-facing join-details DM from the connection_details template.
+func (s *Service) RenderDetailsMessage(ctx context.Context, details Details) notify.RenderedMessage {
+	return s.renderDetailsMessage(ctx, details)
+}
+
+func (s *Service) renderDetailsMessage(ctx context.Context, details Details) notify.RenderedMessage {
+	tmpl, err := s.loadEffectiveTemplate(ctx, messageTypeKeyDetails)
+	if err != nil {
+		return FormatDetailsDM(details)
+	}
+	rendered := template.Render(tmpl, s.buildTemplateVars(ctx, details))
+	msg := toNotifyMessage(rendered)
+	return enrichDetailsDM(msg, details)
+}
+
+func (s *Service) loadEffectiveTemplate(ctx context.Context, typeKey string) (template.Template, error) {
 	var defaultJSON string
 	err := s.DB.QueryRowContext(ctx, `
-		SELECT default_template_json FROM message_types WHERE key = ?`, messageTypeKey,
+		SELECT default_template_json FROM message_types WHERE key = ?`, typeKey,
 	).Scan(&defaultJSON)
 	if err == sql.ErrNoRows {
-		return template.Template{}, fmt.Errorf("message type %q not found", messageTypeKey)
+		return template.Template{}, fmt.Errorf("message type %q not found", typeKey)
 	}
 	if err != nil {
-		return template.Template{}, fmt.Errorf("load message type %q: %w", messageTypeKey, err)
+		return template.Template{}, fmt.Errorf("load message type %q: %w", typeKey, err)
 	}
 
 	var defaults template.Template
@@ -41,7 +56,7 @@ func (s *Service) loadEffectiveTemplate(ctx context.Context) (template.Template,
 
 	var overrideJSON sql.NullString
 	err = s.DB.QueryRowContext(ctx,
-		`SELECT template_json FROM message_templates WHERE message_type_key = ?`, messageTypeKey,
+		`SELECT template_json FROM message_templates WHERE message_type_key = ?`, typeKey,
 	).Scan(&overrideJSON)
 	if err != nil && err != sql.ErrNoRows {
 		return template.Template{}, fmt.Errorf("load template override: %w", err)
@@ -142,5 +157,28 @@ func enrichChangeDM(msg notify.RenderedMessage, old, new Details) notify.Rendere
 	}
 
 	msg.Plain = prefix + passwordLine
+	return msg
+}
+
+// enrichDetailsDM appends password to join-details messages (never in template vars).
+func enrichDetailsDM(msg notify.RenderedMessage, details Details) notify.RenderedMessage {
+	if strings.TrimSpace(details.GamePassword) == "" {
+		return msg
+	}
+
+	if strings.TrimSpace(msg.Plain) != "" {
+		msg.Plain = strings.TrimSpace(msg.Plain) + "\n\n" + fmt.Sprintf("Password: ||%s||", details.GamePassword)
+		return msg
+	}
+
+	if msg.Embed != nil {
+		msg.Embed.Fields = append(msg.Embed.Fields, notify.DiscordEmbedField{
+			Name:  "Password",
+			Value: "||" + details.GamePassword + "||",
+		})
+		return msg
+	}
+
+	msg.Plain = fmt.Sprintf("Password: ||%s||", details.GamePassword)
 	return msg
 }

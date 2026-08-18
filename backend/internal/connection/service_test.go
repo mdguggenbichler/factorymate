@@ -124,5 +124,55 @@ func TestSetBroadcastsToActiveLinkedUsers(t *testing.T) {
 	}
 }
 
+func TestSendToUserUsesEmbedTemplate(t *testing.T) {
+	t.Chdir("../..")
+	ctx := context.Background()
+	database := openTestDB(t)
+	defer database.Close()
+	if err := db.Init(ctx, database, db.SeedConfig{}); err != nil {
+		t.Fatalf("init: %v", err)
+	}
+
+	mock := notify.NewMockDiscordSession()
+	svc := connection.NewService(database, notify.NewDiscordProvider(mock))
+
+	input := connection.UpdateInput{
+		GameHost:     strPtr("play.example.com"),
+		GamePort:     intPtr(7777),
+		GamePassword: strPtr("joinpass"),
+	}
+	_, err := svc.Set(ctx, input, 1)
+	if err != nil {
+		t.Fatalf("set: %v", err)
+	}
+
+	mock.ChannelCalls = nil
+	if err := svc.SendToUser(ctx, "discord-user-1"); err != nil {
+		t.Fatalf("send to user: %v", err)
+	}
+	if len(mock.ChannelCalls) == 0 {
+		t.Fatal("expected DM channel send")
+	}
+	dmMsg := mock.ChannelCalls[len(mock.ChannelCalls)-1].Message
+	if dmMsg.Embeds == nil || len(dmMsg.Embeds) == 0 {
+		t.Fatalf("expected embed DM, got plain content=%q", dmMsg.Content)
+	}
+	if !strings.Contains(dmMsg.Embeds[0].Title, "Join details") {
+		t.Fatalf("embed title = %q, want join details", dmMsg.Embeds[0].Title)
+	}
+
+	var logKey string
+	err = database.QueryRowContext(ctx, `
+		SELECT message_type_key FROM notification_log
+		WHERE recipient_external_user_id = 'discord-user-1' ORDER BY id DESC LIMIT 1`,
+	).Scan(&logKey)
+	if err != nil {
+		t.Fatalf("query log: %v", err)
+	}
+	if logKey != "connection_details" {
+		t.Fatalf("log message type = %q, want connection_details", logKey)
+	}
+}
+
 func strPtr(s string) *string { return &s }
 func intPtr(n int) *int       { return &n }

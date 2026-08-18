@@ -77,6 +77,22 @@ func LoadRoleMappings(ctx context.Context, db *sql.DB) (roleMappingsConfig, erro
 	return cfg, nil
 }
 
+// effectiveMemberRoleIDs includes the implicit @everyone role (guild ID) that Discord omits from member.Roles.
+func effectiveMemberRoleIDs(guildID string, memberRoleIDs []string) []string {
+	guildID = strings.TrimSpace(guildID)
+	if guildID == "" {
+		return memberRoleIDs
+	}
+	for _, id := range memberRoleIDs {
+		if id == guildID {
+			return memberRoleIDs
+		}
+	}
+	out := make([]string, len(memberRoleIDs), len(memberRoleIDs)+1)
+	copy(out, memberRoleIDs)
+	return append(out, guildID)
+}
+
 // ResolveMemberPermissions computes FM role and allowed command groups for a guild member.
 func ResolveMemberPermissions(ctx context.Context, db *sql.DB, memberRoleIDs []string) (memberPermissions, error) {
 	cfg, err := LoadRoleMappings(ctx, db)
@@ -92,6 +108,9 @@ func ResolveMemberPermissions(ctx context.Context, db *sql.DB, memberRoleIDs []s
 	for _, g := range cfg.DefaultBotCommands {
 		perms.CommandGroups[g] = true
 	}
+	if cfg.AllowSelfRegister {
+		perms.CommandGroups[CommandGroupRegister] = true
+	}
 
 	adminRoleSet := make(map[string]bool)
 	for _, id := range cfg.AdminDiscordRoleIDs {
@@ -101,8 +120,9 @@ func ResolveMemberPermissions(ctx context.Context, db *sql.DB, memberRoleIDs []s
 		adminRoleSet[envID] = true
 	}
 
+	effectiveRoles := effectiveMemberRoleIDs(cfg.GuildID, memberRoleIDs)
 	matched := false
-	for _, memberRole := range memberRoleIDs {
+	for _, memberRole := range effectiveRoles {
 		if adminRoleSet[memberRole] {
 			perms.IsAdmin = true
 		}
@@ -142,15 +162,12 @@ func CanRunCommand(perms memberPermissions, group string, state LinkState) bool 
 	if group == "" {
 		return true
 	}
-	if !perms.CommandGroups[group] && !(perms.IsAdmin && group == CommandGroupAdmin) {
-		return false
-	}
 
 	switch group {
 	case CommandGroupRegister:
 		switch state {
 		case LinkStateUnregistered:
-			return perms.AllowRegister
+			return perms.CommandGroups[group] && perms.AllowRegister
 		case LinkStateActiveLinked, LinkStateActiveNotLinked:
 			return perms.IsAdmin
 		default:
@@ -159,8 +176,12 @@ func CanRunCommand(perms memberPermissions, group string, state LinkState) bool 
 	case CommandGroupAdmin:
 		return perms.IsAdmin
 	case CommandGroupPlayer, CommandGroupConnection, CommandGroupMods:
+		// Active linked users may run player-group commands regardless of Discord role mapping (§10.2).
 		return state == LinkStateActiveLinked
 	default:
+		if !perms.CommandGroups[group] && !(perms.IsAdmin && group == CommandGroupAdmin) {
+			return false
+		}
 		return perms.CommandGroups[group]
 	}
 }

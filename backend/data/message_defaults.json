@@ -205,5 +205,21 @@
       "footer": "🏭 {ServerName}",
       "show_timestamp": true
     }
+  },
+  "connection_details": {
+    "plain": "Join {ServerName} at {GameHost}:{GamePort}.",
+    "embed": {
+      "title": "🏭 Join details",
+      "description": "Use these settings to connect to the server.",
+      "color": "#5865F2",
+      "fields": [
+        { "name": "🏭 Factory", "value": "{ServerName}", "inline": true },
+        { "name": "🌐 Host", "value": "{GameHost}", "inline": true },
+        { "name": "🔌 Port", "value": "{GamePort}", "inline": true },
+        { "name": "📝 Notes", "value": "{Notes}", "inline": false }
+      ],
+      "footer": "🏭 {ServerName}",
+      "show_timestamp": true
+    }
   }
 }
