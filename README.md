@@ -1,3 +1,7 @@
+<div align="center">
+  <img src="assets/icon_no_bg.svg" alt="FactoryMate logo" width="160" />
+</div>
+
 # FactoryMate
 
 **Repository:** [github.com/ghotso/factorymate](https://github.com/ghotso/factorymate)
