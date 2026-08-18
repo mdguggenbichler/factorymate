@@ -29,7 +29,10 @@ func TestHealthz(t *testing.T) {
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		_ = json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
+		_ = json.NewEncoder(w).Encode(map[string]string{
+			"status":  "ok",
+			"version": "0.1.0",
+		})
 	})
 	req := httptest.NewRequest(http.MethodGet, "/healthz", nil)
 	resp := httptest.NewRecorder()
@@ -41,6 +44,9 @@ func TestHealthz(t *testing.T) {
 	decodeJSONRecorder(t, resp, &body)
 	if body["status"] != "ok" {
 		t.Fatalf("body = %v, want status ok", body)
+	}
+	if body["version"] == "" {
+		t.Fatalf("body = %v, want non-empty version", body)
 	}
 }
 

@@ -26,6 +26,8 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
+var appVersion = "dev"
+
 func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
@@ -160,5 +162,8 @@ func (f *settingsFetcher) GetFast(ctx context.Context) frm.FastPollResult {
 func healthz(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	_ = json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
+	_ = json.NewEncoder(w).Encode(map[string]string{
+		"status":  "ok",
+		"version": appVersion,
+	})
 }

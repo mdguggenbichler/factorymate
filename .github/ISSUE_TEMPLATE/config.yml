@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: User guide
+    url: https://ghotso.github.io/factorymate/
+    about: Setup, Discord bot, and day-to-day management
+  - name: Repository
+    url: https://github.com/ghotso/factorymate
+    about: Source code, releases, and container images

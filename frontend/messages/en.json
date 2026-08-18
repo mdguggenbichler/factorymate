@@ -8,6 +8,11 @@
     "comingSoonTitle": "Coming soon",
     "comingSoonDescription": "This page will be available in an upcoming milestone."
   },
+  "about": {
+    "version": "Version {version}",
+    "github": "GitHub",
+    "reportBug": "Report a bug"
+  },
   "charts": {
     "intervalLabel": "Select time range",
     "interval6h": "Last 6 hours",
