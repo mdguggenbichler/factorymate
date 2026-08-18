@@ -23,6 +23,12 @@ On the **Bot** tab, set:
 - **Username** — how the bot appears in Discord (e.g. `FactoryMate`)
 - **Avatar** — optional icon for channel posts and DMs
 
+Use the FactoryMate brand avatar for a consistent look:
+
+- **Source file:** `assets/icon_full_bg_blue.png` in the FactoryMate repository
+- **From a running instance:** open `/discord-bot-avatar.png` in your browser (Settings → Discord also shows a preview)
+- **Upload:** Discord Developer Portal → your application → **Bot** → **Avatar**
+
 This replaces the old per-webhook username/avatar overrides. One bot identity is used for all notifications.
 
 ## 4. Required bot permissions

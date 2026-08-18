@@ -18,6 +18,10 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "FactoryMate",
+  icons: {
+    icon: "/icon-no-bg.svg",
+    apple: "/icon-no-bg.svg",
+  },
 }
 
 export default async function RootLayout({

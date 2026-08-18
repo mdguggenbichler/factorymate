@@ -245,6 +245,32 @@ export function DiscordSettingsForm({
               <Badge variant="outline">{t("status.botDisabled")}</Badge>
             )}
           </div>
+          <div className="flex flex-col gap-3 rounded-lg border p-4 sm:flex-row sm:items-center">
+            <div className="flex shrink-0 items-center justify-center">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/discord-bot-avatar.png"
+                alt={t("recommendedAvatarAlt")}
+                width={64}
+                height={64}
+                className="size-16 rounded-full"
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <p className="text-sm font-medium">{t("recommendedAvatarTitle")}</p>
+              <p className="text-sm text-muted-foreground">
+                {t("recommendedAvatarDescription")}{" "}
+                <a
+                  href="https://discord.com/developers/applications"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary underline-offset-4 hover:underline"
+                >
+                  {t("recommendedAvatarLink")}
+                </a>
+              </p>
+            </div>
+          </div>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
             <Field className="flex-1">
               <FieldLabel>{t("inviteUrl")}</FieldLabel>
