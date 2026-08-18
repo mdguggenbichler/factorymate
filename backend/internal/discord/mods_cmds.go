@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"log"
 	"strings"
 	"time"
 
@@ -47,7 +48,7 @@ func parseModsOptions(data discordgo.ApplicationCommandInteractionData) (action 
 func (b *Bot) handleModsList(ctx context.Context, s *discordgo.Session, i *discordgo.InteractionCreate, externalID string, deliveryDM bool) {
 	list, err := b.mods.List(ctx)
 	if err != nil {
-		respondEphemeral(s, i, "Could not load mod list.")
+		respondEphemeral(ctx, s, i, "Could not load mod list.")
 		_ = LogBotCommand(ctx, b.db, externalID, "mods list", false, err.Error())
 		return
 	}
@@ -56,22 +57,22 @@ func (b *Bot) handleModsList(ctx context.Context, s *discordgo.Session, i *disco
 	if deliveryDM {
 		provider := notify.NewDiscordProvider(s)
 		if err := provider.SendDirect(ctx, registration.PlatformDiscord, externalID, notify.RenderedMessage{Embed: embed}); err != nil {
-			respondEphemeral(s, i, "Could not send mod list DM. Check that DMs are enabled.")
+			respondEphemeral(ctx, s, i, "Could not send mod list DM. Check that DMs are enabled.")
 			_ = LogBotCommand(ctx, b.db, externalID, "mods list", false, err.Error())
 			return
 		}
-		respondEphemeral(s, i, "Mod list sent to your DMs.")
+		respondEphemeral(ctx, s, i, "Mod list sent to your DMs.")
 		_ = LogBotCommand(ctx, b.db, externalID, "mods list", true, "dm")
 		return
 	}
-	respondEphemeralEmbed(s, i, embed)
+	respondEphemeralEmbed(ctx, s, i, embed)
 	_ = LogBotCommand(ctx, b.db, externalID, "mods list", true, "ephemeral")
 }
 
 func (b *Bot) handleModsExport(ctx context.Context, s *discordgo.Session, i *discordgo.InteractionCreate, externalID string, deliveryDM bool) {
 	data, filename, err := b.mods.GenerateSMMProfile(ctx)
 	if err != nil {
-		respondEphemeral(s, i, "Could not generate SMM profile. Try again later.")
+		respondEphemeral(ctx, s, i, "Could not generate SMM profile. Try again later.")
 		_ = LogBotCommand(ctx, b.db, externalID, "mods export", false, err.Error())
 		return
 	}
@@ -79,11 +80,11 @@ func (b *Bot) handleModsExport(ctx context.Context, s *discordgo.Session, i *dis
 	file := &discordgo.File{Name: filename, Reader: bytes.NewReader(data)}
 	if deliveryDM {
 		if err := sendUserDMWithFile(s, externalID, "SMM profile ready — import this file in Satisfactory Mod Manager.", file); err != nil {
-			respondEphemeral(s, i, "Could not send SMM profile DM. Check that DMs are enabled.")
+			respondEphemeral(ctx, s, i, "Could not send SMM profile DM. Check that DMs are enabled.")
 			_ = LogBotCommand(ctx, b.db, externalID, "mods export", false, err.Error())
 			return
 		}
-		respondEphemeral(s, i, "SMM profile sent to your DMs.")
+		respondEphemeral(ctx, s, i, "SMM profile sent to your DMs.")
 		_ = LogBotCommand(ctx, b.db, externalID, "mods export", true, "dm:"+filename)
 		return
 	}
@@ -97,7 +98,7 @@ func (b *Bot) handleModsExport(ctx context.Context, s *discordgo.Session, i *dis
 		},
 	})
 	if err != nil {
-		respondEphemeral(s, i, "Could not attach SMM profile.")
+		respondEphemeral(ctx, s, i, "Could not attach SMM profile.")
 		_ = LogBotCommand(ctx, b.db, externalID, "mods export", false, err.Error())
 		return
 	}
@@ -130,7 +131,13 @@ func formatModsListEmbed(list mods.ListResponse) *notify.DiscordEmbed {
 
 	fields := make([]notify.DiscordEmbedField, 0, 2)
 	remaining := strings.Join(modLines, "\n")
+	const maxModFields = 5
+	truncated := false
 	for len(remaining) > 0 {
+		if len(fields) >= maxModFields {
+			truncated = true
+			break
+		}
 		chunk := remaining
 		if len(chunk) > maxFieldLen {
 			chunk = chunk[:maxFieldLen]
@@ -147,7 +154,13 @@ func formatModsListEmbed(list mods.ListResponse) *notify.DiscordEmbed {
 		remaining = strings.TrimPrefix(remaining, "\n")
 	}
 
-	footer := fmt.Sprintf("Full list: %s/mods", PublicURL())
+	footer := "Full list on the dashboard"
+	if url := PublicURL(); url != "" {
+		footer = fmt.Sprintf("Full list: %s/mods", url)
+	}
+	if truncated {
+		desc += "\n\n⚠️ List truncated — open the dashboard for all mods."
+	}
 	return &notify.DiscordEmbed{
 		Title:       title,
 		Description: desc,
@@ -156,9 +169,9 @@ func formatModsListEmbed(list mods.ListResponse) *notify.DiscordEmbed {
 	}
 }
 
-func respondEphemeralEmbed(s *discordgo.Session, i *discordgo.InteractionCreate, embed *notify.DiscordEmbed) {
+func respondEphemeralEmbed(ctx context.Context, s *discordgo.Session, i *discordgo.InteractionCreate, embed *notify.DiscordEmbed) {
 	if embed == nil {
-		respondEphemeral(s, i, "No mod data available.")
+		respondEphemeral(ctx, s, i, "No mod data available.")
 		return
 	}
 	dgEmbed := &discordgo.MessageEmbed{
@@ -173,6 +186,16 @@ func respondEphemeralEmbed(s *discordgo.Session, i *discordgo.InteractionCreate,
 			Inline: f.Inline,
 		})
 	}
+	if interactionDeferred(ctx) {
+		embeds := []*discordgo.MessageEmbed{dgEmbed}
+		_, err := s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
+			Embeds: &embeds,
+		})
+		if err != nil {
+			log.Printf("discord bot: ephemeral embed edit: %v", err)
+		}
+		return
+	}
 	err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
 		Data: &discordgo.InteractionResponseData{
@@ -181,6 +204,6 @@ func respondEphemeralEmbed(s *discordgo.Session, i *discordgo.InteractionCreate,
 		},
 	})
 	if err != nil {
-		respondEphemeral(s, i, "Could not display mod list.")
+		respondEphemeral(ctx, s, i, "Could not display mod list.")
 	}
 }

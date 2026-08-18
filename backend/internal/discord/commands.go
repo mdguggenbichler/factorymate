@@ -11,7 +11,8 @@ import (
 )
 
 func (b *Bot) registerSlashCommands(ctx context.Context) error {
-	if b.session == nil {
+	session := b.Session()
+	if session == nil {
 		return nil
 	}
 	guildID, err := EffectiveGuildID(ctx, b.db)
@@ -28,7 +29,7 @@ func (b *Bot) registerSlashCommands(ctx context.Context) error {
 		return fmt.Errorf("validate slash commands: %w", err)
 	}
 
-	if _, err := b.session.ApplicationCommandBulkOverwrite(b.session.State.User.ID, guildID, commands, discordgo.WithContext(ctx)); err != nil {
+	if _, err := session.ApplicationCommandBulkOverwrite(session.State.User.ID, guildID, commands, discordgo.WithContext(ctx)); err != nil {
 		return fmt.Errorf("register slash commands: %w", err)
 	}
 	return nil

@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 
 	"factorymate/internal/auth"
@@ -17,6 +18,10 @@ func (h *Handler) GetAccountNotifications(w http.ResponseWriter, r *http.Request
 
 	prefs, err := h.notifications.GetUserPrefs(r.Context(), user.ID)
 	if err != nil {
+		if errors.Is(err, notifications.ErrUserNotFound) {
+			writeError(w, r, http.StatusNotFound, "user not found")
+			return
+		}
 		writeError(w, r, http.StatusInternalServerError, "internal error")
 		return
 	}
@@ -41,7 +46,7 @@ func (h *Handler) PutAccountNotifications(w http.ResponseWriter, r *http.Request
 
 	prefs, err := h.notifications.SetUserPrefs(r.Context(), user.ID, input)
 	if err != nil {
-		if err.Error() == "user not found" {
+		if errors.Is(err, notifications.ErrUserNotFound) {
 			writeError(w, r, http.StatusNotFound, "user not found")
 			return
 		}

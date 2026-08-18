@@ -75,7 +75,8 @@ func (p *DiscordProvider) Send(ctx context.Context, target NotificationTarget, m
 	if target.ProviderType != discordProviderType {
 		return fmt.Errorf("discord provider cannot send to target type %q", target.ProviderType)
 	}
-	if p.liveSession() == nil {
+	session := p.liveSession()
+	if session == nil {
 		return fmt.Errorf("discord bot is not connected")
 	}
 
@@ -96,7 +97,7 @@ func (p *DiscordProvider) Send(ctx context.Context, target NotificationTarget, m
 		return err
 	}
 
-	_, err = p.liveSession().ChannelMessageSendComplex(channelID, send, discordgo.WithContext(ctx))
+	_, err = session.ChannelMessageSendComplex(channelID, send, discordgo.WithContext(ctx))
 	if err != nil {
 		return fmt.Errorf("discord channel send: %w", err)
 	}
@@ -114,11 +115,12 @@ func (p *DiscordProvider) SendDirect(ctx context.Context, platform, externalUser
 	if strings.TrimSpace(externalUserID) == "" {
 		return fmt.Errorf("external user id is required")
 	}
-	if p.liveSession() == nil {
+	session := p.liveSession()
+	if session == nil {
 		return fmt.Errorf("discord bot is not connected")
 	}
 
-	channel, err := p.liveSession().UserChannelCreate(externalUserID, discordgo.WithContext(ctx))
+	channel, err := session.UserChannelCreate(externalUserID, discordgo.WithContext(ctx))
 	if err != nil {
 		return fmt.Errorf("discord create dm channel: %w", err)
 	}
@@ -128,7 +130,7 @@ func (p *DiscordProvider) SendDirect(ctx context.Context, platform, externalUser
 		return err
 	}
 
-	_, err = p.liveSession().ChannelMessageSendComplex(channel.ID, send, discordgo.WithContext(ctx))
+	_, err = session.ChannelMessageSendComplex(channel.ID, send, discordgo.WithContext(ctx))
 	if err != nil {
 		return fmt.Errorf("discord dm send: %w", err)
 	}
@@ -221,11 +223,20 @@ func hexColorToDiscordInt(color string) (int, error) {
 	return int(value), nil
 }
 
-var gamePasswordJSONField = regexp.MustCompile(`"game_password"\s*:\s*"[^"]*"`)
+var (
+	gamePasswordJSONString = regexp.MustCompile(`"game_password"\s*:\s*"(?:[^"\\]|\\.)*"`)
+	gamePasswordJSONOther  = regexp.MustCompile(`"game_password"\s*:\s*[^,}\s]+`)
+	passwordPlainLine      = regexp.MustCompile(`(?i)(Password:\s*)\|\|[^|]+\|\|`)
+	passwordPlainUnspoiler  = regexp.MustCompile(`(?i)(Password:\s*)\S+`)
+)
 
 // RedactForLog removes sensitive values (e.g. game_password) from log-oriented strings (§8.6).
 func RedactForLog(s string) string {
-	return gamePasswordJSONField.ReplaceAllString(s, `"game_password":"[REDACTED]"`)
+	s = gamePasswordJSONString.ReplaceAllString(s, `"game_password":"[REDACTED]"`)
+	s = gamePasswordJSONOther.ReplaceAllString(s, `"game_password":[REDACTED]`)
+	s = passwordPlainLine.ReplaceAllString(s, `${1}[REDACTED]`)
+	s = passwordPlainUnspoiler.ReplaceAllString(s, `${1}[REDACTED]`)
+	return s
 }
 
 // SampleRenderedMessage returns a hardcoded player_joined embed for manual and automated tests.

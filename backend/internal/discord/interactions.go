@@ -25,6 +25,31 @@ const (
 	btnRegReject       = "btn_reg_reject:"
 )
 
+type deferredInteractionKey struct{}
+
+func interactionDeferred(ctx context.Context) bool {
+	v, _ := ctx.Value(deferredInteractionKey{}).(bool)
+	return v
+}
+
+func withDeferred(ctx context.Context) context.Context {
+	return context.WithValue(ctx, deferredInteractionKey{}, true)
+}
+
+func deferEphemeral(s *discordgo.Session, i *discordgo.InteractionCreate) bool {
+	err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
+		Data: &discordgo.InteractionResponseData{
+			Flags: discordgo.MessageFlagsEphemeral,
+		},
+	})
+	if err != nil {
+		log.Printf("discord bot: defer ephemeral: %v", err)
+		return false
+	}
+	return true
+}
+
 func (b *Bot) handleInteraction(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
@@ -35,7 +60,7 @@ func (b *Bot) handleInteraction(s *discordgo.Session, i *discordgo.InteractionCr
 		return
 	}
 	if !enabled {
-		respondEphemeral(s, i, "Discord bot is currently disabled.")
+		respondEphemeral(ctx, s, i, "Discord bot is currently disabled.")
 		return
 	}
 
@@ -52,27 +77,34 @@ func (b *Bot) handleInteraction(s *discordgo.Session, i *discordgo.InteractionCr
 func (b *Bot) handleApplicationCommand(ctx context.Context, s *discordgo.Session, i *discordgo.InteractionCreate) {
 	data := i.ApplicationCommandData()
 	cmdName := data.Name
+	modalFirst := cmdName == "register" || cmdName == "link"
+	if !modalFirst {
+		if deferEphemeral(s, i) {
+			ctx = withDeferred(ctx)
+		}
+	}
+
 	externalID := interactionUserID(i)
 	memberRoles := memberRoleIDs(i)
 
 	state, user, err := b.linkState(ctx, externalID)
 	if err != nil {
 		log.Printf("discord bot: link state: %v", err)
-		respondEphemeral(s, i, "Something went wrong. Please try again.")
+		respondEphemeral(ctx, s, i, "Something went wrong. Please try again.")
 		return
 	}
 
 	perms, err := ResolveMemberPermissions(ctx, b.db, memberRoles)
 	if err != nil {
 		log.Printf("discord bot: permissions: %v", err)
-		respondEphemeral(s, i, "Something went wrong. Please try again.")
+		respondEphemeral(ctx, s, i, "Something went wrong. Please try again.")
 		return
 	}
 
 	switch cmdName {
 	case "help":
 		_ = LogBotCommand(ctx, b.db, externalID, "help", true, "")
-		respondEphemeral(s, i, formatHelpMessage())
+		respondEphemeral(ctx, s, i, formatHelpMessage())
 		return
 	case "whoami":
 		b.handleWhoami(ctx, s, i, externalID, user, state)
@@ -83,7 +115,7 @@ func (b *Bot) handleApplicationCommand(ctx context.Context, s *discordgo.Session
 			return
 		}
 		if state != LinkStateUnregistered {
-			respondEphemeral(s, i, "You are already registered. Use /whoami to check your status.")
+			respondEphemeral(ctx, s, i, "You are already registered. Use /whoami to check your status.")
 			_ = LogBotCommand(ctx, b.db, externalID, "register", false, "already registered")
 			return
 		}
@@ -101,13 +133,17 @@ func (b *Bot) handleApplicationCommand(ctx context.Context, s *discordgo.Session
 			}
 		}
 		if target == nil {
-			respondEphemeral(s, i, "Could not resolve target user.")
+			respondEphemeral(ctx, s, i, "Could not resolve target user.")
 			return
 		}
 		b.handleRegisterUser(ctx, s, i, target)
 	case "link":
+		if !CanRunCommand(perms, CommandGroupRegister, state) {
+			b.logAndDeny(ctx, s, i, externalID, "link", "forbidden")
+			return
+		}
 		if state != LinkStateUnregistered {
-			respondEphemeral(s, i, "Your Discord is already linked. Use /whoami to check your status.")
+			respondEphemeral(ctx, s, i, "Your Discord is already linked. Use /whoami to check your status.")
 			_ = LogBotCommand(ctx, b.db, externalID, "link", false, "already linked")
 			return
 		}
@@ -119,7 +155,7 @@ func (b *Bot) handleApplicationCommand(ctx context.Context, s *discordgo.Session
 			return
 		}
 		if user == nil {
-			respondEphemeral(s, i, "You must be registered first. Use /register or /link.")
+			respondEphemeral(ctx, s, i, "You must be registered first. Use /register or /link.")
 			return
 		}
 		name := ""
@@ -135,7 +171,7 @@ func (b *Bot) handleApplicationCommand(ctx context.Context, s *discordgo.Session
 			return
 		}
 		if user == nil {
-			respondEphemeral(s, i, "You must be registered first. Use /register or /link.")
+			respondEphemeral(ctx, s, i, "You must be registered first. Use /register or /link.")
 			return
 		}
 		b.handleClearPlayer(ctx, s, i, externalID, user.ID)
@@ -145,7 +181,7 @@ func (b *Bot) handleApplicationCommand(ctx context.Context, s *discordgo.Session
 		b.handleModsCommand(ctx, s, i, data, externalID, perms, state)
 	case "registration":
 		if len(data.Options) == 0 || data.Options[0].Name != "auto-approve" {
-			respondEphemeral(s, i, "Unknown subcommand.")
+			respondEphemeral(ctx, s, i, "Unknown subcommand.")
 			return
 		}
 		if !CanRunAdminCommand(perms, state, user) {
@@ -160,7 +196,7 @@ func (b *Bot) handleApplicationCommand(ctx context.Context, s *discordgo.Session
 		}
 		on := enabled == "on"
 		if err := b.registration.SetAutoApprove(ctx, on); err != nil {
-			respondEphemeral(s, i, "Failed to update setting.")
+			respondEphemeral(ctx, s, i, "Failed to update setting.")
 			_ = LogBotCommand(ctx, b.db, externalID, "registration auto-approve", false, err.Error())
 			return
 		}
@@ -168,7 +204,7 @@ func (b *Bot) handleApplicationCommand(ctx context.Context, s *discordgo.Session
 		if on {
 			msg = "Auto-approve registrations is now **on**."
 		}
-		respondEphemeral(s, i, msg)
+		respondEphemeral(ctx, s, i, msg)
 		_ = LogBotCommand(ctx, b.db, externalID, "registration auto-approve", true, enabled)
 	case "registrations":
 		b.handleRegistrationsCommand(ctx, s, i, data, externalID, perms, state, user)
@@ -212,12 +248,12 @@ func (b *Bot) handleApplicationCommand(ctx context.Context, s *discordgo.Session
 			return
 		}
 		if user == nil {
-			respondEphemeral(s, i, "You must be registered first.")
+			respondEphemeral(ctx, s, i, "You must be registered first.")
 			return
 		}
 		b.handleNotificationsCommand(ctx, s, i, externalID, user.ID, data)
 	default:
-		respondEphemeral(s, i, "Unknown command.")
+		respondEphemeral(ctx, s, i, "Unknown command.")
 	}
 }
 
@@ -244,33 +280,33 @@ func (b *Bot) handleWhoami(ctx context.Context, s *discordgo.Session, i *discord
 			"Status: **active**",
 		}
 	}
-	respondEphemeral(s, i, strings.Join(lines, "\n"))
+	respondEphemeral(ctx, s, i, strings.Join(lines, "\n"))
 	_ = LogBotCommand(ctx, b.db, externalID, "whoami", true, "")
 }
 
 func (b *Bot) handleRegisterUser(ctx context.Context, s *discordgo.Session, i *discordgo.InteractionCreate, target *discordgo.User) {
 	if target == nil {
-		respondEphemeral(s, i, "Could not resolve target user.")
+		respondEphemeral(ctx, s, i, "Could not resolve target user.")
 		return
 	}
 	if target.Bot {
-		respondEphemeral(s, i, "Cannot register bots.")
+		respondEphemeral(ctx, s, i, "Cannot register bots.")
 		return
 	}
 
 	existing, err := b.registration.GetByExternal(ctx, registration.PlatformDiscord, target.ID)
 	if err != nil {
-		respondEphemeral(s, i, "Something went wrong.")
+		respondEphemeral(ctx, s, i, "Something went wrong.")
 		return
 	}
 	if existing != nil {
-		respondEphemeral(s, i, "That user is already registered.")
+		respondEphemeral(ctx, s, i, "That user is already registered.")
 		return
 	}
 
 	dmChannel, err := s.UserChannelCreate(target.ID)
 	if err != nil {
-		respondEphemeral(s, i, "Could not DM the user. They may have DMs disabled.")
+		respondEphemeral(ctx, s, i, "Could not DM the user. They may have DMs disabled.")
 		_ = LogBotCommand(ctx, b.db, interactionUserID(i), "register-user", false, "dm failed")
 		return
 	}
@@ -290,12 +326,12 @@ func (b *Bot) handleRegisterUser(ctx context.Context, s *discordgo.Session, i *d
 		},
 	})
 	if err != nil {
-		respondEphemeral(s, i, "Could not send invitation DM.")
+		respondEphemeral(ctx, s, i, "Could not send invitation DM.")
 		_ = LogBotCommand(ctx, b.db, interactionUserID(i), "register-user", false, "dm send failed")
 		return
 	}
 
-	respondEphemeral(s, i, fmt.Sprintf("Invitation sent to <@%s>.", target.ID))
+	respondEphemeral(ctx, s, i, fmt.Sprintf("Invitation sent to <@%s>.", target.ID))
 	_ = LogBotCommand(ctx, b.db, interactionUserID(i), "register-user", true, target.ID)
 }
 
@@ -306,12 +342,12 @@ func (b *Bot) handleSetPlayer(ctx context.Context, s *discordgo.Session, i *disc
 		if errors.Is(err, registration.ErrPlayerAlreadyLinked) {
 			msg = "That player is already linked to another user."
 		}
-		respondEphemeral(s, i, msg)
+		respondEphemeral(ctx, s, i, msg)
 		_ = LogBotCommand(ctx, b.db, externalID, "set-player", false, err.Error())
 		return
 	}
 	player := playerDisplayLine(updated.PlayerName, name, updated.PlayerID != nil)
-	respondEphemeral(s, i, fmt.Sprintf("Player mapping updated: **%s**", player))
+	respondEphemeral(ctx, s, i, fmt.Sprintf("Player mapping updated: **%s**", player))
 	_ = LogBotCommand(ctx, b.db, externalID, "set-player", true, name)
 }
 
@@ -322,20 +358,23 @@ func (b *Bot) handleClearPlayer(ctx context.Context, s *discordgo.Session, i *di
 		if errors.Is(err, registration.ErrUserNotFound) {
 			msg = "User not found."
 		}
-		respondEphemeral(s, i, msg)
+		respondEphemeral(ctx, s, i, msg)
 		_ = LogBotCommand(ctx, b.db, externalID, "clear-player", false, err.Error())
 		return
 	}
 	if updated.PlayerID != nil || (updated.PendingPlayerName != nil && *updated.PendingPlayerName != "") {
-		respondEphemeral(s, i, "Player mapping could not be cleared.")
+		respondEphemeral(ctx, s, i, "Player mapping could not be cleared.")
 		_ = LogBotCommand(ctx, b.db, externalID, "clear-player", false, "still mapped")
 		return
 	}
-	respondEphemeral(s, i, "Player mapping cleared.")
+	respondEphemeral(ctx, s, i, "Player mapping cleared.")
 	_ = LogBotCommand(ctx, b.db, externalID, "clear-player", true, "")
 }
 
 func (b *Bot) handleModalSubmit(ctx context.Context, s *discordgo.Session, i *discordgo.InteractionCreate) {
+	if deferEphemeral(s, i) {
+		ctx = withDeferred(ctx)
+	}
 	customID := i.ModalSubmitData().CustomID
 	externalID := interactionUserID(i)
 	member := interactionMember(i)
@@ -348,7 +387,7 @@ func (b *Bot) handleModalSubmit(ctx context.Context, s *discordgo.Session, i *di
 	case strings.HasPrefix(customID, modalRejectReason):
 		b.submitRejectModal(ctx, s, i, customID, externalID)
 	default:
-		respondEphemeral(s, i, "Unknown modal.")
+		respondEphemeral(ctx, s, i, "Unknown modal.")
 	}
 }
 
@@ -359,7 +398,7 @@ func (b *Bot) submitRegisterModal(ctx context.Context, s *discordgo.Session, i *
 	forceApprove := strings.HasPrefix(customID, modalRegisterAdmin)
 
 	if password == "" || playerName == "" {
-		respondEphemeral(s, i, "All fields are required.")
+		respondEphemeral(ctx, s, i, "All fields are required.")
 		return
 	}
 
@@ -367,7 +406,7 @@ func (b *Bot) submitRegisterModal(ctx context.Context, s *discordgo.Session, i *
 
 	role, err := FMRoleForMember(ctx, b.db, memberRoleIDsFromMember(member))
 	if err != nil {
-		respondEphemeral(s, i, "Something went wrong.")
+		respondEphemeral(ctx, s, i, "Something went wrong.")
 		return
 	}
 
@@ -388,13 +427,13 @@ func (b *Bot) submitRegisterModal(ctx context.Context, s *discordgo.Session, i *
 		case errors.Is(err, auth.ErrWeakPassword):
 			msg = err.Error()
 		}
-		respondEphemeral(s, i, msg)
+		respondEphemeral(ctx, s, i, msg)
 		_ = LogBotCommand(ctx, b.db, externalID, "register", false, err.Error())
 		return
 	}
 
 	if result.PendingApproval {
-		respondEphemeral(s, i, formatRegistrationPendingMessage(playerName))
+		respondEphemeral(ctx, s, i, formatRegistrationPendingMessage(playerName))
 		if err := b.notifyAdminsPending(ctx, s, result.User, playerName, member); err != nil {
 			log.Printf("discord bot: notify admins: %v", err)
 		}
@@ -403,7 +442,7 @@ func (b *Bot) submitRegisterModal(ctx context.Context, s *discordgo.Session, i *
 	}
 
 	playerLine := playerDisplayLine(result.User.PlayerName, playerName, result.PlayerLinked)
-	respondEphemeral(s, i, formatRegistrationApprovedMessage(result.User.Username, string(result.User.Role), playerLine))
+	respondEphemeral(ctx, s, i, formatRegistrationApprovedMessage(result.User.Username, string(result.User.Role), playerLine))
 	b.SendWelcomeDM(ctx, externalID, result.User.Username)
 	_ = LogBotCommand(ctx, b.db, externalID, "register", true, "active")
 }
@@ -413,7 +452,7 @@ func (b *Bot) submitLinkModal(ctx context.Context, s *discordgo.Session, i *disc
 	username := values["fm_username"]
 	password := values["password"]
 	if username == "" || password == "" {
-		respondEphemeral(s, i, "Username and password are required.")
+		respondEphemeral(ctx, s, i, "Username and password are required.")
 		return
 	}
 
@@ -429,12 +468,12 @@ func (b *Bot) submitLinkModal(ctx context.Context, s *discordgo.Session, i *disc
 		case errors.Is(err, registration.ErrAlreadyRegistered):
 			msg = "This Discord account or FM user is already linked."
 		}
-		respondEphemeral(s, i, msg)
+		respondEphemeral(ctx, s, i, msg)
 		_ = LogBotCommand(ctx, b.db, externalID, "link", false, err.Error())
 		return
 	}
 
-	respondEphemeral(s, i, fmt.Sprintf("✅ Linked to **%s**. Use /whoami to check your status.", linked.Username))
+	respondEphemeral(ctx, s, i, fmt.Sprintf("✅ Linked to **%s**. Use /whoami to check your status.", linked.Username))
 	_ = LogBotCommand(ctx, b.db, externalID, "link", true, linked.Username)
 }
 
@@ -442,11 +481,17 @@ func (b *Bot) handleMessageComponent(ctx context.Context, s *discordgo.Session, 
 	customID := i.MessageComponentData().CustomID
 	externalID := interactionUserID(i)
 
+	if !strings.HasPrefix(customID, btnCompleteReg) {
+		if deferEphemeral(s, i) {
+			ctx = withDeferred(ctx)
+		}
+	}
+
 	switch {
 	case strings.HasPrefix(customID, btnCompleteReg):
 		targetID := strings.TrimPrefix(customID, btnCompleteReg)
 		if externalID != targetID {
-			respondEphemeral(s, i, "This invitation is not for you.")
+			respondEphemeral(ctx, s, i, "This invitation is not for you.")
 			return
 		}
 		showRegisterModal(s, i, modalRegisterAdmin+targetID, "Complete FactoryMate registration")
@@ -455,32 +500,32 @@ func (b *Bot) handleMessageComponent(ctx context.Context, s *discordgo.Session, 
 	case strings.HasPrefix(customID, btnRegReject):
 		b.handleRejectButton(ctx, s, i, customID, externalID)
 	default:
-		respondEphemeral(s, i, "Unknown button.")
+		respondEphemeral(ctx, s, i, "Unknown button.")
 	}
 }
 
 func (b *Bot) handleApproveButton(ctx context.Context, s *discordgo.Session, i *discordgo.InteractionCreate, customID, externalID string) {
 	userID, err := parseUserIDFromCustomID(customID, btnRegApprove)
 	if err != nil {
-		respondEphemeral(s, i, "Invalid approval request.")
+		respondEphemeral(ctx, s, i, "Invalid approval request.")
 		return
 	}
 
 	adminUser, err := b.registration.GetByExternal(ctx, registration.PlatformDiscord, externalID)
 	if err != nil || adminUser == nil || adminUser.Role != auth.RoleAdmin {
-		respondEphemeral(s, i, "Only admins can approve registrations.")
+		respondEphemeral(ctx, s, i, "Only admins can approve registrations.")
 		_ = LogBotCommand(ctx, b.db, externalID, "registration approve", false, "forbidden")
 		return
 	}
 
 	expired, err := b.registration.RegistrationButtonExpired(ctx, userID)
 	if err != nil {
-		respondEphemeral(s, i, "Could not verify registration age.")
+		respondEphemeral(ctx, s, i, "Could not verify registration age.")
 		_ = LogBotCommand(ctx, b.db, externalID, "registration approve", false, err.Error())
 		return
 	}
 	if expired {
-		respondEphemeral(s, i, "Button expired — use web UI or `/registrations approve`.")
+		respondEphemeral(ctx, s, i, "Button expired — use web UI or `/registrations approve`.")
 		_ = LogBotCommand(ctx, b.db, externalID, "registration approve", false, "expired")
 		return
 	}
@@ -491,12 +536,12 @@ func (b *Bot) handleApproveButton(ctx context.Context, s *discordgo.Session, i *
 		if errors.Is(err, registration.ErrNotPendingApproval) {
 			msg = "This registration is no longer pending."
 		}
-		respondEphemeral(s, i, msg)
+		respondEphemeral(ctx, s, i, msg)
 		_ = LogBotCommand(ctx, b.db, externalID, "registration approve", false, err.Error())
 		return
 	}
 
-	respondEphemeral(s, i, fmt.Sprintf("Approved **%s**.", approved.Username))
+	respondEphemeral(ctx, s, i, fmt.Sprintf("Approved **%s**.", approved.Username))
 	if extID := approvedExternalID(approved); extID != "" {
 		b.SendWelcomeDM(ctx, extID, approved.Username)
 	}
@@ -506,23 +551,23 @@ func (b *Bot) handleApproveButton(ctx context.Context, s *discordgo.Session, i *
 func (b *Bot) handleRejectButton(ctx context.Context, s *discordgo.Session, i *discordgo.InteractionCreate, customID, externalID string) {
 	userID, err := parseUserIDFromCustomID(customID, btnRegReject)
 	if err != nil {
-		respondEphemeral(s, i, "Invalid rejection request.")
+		respondEphemeral(ctx, s, i, "Invalid rejection request.")
 		return
 	}
 
 	adminUser, err := b.registration.GetByExternal(ctx, registration.PlatformDiscord, externalID)
 	if err != nil || adminUser == nil || adminUser.Role != auth.RoleAdmin {
-		respondEphemeral(s, i, "Only admins can reject registrations.")
+		respondEphemeral(ctx, s, i, "Only admins can reject registrations.")
 		return
 	}
 
 	expired, err := b.registration.RegistrationButtonExpired(ctx, userID)
 	if err != nil {
-		respondEphemeral(s, i, "Could not verify registration age.")
+		respondEphemeral(ctx, s, i, "Could not verify registration age.")
 		return
 	}
 	if expired {
-		respondEphemeral(s, i, "Button expired — use web UI or `/registrations reject`.")
+		respondEphemeral(ctx, s, i, "Button expired — use web UI or `/registrations reject`.")
 		return
 	}
 
@@ -556,13 +601,13 @@ func (b *Bot) handleRejectButton(ctx context.Context, s *discordgo.Session, i *d
 func (b *Bot) submitRejectModal(ctx context.Context, s *discordgo.Session, i *discordgo.InteractionCreate, customID, externalID string) {
 	userID, err := parseUserIDFromCustomID(customID, modalRejectReason)
 	if err != nil {
-		respondEphemeral(s, i, "Invalid rejection request.")
+		respondEphemeral(ctx, s, i, "Invalid rejection request.")
 		return
 	}
 
 	adminUser, err := b.registration.GetByExternal(ctx, registration.PlatformDiscord, externalID)
 	if err != nil || adminUser == nil || adminUser.Role != auth.RoleAdmin {
-		respondEphemeral(s, i, "Only admins can reject registrations.")
+		respondEphemeral(ctx, s, i, "Only admins can reject registrations.")
 		return
 	}
 
@@ -573,12 +618,12 @@ func (b *Bot) submitRejectModal(ctx context.Context, s *discordgo.Session, i *di
 		if errors.Is(err, registration.ErrNotPendingApproval) {
 			msg = "This registration is no longer pending."
 		}
-		respondEphemeral(s, i, msg)
+		respondEphemeral(ctx, s, i, msg)
 		_ = LogBotCommand(ctx, b.db, externalID, "registration reject", false, err.Error())
 		return
 	}
 
-	respondEphemeral(s, i, "Registration rejected.")
+	respondEphemeral(ctx, s, i, "Registration rejected.")
 	if targetExternalID != "" {
 		b.SendRegistrationDeclinedDM(ctx, targetExternalID, reason)
 	}
@@ -653,12 +698,12 @@ func (b *Bot) linkState(ctx context.Context, externalID string) (LinkState, *aut
 		}
 		return LinkStateActiveNotLinked, user, nil
 	default:
-		return LinkStateActiveLinked, user, nil
+		return LinkStateUnregistered, user, nil
 	}
 }
 
 func (b *Bot) logAndDeny(ctx context.Context, s *discordgo.Session, i *discordgo.InteractionCreate, externalID, command, detail string) {
-	respondEphemeral(s, i, "You don't have permission to run this command.")
+	respondEphemeral(ctx, s, i, "You don't have permission to run this command.")
 	_ = LogBotCommand(ctx, b.db, externalID, command, false, detail)
 }
 
@@ -698,7 +743,11 @@ func showLinkModal(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	})
 }
 
-func respondEphemeral(s *discordgo.Session, i *discordgo.InteractionCreate, content string) {
+func respondEphemeral(ctx context.Context, s *discordgo.Session, i *discordgo.InteractionCreate, content string) {
+	if interactionDeferred(ctx) {
+		editEphemeral(s, i, content)
+		return
+	}
 	err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
 		Data: &discordgo.InteractionResponseData{
@@ -708,6 +757,13 @@ func respondEphemeral(s *discordgo.Session, i *discordgo.InteractionCreate, cont
 	})
 	if err != nil {
 		log.Printf("discord bot: ephemeral respond: %v", err)
+	}
+}
+
+func editEphemeral(s *discordgo.Session, i *discordgo.InteractionCreate, content string) {
+	_, err := s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{Content: &content})
+	if err != nil {
+		log.Printf("discord bot: ephemeral edit: %v", err)
 	}
 }
 

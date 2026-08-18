@@ -7,6 +7,11 @@ const PUBLIC_PATHS = ["/login", "/setup", "/invite"]
 const PENDING_ALLOWED_PATHS = ["/awaiting-approval"]
 const SESSION_COOKIE = "factorymate_session"
 
+type SessionLookup =
+  | { kind: "none" }
+  | { kind: "ok"; status: string }
+  | { kind: "unavailable" }
+
 function isPublicPath(pathname: string): boolean {
   return PUBLIC_PATHS.some(
     (path) => pathname === path || pathname.startsWith(`${path}/`)
@@ -19,10 +24,10 @@ function isPendingAllowedPath(pathname: string): boolean {
   )
 }
 
-async function getSessionUserStatus(request: NextRequest): Promise<string | null> {
+async function lookupSessionUser(request: NextRequest): Promise<SessionLookup> {
   const session = request.cookies.get(SESSION_COOKIE)?.value
   if (!session) {
-    return null
+    return { kind: "none" }
   }
 
   try {
@@ -32,13 +37,16 @@ async function getSessionUserStatus(request: NextRequest): Promise<string | null
       },
       cache: "no-store",
     })
+    if (response.status === 401 || response.status === 403) {
+      return { kind: "none" }
+    }
     if (!response.ok) {
-      return null
+      return { kind: "unavailable" }
     }
     const body = (await response.json()) as { status?: string }
-    return body.status ?? null
+    return { kind: "ok", status: body.status ?? "" }
   } catch {
-    return null
+    return { kind: "unavailable" }
   }
 }
 
@@ -72,8 +80,11 @@ export async function middleware(request: NextRequest) {
     }
 
     if (hasSession) {
-      const status = await getSessionUserStatus(request)
-      if (status === "pending_approval") {
+      const lookup = await lookupSessionUser(request)
+      if (lookup.kind === "unavailable") {
+        return new NextResponse("Service unavailable", { status: 503 })
+      }
+      if (lookup.kind === "ok" && lookup.status === "pending_approval") {
         return NextResponse.redirect(new URL("/awaiting-approval", request.url))
       }
       return NextResponse.redirect(new URL("/", request.url))
@@ -87,8 +98,11 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL(destination, request.url))
   }
 
-  const status = await getSessionUserStatus(request)
-  if (status === "pending_approval" && !isPendingAllowedPath(pathname)) {
+  const lookup = await lookupSessionUser(request)
+  if (lookup.kind === "unavailable") {
+    return new NextResponse("Service unavailable", { status: 503 })
+  }
+  if (lookup.kind === "ok" && lookup.status === "pending_approval" && !isPendingAllowedPath(pathname)) {
     return NextResponse.redirect(new URL("/awaiting-approval", request.url))
   }
 

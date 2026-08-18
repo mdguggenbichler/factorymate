@@ -8,7 +8,7 @@ const helpMessageTemplate = `🏭 FactoryMate — quick start
 1. /register — create your dashboard account
 2. /mods export — download SMM profile → import in Satisfactory Mod Manager
 3. /connection get — get server host, port, and password (sent to your DMs)
-4. Log in: %s
+4. %s
 
 **Already registered?**
 /connection get — join details (DM)
@@ -25,11 +25,16 @@ const helpMessageTemplate = `🏭 FactoryMate — quick start
 /register-user — invite someone to complete registration
 /registration auto-approve — toggle approval gate
 
-Dashboard: %s`
+%s`
 
 func formatHelpMessage() string {
-	url := PublicURL()
-	return fmt.Sprintf(helpMessageTemplate, url, url)
+	loginLine := "Log in via the dashboard (ask an admin for the URL)."
+	dashboardLine := ""
+	if url := PublicURL(); url != "" {
+		loginLine = fmt.Sprintf("Log in: %s", url)
+		dashboardLine = fmt.Sprintf("Dashboard: %s", url)
+	}
+	return fmt.Sprintf(helpMessageTemplate, loginLine, dashboardLine)
 }
 
 func formatRegistrationPendingMessage(playerName string) string {
@@ -37,12 +42,20 @@ func formatRegistrationPendingMessage(playerName string) string {
 }
 
 func formatRegistrationApprovedMessage(username, role, playerLine string) string {
+	dashboard := "the dashboard"
+	if url := PublicURL(); url != "" {
+		dashboard = url
+	}
 	return fmt.Sprintf("✅ **You're registered!**\n\nDashboard: %s\nUsername:  %s\nRole:      %s\nPlayer:    %s\n\nWe'll link your player automatically when you join.\nUse /set-player to correct your in-game name, or /clear-player to remove your mapping.\nUse /connection get for join details. Use /mods for the full mod list.",
-		PublicURL(), username, role, playerLine)
+		dashboard, username, role, playerLine)
 }
 
 func formatWelcomeApprovedDM(username string) string {
-	return fmt.Sprintf("✅ **Registration approved!**\n\nWelcome to FactoryMate.\nDashboard: %s\nUsername: %s", PublicURL(), username)
+	dashboard := "the dashboard"
+	if url := PublicURL(); url != "" {
+		dashboard = url
+	}
+	return fmt.Sprintf("✅ **Registration approved!**\n\nWelcome to FactoryMate.\nDashboard: %s\nUsername: %s", dashboard, username)
 }
 
 func formatRegistrationDeclinedDM(comment string) string {
@@ -63,4 +76,12 @@ func playerDisplayLine(userPlayerName *string, pendingName string, linked bool) 
 		return pendingName + " (pending — not seen on server yet)"
 	}
 	return "—"
+}
+
+func dashboardURL(path string) string {
+	base := PublicURL()
+	if base == "" {
+		return ""
+	}
+	return base + path
 }

@@ -8,6 +8,7 @@ import (
 	"os"
 	"sort"
 	"strings"
+	"sync"
 
 	"factorymate/internal/connection"
 	"factorymate/internal/mods"
@@ -35,6 +36,7 @@ type Channel struct {
 type Bot struct {
 	db           *sql.DB
 	token        string
+	sessionMu    sync.RWMutex
 	session      *discordgo.Session
 	registration *registration.Service
 	connection   *connection.Service
@@ -55,11 +57,15 @@ func NewBot(db *sql.DB, regSvc *registration.Service, connSvc *connection.Servic
 
 // Connected reports whether the gateway session is open.
 func (b *Bot) Connected() bool {
+	b.sessionMu.RLock()
+	defer b.sessionMu.RUnlock()
 	return b.session != nil
 }
 
 // Session returns the live discordgo session for notify.DiscordSession adapters.
 func (b *Bot) Session() *discordgo.Session {
+	b.sessionMu.RLock()
+	defer b.sessionMu.RUnlock()
 	return b.session
 }
 
@@ -90,7 +96,9 @@ func (b *Bot) Start(ctx context.Context) error {
 	if err := dg.Open(); err != nil {
 		return fmt.Errorf("discord gateway: %w", err)
 	}
+	b.sessionMu.Lock()
 	b.session = dg
+	b.sessionMu.Unlock()
 	log.Printf("discord bot: connected as %s", dg.State.User.Username)
 
 	if err := b.registerSlashCommands(ctx); err != nil {
@@ -106,6 +114,8 @@ func (b *Bot) Start(ctx context.Context) error {
 
 // Stop closes the gateway session.
 func (b *Bot) Stop() {
+	b.sessionMu.Lock()
+	defer b.sessionMu.Unlock()
 	if b.session == nil {
 		return
 	}
@@ -117,10 +127,13 @@ func (b *Bot) Stop() {
 
 // InviteURL builds the OAuth2 invite link for the configured application.
 func (b *Bot) InviteURL() (string, error) {
-	if b.session == nil || b.session.State.Application == nil {
+	b.sessionMu.RLock()
+	session := b.session
+	b.sessionMu.RUnlock()
+	if session == nil || session.State.Application == nil {
 		return "", fmt.Errorf("discord bot is not connected")
 	}
-	clientID := b.session.State.Application.ID
+	clientID := session.State.Application.ID
 	return fmt.Sprintf(
 		"https://discord.com/api/oauth2/authorize?client_id=%s&permissions=%d&scope=bot%%20applications.commands",
 		clientID, InvitePermissions,
@@ -129,7 +142,10 @@ func (b *Bot) InviteURL() (string, error) {
 
 // ListGuildTextChannels returns text channels for the effective guild ID.
 func (b *Bot) ListGuildTextChannels(ctx context.Context) ([]Channel, error) {
-	if b.session == nil {
+	b.sessionMu.RLock()
+	session := b.session
+	b.sessionMu.RUnlock()
+	if session == nil {
 		return nil, fmt.Errorf("discord bot is not connected")
 	}
 
@@ -149,7 +165,7 @@ func (b *Bot) ListGuildTextChannels(ctx context.Context) ([]Channel, error) {
 		return nil, fmt.Errorf("discord guild_id is not configured")
 	}
 
-	channels, err := b.session.GuildChannels(guildID, discordgo.WithContext(ctx))
+	channels, err := session.GuildChannels(guildID, discordgo.WithContext(ctx))
 	if err != nil {
 		return nil, fmt.Errorf("list guild channels: %w", err)
 	}

@@ -97,7 +97,7 @@ func (s *Service) GenerateSMMProfile(ctx context.Context) ([]byte, string, error
 	}
 	s.mu.Unlock()
 
-	rawMods, err := s.RawMods(ctx)
+	rawMods, capturedGen, err := s.rawModsWithGeneration(ctx)
 	if err != nil {
 		return nil, "", err
 	}
@@ -118,7 +118,7 @@ func (s *Service) GenerateSMMProfile(ctx context.Context) ([]byte, string, error
 	filename := "factorymate-server.smmprofile"
 
 	s.mu.Lock()
-	if s.cache != nil {
+	if s.cache != nil && s.cache.generation == capturedGen {
 		s.cache.smmProfile = append([]byte(nil), raw...)
 		s.cache.smmFilename = filename
 	}
@@ -127,18 +127,40 @@ func (s *Service) GenerateSMMProfile(ctx context.Context) ([]byte, string, error
 	return raw, filename, nil
 }
 
+func (s *Service) rawModsWithGeneration(ctx context.Context) ([]frm.Mod, uint64, error) {
+	_, err := s.List(ctx)
+	if err != nil {
+		return nil, 0, err
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.cache == nil {
+		return nil, 0, fmt.Errorf("mod list not available")
+	}
+	return append([]frm.Mod(nil), s.cache.rawMods...), s.cache.generation, nil
+}
+
 func buildSMMProfile(ctx context.Context, client FicsitResolver, rawMods []frm.Mod, profileName string) (SMMProfile, error) {
 	var gameVersion int
+	var hasFactoryGame bool
 	constraints := make([]ModVersionConstraint, 0)
 	for _, m := range rawMods {
 		if m.SMRName == "FactoryGame" {
-			gameVersion = parseGameBuildInt(m.Version)
+			var err error
+			gameVersion, err = parseGameBuildInt(m.Version)
+			if err != nil {
+				return SMMProfile{}, err
+			}
+			hasFactoryGame = true
 			continue
 		}
 		constraints = append(constraints, ModVersionConstraint{
 			ModIDOrReference: m.SMRName,
 			Version:          m.Version,
 		})
+	}
+	if !hasFactoryGame {
+		return SMMProfile{}, fmt.Errorf("FactoryGame mod not found in mod list")
 	}
 
 	resolved, err := client.ResolveModVersions(ctx, constraints)
@@ -170,6 +192,14 @@ func buildSMMProfile(ctx context.Context, client FicsitResolver, rawMods []frm.M
 			}
 			targets[t.TargetName] = SMMProfileLockTarget{Hash: t.Hash, Link: link}
 		}
+		for _, required := range profileRequiredTargets {
+			if _, ok := targets[required]; !ok {
+				return SMMProfile{}, fmt.Errorf(
+					"mod %s version %s has no %s target",
+					m.SMRName, m.Version, required,
+				)
+			}
+		}
 		lockMods[m.SMRName] = SMMProfileLockMod{
 			Version:      m.Version,
 			Dependencies: nil,
@@ -194,16 +224,22 @@ func buildSMMProfile(ctx context.Context, client FicsitResolver, rawMods []frm.M
 	}, nil
 }
 
-func parseGameBuildInt(version string) int {
+func parseGameBuildInt(version string) (int, error) {
 	part := strings.SplitN(version, ".", 2)[0]
+	if part == "" {
+		return 0, fmt.Errorf("invalid FactoryGame version %q", version)
+	}
 	n := 0
 	for _, c := range part {
 		if c < '0' || c > '9' {
-			break
+			return 0, fmt.Errorf("invalid FactoryGame version %q", version)
 		}
 		n = n*10 + int(c-'0')
 	}
-	return n
+	if n == 0 {
+		return 0, fmt.Errorf("invalid FactoryGame version %q", version)
+	}
+	return n, nil
 }
 
 // HTTPFicsitClient calls the public ficsit.app GraphQL API.

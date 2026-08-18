@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"factorymate/internal/auth"
 	"factorymate/internal/connection"
@@ -89,6 +90,11 @@ func TestSetBroadcastsToActiveLinkedUsers(t *testing.T) {
 	_, err = svc.Set(ctx, input2, 1)
 	if err != nil {
 		t.Fatalf("set again: %v", err)
+	}
+
+	deadline := time.Now().Add(2 * time.Second)
+	for len(mock.DMUserIDs) == 0 && time.Now().Before(deadline) {
+		time.Sleep(10 * time.Millisecond)
 	}
 
 	if len(mock.DMUserIDs) != 1 || mock.DMUserIDs[0] != "discord-1" {

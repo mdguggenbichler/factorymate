@@ -67,14 +67,24 @@ func SyncAllLinkedRoles(ctx context.Context, db *sql.DB, session *discordgo.Sess
 	if err != nil {
 		return 0, fmt.Errorf("query linked users: %w", err)
 	}
-	defer rows.Close()
 
-	updated := 0
+	externalUserIDs := make([]string, 0)
 	for rows.Next() {
 		var externalUserID string
 		if err := rows.Scan(&externalUserID); err != nil {
-			return updated, fmt.Errorf("scan linked user: %w", err)
+			rows.Close()
+			return 0, fmt.Errorf("scan linked user: %w", err)
 		}
+		externalUserIDs = append(externalUserIDs, externalUserID)
+	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return 0, err
+	}
+	rows.Close()
+
+	updated := 0
+	for _, externalUserID := range externalUserIDs {
 		member, err := session.GuildMember(guildID, externalUserID, discordgo.WithContext(ctx))
 		if err != nil {
 			log.Printf("discord bot: sync roles: guild member %s: %v", externalUserID, err)
@@ -88,5 +98,5 @@ func SyncAllLinkedRoles(ctx context.Context, db *sql.DB, session *discordgo.Sess
 			updated++
 		}
 	}
-	return updated, rows.Err()
+	return updated, nil
 }

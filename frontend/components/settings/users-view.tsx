@@ -982,7 +982,7 @@ export function UsersView({
                         externalPlatform: event.target.value,
                       }))
                     }
-                    placeholder="discord"
+                    placeholder={t("fields.externalPlatformPlaceholder")}
                   />
                 </Field>
                 <Field>

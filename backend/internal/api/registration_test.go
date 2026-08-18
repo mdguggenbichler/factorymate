@@ -153,10 +153,13 @@ func TestUpdateUserExternalUnlink(t *testing.T) {
 	if resp.Code != http.StatusOK {
 		t.Fatalf("unlink status = %d body=%s", resp.Code, resp.Body.String())
 	}
-	var updated auth.User
+	var updated struct {
+		ExternalUserID *string `json:"externalUserId"`
+		ExternalLinked *string `json:"externalLinkedAt"`
+	}
 	decodeJSONRecorder(t, resp, &updated)
-	if updated.External.UserID != nil {
-		t.Fatalf("expected external unlink, got %+v", updated.External)
+	if updated.ExternalUserID != nil || updated.ExternalLinked != nil {
+		t.Fatalf("expected external unlink, got %+v", updated)
 	}
 }
 

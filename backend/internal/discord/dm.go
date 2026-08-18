@@ -3,7 +3,7 @@ package discord
 import (
 	"context"
 	"fmt"
-	"strings"
+	"log"
 
 	"factorymate/internal/notify"
 	"factorymate/internal/registration"
@@ -13,40 +13,42 @@ import (
 
 // SendWelcomeDM sends post-approval welcome with connection details when configured.
 func (b *Bot) SendWelcomeDM(ctx context.Context, externalUserID, username string) {
-	if b.session == nil {
+	if b.Session() == nil {
 		return
 	}
 	enabled, err := BotEnabled(ctx, b.db)
 	if err != nil || !enabled {
 		return
 	}
-	provider := notify.NewDiscordProvider(b.session)
+	provider := notify.NewDiscordProvider(b.Session())
 
 	welcome := formatWelcomeApprovedDM(username)
-	_ = provider.SendDirect(ctx, registration.PlatformDiscord, externalUserID, notify.RenderedMessage{Plain: welcome})
+	if err := provider.SendDirect(ctx, registration.PlatformDiscord, externalUserID, notify.RenderedMessage{Plain: welcome}); err != nil {
+		log.Printf("discord bot: welcome dm: %v", err)
+	}
 
 	if b.connection != nil {
-		details, err := b.connection.Get(ctx)
-		if err == nil && strings.TrimSpace(details.GameHost) != "" {
-			connMsg := b.connection.RenderDetailsMessage(ctx, details)
-			_ = provider.SendDirect(ctx, registration.PlatformDiscord, externalUserID, connMsg)
+		if err := b.connection.SendToUser(ctx, externalUserID); err != nil {
+			log.Printf("discord bot: welcome connection dm: %v", err)
 		}
 	}
 
 	hint := "Use /mods for the full mod list and /mods export to download an SMM profile to import before joining."
-	_ = provider.SendDirect(ctx, registration.PlatformDiscord, externalUserID, notify.RenderedMessage{Plain: hint})
+	if err := provider.SendDirect(ctx, registration.PlatformDiscord, externalUserID, notify.RenderedMessage{Plain: hint}); err != nil {
+		log.Printf("discord bot: welcome hint dm: %v", err)
+	}
 }
 
 // SendRegistrationDeclinedDM notifies a registrant their request was rejected.
 func (b *Bot) SendRegistrationDeclinedDM(ctx context.Context, externalUserID, comment string) {
-	if b.session == nil {
+	if b.Session() == nil {
 		return
 	}
 	enabled, err := BotEnabled(ctx, b.db)
 	if err != nil || !enabled {
 		return
 	}
-	provider := notify.NewDiscordProvider(b.session)
+	provider := notify.NewDiscordProvider(b.Session())
 	_ = provider.SendDirect(ctx, registration.PlatformDiscord, externalUserID, notify.RenderedMessage{
 		Plain: formatRegistrationDeclinedDM(comment),
 	})

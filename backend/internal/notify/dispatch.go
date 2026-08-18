@@ -62,11 +62,14 @@ func (d *Dispatcher) HandleEvent(ctx context.Context, messageTypeKey string, var
 		}
 	}
 
-	if err := d.dispatchCategoryDMs(ctx, messageTypeKey, category, rendered); err != nil {
-		return err
+	sent, err := d.dispatchCategoryDMs(ctx, messageTypeKey, category, rendered)
+	if err != nil {
+		log.Printf("notify: category dm %q failed: %v", messageTypeKey, err)
 	}
 	if messageTypeKey == "player_joined" || messageTypeKey == "player_left" {
-		_ = d.dispatchPersonalPlayerDMs(ctx, messageTypeKey, vars, rendered)
+		if err := d.dispatchPersonalPlayerDMs(ctx, messageTypeKey, vars, rendered, sent); err != nil {
+			log.Printf("notify: personal dm %q failed: %v", messageTypeKey, err)
+		}
 	}
 	return nil
 }
@@ -224,33 +227,40 @@ func (d *Dispatcher) dispatchToTarget(ctx context.Context, messageTypeKey string
 	return sendErr
 }
 
-func (d *Dispatcher) dispatchCategoryDMs(ctx context.Context, messageTypeKey, category string, rendered template.RenderedMessage) error {
+func (d *Dispatcher) dispatchCategoryDMs(ctx context.Context, messageTypeKey, category string, rendered template.RenderedMessage) (map[string]struct{}, error) {
+	sent := make(map[string]struct{})
 	if category == "" || d.Prefs == nil {
-		return nil
+		return sent, nil
 	}
 	provider, ok := d.directProvider()
 	if !ok {
-		return nil
+		return sent, nil
 	}
 
 	recipients, err := d.Prefs.ListDMRecipients(ctx, category)
 	if err != nil {
-		return fmt.Errorf("list dm recipients for %q: %w", category, err)
+		return sent, fmt.Errorf("list dm recipients for %q: %w", category, err)
 	}
 	if len(recipients) == 0 {
-		return nil
+		return sent, nil
 	}
 
 	msg := providerMessage("discord", rendered)
 	preview := renderedPreview("discord", rendered)
-	for _, recipient := range recipients {
+	for i, recipient := range recipients {
 		sendErr := provider.SendDirect(ctx, "discord", recipient.ExternalUserID, msg)
 		d.recordDMLog(ctx, messageTypeKey, recipient.ExternalUserID, preview, sendErr == nil, sendErr)
+		if sendErr == nil {
+			sent[recipient.ExternalUserID] = struct{}{}
+		}
+		if i < len(recipients)-1 {
+			time.Sleep(dmRateLimit)
+		}
 	}
-	return nil
+	return sent, nil
 }
 
-func (d *Dispatcher) dispatchPersonalPlayerDMs(ctx context.Context, messageTypeKey string, vars map[string]string, rendered template.RenderedMessage) error {
+func (d *Dispatcher) dispatchPersonalPlayerDMs(ctx context.Context, messageTypeKey string, vars map[string]string, rendered template.RenderedMessage, alreadySent map[string]struct{}) error {
 	if d.Prefs == nil {
 		return nil
 	}
@@ -270,9 +280,17 @@ func (d *Dispatcher) dispatchPersonalPlayerDMs(ctx context.Context, messageTypeK
 
 	personal := personalPlayerMessage(messageTypeKey, rendered)
 	preview := notifyRenderedPreview(personal)
-	for _, recipient := range recipients {
+	for i, recipient := range recipients {
+		if alreadySent != nil {
+			if _, ok := alreadySent[recipient.ExternalUserID]; ok {
+				continue
+			}
+		}
 		sendErr := provider.SendDirect(ctx, "discord", recipient.ExternalUserID, personal)
 		d.recordDMLog(ctx, messageTypeKey, recipient.ExternalUserID, preview, sendErr == nil, sendErr)
+		if i < len(recipients)-1 {
+			time.Sleep(dmRateLimit)
+		}
 	}
 	return nil
 }
@@ -406,7 +424,7 @@ func (d *Dispatcher) recordChannelLog(ctx context.Context, messageTypeKey string
 		messageTypeKey, targetID, preview, success, errText, sentAt,
 	)
 	if err != nil {
-		_ = err
+		log.Printf("notify: record channel log for %q: %v", messageTypeKey, err)
 	}
 }
 
@@ -423,6 +441,6 @@ func (d *Dispatcher) recordDMLog(ctx context.Context, messageTypeKey, externalUs
 		messageTypeKey, preview, success, errText, sentAt, externalUserID,
 	)
 	if err != nil {
-		_ = err
+		log.Printf("notify: record dm log for %q: %v", messageTypeKey, err)
 	}
 }

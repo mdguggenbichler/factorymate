@@ -2,6 +2,7 @@ package discord
 
 import (
 	"context"
+	"fmt"
 
 	"factorymate/internal/connection"
 	"factorymate/internal/mods"
@@ -10,7 +11,13 @@ import (
 
 // SendDirect implements connection.DirectMessenger via the live session.
 func (b *Bot) SendDirect(ctx context.Context, platform, externalUserID string, msg notify.RenderedMessage) error {
-	provider := notify.NewDiscordProvider(b.session)
+	b.sessionMu.RLock()
+	session := b.session
+	b.sessionMu.RUnlock()
+	if session == nil {
+		return fmt.Errorf("discord bot is not connected")
+	}
+	provider := notify.NewDiscordProvider(session)
 	return provider.SendDirect(ctx, platform, externalUserID, msg)
 }
 

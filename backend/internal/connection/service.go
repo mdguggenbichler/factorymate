@@ -99,7 +99,13 @@ func (s *Service) Set(ctx context.Context, input UpdateInput, updatedByUserID in
 		return Details{}, fmt.Errorf("marshal connection details: %w", err)
 	}
 
-	if _, err := s.DB.ExecContext(ctx, `
+	tx, err := s.DB.BeginTx(ctx, nil)
+	if err != nil {
+		return Details{}, fmt.Errorf("begin transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	if _, err := tx.ExecContext(ctx, `
 		INSERT INTO app_setting_kv (key, value) VALUES (?, ?)
 		ON CONFLICT(key) DO UPDATE SET value = excluded.value`,
 		settingKeyDetails, string(raw),
@@ -108,9 +114,21 @@ func (s *Service) Set(ctx context.Context, input UpdateInput, updatedByUserID in
 	}
 
 	if input.SMMProfileName != nil {
-		if err := s.setSMMProfileName(ctx, *input.SMMProfileName); err != nil {
-			return Details{}, err
+		name := strings.TrimSpace(*input.SMMProfileName)
+		if name == "" {
+			name = defaultSMMProfileName
 		}
+		if _, err := tx.ExecContext(ctx, `
+			INSERT INTO app_setting_kv (key, value) VALUES (?, ?)
+			ON CONFLICT(key) DO UPDATE SET value = excluded.value`,
+			settingSMMProfileName, name,
+		); err != nil {
+			return Details{}, fmt.Errorf("save smm profile name: %w", err)
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return Details{}, fmt.Errorf("commit connection settings: %w", err)
 	}
 
 	profileName, err := s.getSMMProfileName(ctx)
@@ -119,8 +137,12 @@ func (s *Service) Set(ctx context.Context, input UpdateInput, updatedByUserID in
 	}
 	merged.SMMProfileName = profileName
 
-	if s.SendDM != nil {
-		_ = s.BroadcastChange(ctx, old, merged)
+	if s.SendDM != nil && len(ChangedFields(old, merged, input)) > 0 {
+		oldCopy := old
+		newCopy := merged
+		go func() {
+			_ = s.BroadcastChange(context.Background(), oldCopy, newCopy)
+		}()
 	}
 
 	return merged, nil

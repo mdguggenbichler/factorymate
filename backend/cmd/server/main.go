@@ -56,6 +56,9 @@ func main() {
 		log.Fatalf("discord bot: %v", err)
 	}
 
+	connSvc := connection.NewService(database, bot)
+	bot.SetConnection(connSvc)
+
 	notify.SendEnabled = func(ctx context.Context) (bool, error) {
 		return discord.BotEnabled(ctx, database)
 	}
@@ -63,9 +66,6 @@ func main() {
 	if err := bot.Start(ctx); err != nil {
 		log.Printf("discord bot start: %v — dashboard and FRM polling will continue without bot features", err)
 	}
-
-	connSvc := connection.NewService(database, bot)
-	bot.SetConnection(connSvc)
 
 	go runPoller(ctx, database, phases, bot)
 	go runSlowPoller(ctx, database)

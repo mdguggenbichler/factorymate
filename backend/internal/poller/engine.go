@@ -331,6 +331,9 @@ func (e *Engine) processElevators(ctx context.Context, elevators []frm.Elevator,
 func (e *Engine) processResearch(ctx context.Context, trees []frm.ResearchTree, now time.Time) ([]Event, error) {
 	var events []Event
 	for _, tree := range trees {
+		if len(tree.Nodes) == 0 {
+			continue
+		}
 		seenIDs := make([]string, 0, len(tree.Nodes))
 		for _, node := range tree.Nodes {
 			seenIDs = append(seenIDs, node.ID)

@@ -28,11 +28,13 @@ type Service struct {
 	CacheTTL     time.Duration
 	FicsitClient FicsitResolver
 
-	mu    sync.Mutex
-	cache *cachedList
+	mu          sync.Mutex
+	cache       *cachedList
+	cacheGen    uint64
 }
 
 type cachedList struct {
+	generation  uint64
 	response    ListResponse
 	rawMods     []frm.Mod
 	smmProfile  []byte
@@ -97,10 +99,13 @@ func (s *Service) Refresh(ctx context.Context) (ListResponse, error) {
 
 	resp := buildListResponse(rawMods, s.Now)
 	s.mu.Lock()
+	s.cacheGen++
+	gen := s.cacheGen
 	s.cache = &cachedList{
-		response: resp,
-		rawMods:  rawMods,
-		at:       s.Now(),
+		generation: gen,
+		response:   resp,
+		rawMods:    rawMods,
+		at:         s.Now(),
 	}
 	s.mu.Unlock()
 	return resp, nil

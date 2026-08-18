@@ -14,7 +14,7 @@ import (
 
 func (b *Bot) handleConnectionCommand(ctx context.Context, s *discordgo.Session, i *discordgo.InteractionCreate, data discordgo.ApplicationCommandInteractionData, externalID string, perms memberPermissions, state LinkState, fmUser *auth.User) {
 	if len(data.Options) == 0 {
-		respondEphemeral(s, i, "Use /connection get or /connection set.")
+		respondEphemeral(ctx, s, i, "Use /connection get or /connection set.")
 		return
 	}
 
@@ -27,7 +27,7 @@ func (b *Bot) handleConnectionCommand(ctx context.Context, s *discordgo.Session,
 		}
 		adminUser, err := b.registration.GetByExternal(ctx, registration.PlatformDiscord, externalID)
 		if err != nil || adminUser == nil {
-			respondEphemeral(s, i, "Something went wrong.")
+			respondEphemeral(ctx, s, i, "Something went wrong.")
 			return
 		}
 		b.handleConnectionSet(ctx, s, i, externalID, adminUser.ID, sub)
@@ -38,17 +38,17 @@ func (b *Bot) handleConnectionCommand(ctx context.Context, s *discordgo.Session,
 		}
 		b.handleConnectionGet(ctx, s, i, externalID)
 	default:
-		respondEphemeral(s, i, "Unknown subcommand.")
+		respondEphemeral(ctx, s, i, "Unknown subcommand.")
 	}
 }
 
 func (b *Bot) handleConnectionGet(ctx context.Context, s *discordgo.Session, i *discordgo.InteractionCreate, externalID string) {
 	if err := b.connection.SendToUser(ctx, externalID); err != nil {
-		respondEphemeral(s, i, "Could not send connection details DM. Check that DMs are enabled.")
+		respondEphemeral(ctx, s, i, "Could not send connection details DM. Check that DMs are enabled.")
 		_ = LogBotCommand(ctx, b.db, externalID, "connection get", false, err.Error())
 		return
 	}
-	respondEphemeral(s, i, "Connection details sent to your DMs.")
+	respondEphemeral(ctx, s, i, "Connection details sent to your DMs.")
 	_ = LogBotCommand(ctx, b.db, externalID, "connection get", true, "dm")
 }
 
@@ -56,26 +56,35 @@ func (b *Bot) handleConnectionSet(ctx context.Context, s *discordgo.Session, i *
 	var host string
 	var port int64
 	var password, notes string
-	hasPassword := false
+	hasHost, hasPort, hasPassword, hasNotes := false, false, false, false
 
 	for _, opt := range sub.Options {
 		switch opt.Name {
 		case "host":
 			host = opt.StringValue()
+			hasHost = true
 		case "port":
 			port = opt.IntValue()
+			hasPort = true
 		case "password":
 			password = opt.StringValue()
 			hasPassword = true
 		case "notes":
 			notes = opt.StringValue()
+			hasNotes = true
 		}
 	}
 
-	input := connection.UpdateInput{
-		GameHost: &host,
-		GamePort: func() *int { p := int(port); return &p }(),
-		Notes:    &notes,
+	input := connection.UpdateInput{}
+	if hasHost {
+		input.GameHost = &host
+	}
+	if hasPort {
+		p := int(port)
+		input.GamePort = &p
+	}
+	if hasNotes {
+		input.Notes = &notes
 	}
 	if hasPassword {
 		input.GamePassword = &password
@@ -84,13 +93,13 @@ func (b *Bot) handleConnectionSet(ctx context.Context, s *discordgo.Session, i *
 	old, _ := b.connection.Get(ctx)
 	details, err := b.connection.Set(ctx, input, adminID)
 	if err != nil {
-		respondEphemeral(s, i, "Failed to update connection details.")
+		respondEphemeral(ctx, s, i, "Failed to update connection details.")
 		_ = LogBotCommand(ctx, b.db, externalID, "connection set", false, err.Error())
 		return
 	}
 
 	fields := connection.ChangedFields(old, details, input)
 	detail := "updated: " + strings.Join(fields, ", ")
-	respondEphemeral(s, i, fmt.Sprintf("Connection details updated and broadcast to active players.\nUpdated: %s", strings.Join(fields, ", ")))
+	respondEphemeral(ctx, s, i, fmt.Sprintf("Connection details updated and broadcast to active players.\nUpdated: %s", strings.Join(fields, ", ")))
 	_ = LogBotCommand(ctx, b.db, externalID, "connection set", true, detail)
 }

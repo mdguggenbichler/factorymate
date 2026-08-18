@@ -4,10 +4,14 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
 )
+
+// ErrUserNotFound is returned when a user id does not exist.
+var ErrUserNotFound = errors.New("user not found")
 
 const (
 	KeyDMDefaultsJSON          = "notifications.dm_defaults_json"
@@ -156,7 +160,7 @@ func (s *Service) GetUserPrefs(ctx context.Context, userID int64) (UserPrefs, er
 	var personal sql.NullBool
 	err = s.DB.QueryRowContext(ctx, `SELECT dm_player_personal FROM users WHERE id = ?`, userID).Scan(&personal)
 	if err == sql.ErrNoRows {
-		return UserPrefs{}, fmt.Errorf("user not found")
+		return UserPrefs{}, ErrUserNotFound
 	}
 	if err != nil {
 		return UserPrefs{}, fmt.Errorf("query dm_player_personal: %w", err)
@@ -174,7 +178,7 @@ func (s *Service) SetUserPrefs(ctx context.Context, userID int64, input UserPref
 		return UserPrefs{}, fmt.Errorf("check user: %w", err)
 	}
 	if exists == 0 {
-		return UserPrefs{}, fmt.Errorf("user not found")
+		return UserPrefs{}, ErrUserNotFound
 	}
 
 	tx, err := s.DB.BeginTx(ctx, nil)

@@ -149,10 +149,15 @@ func enrichChangeDM(msg notify.RenderedMessage, old, new Details) notify.Rendere
 				msg.Embed.Description = prefix
 			}
 		}
-		msg.Embed.Fields = append(msg.Embed.Fields, notify.DiscordEmbedField{
-			Name:  "Password",
-			Value: "||" + new.GamePassword + "||",
-		})
+		if embedHasPasswordCapacity(msg.Embed, passwordLine) {
+			msg.Embed.Fields = append(msg.Embed.Fields, notify.DiscordEmbedField{
+				Name:  "Password",
+				Value: "||" + new.GamePassword + "||",
+			})
+			return msg
+		}
+		msg.Plain = prefix + passwordLine
+		msg.Embed = nil
 		return msg
 	}
 
@@ -166,19 +171,45 @@ func enrichDetailsDM(msg notify.RenderedMessage, details Details) notify.Rendere
 		return msg
 	}
 
+	passwordLine := fmt.Sprintf("Password: ||%s||", details.GamePassword)
+
 	if strings.TrimSpace(msg.Plain) != "" {
-		msg.Plain = strings.TrimSpace(msg.Plain) + "\n\n" + fmt.Sprintf("Password: ||%s||", details.GamePassword)
+		msg.Plain = strings.TrimSpace(msg.Plain) + "\n\n" + passwordLine
 		return msg
 	}
 
 	if msg.Embed != nil {
-		msg.Embed.Fields = append(msg.Embed.Fields, notify.DiscordEmbedField{
-			Name:  "Password",
-			Value: "||" + details.GamePassword + "||",
-		})
+		if embedHasPasswordCapacity(msg.Embed, passwordLine) {
+			msg.Embed.Fields = append(msg.Embed.Fields, notify.DiscordEmbedField{
+				Name:  "Password",
+				Value: "||" + details.GamePassword + "||",
+			})
+			return msg
+		}
+		msg.Plain = passwordLine
+		msg.Embed = nil
 		return msg
 	}
 
-	msg.Plain = fmt.Sprintf("Password: ||%s||", details.GamePassword)
+	msg.Plain = passwordLine
 	return msg
+}
+
+const (
+	discordEmbedMaxFields     = 25
+	discordEmbedMaxTotalChars = 6000
+)
+
+func embedHasPasswordCapacity(embed *notify.DiscordEmbed, passwordLine string) bool {
+	if embed == nil {
+		return true
+	}
+	if len(embed.Fields) >= discordEmbedMaxFields-1 {
+		return false
+	}
+	total := len(embed.Title) + len(embed.Description) + len(embed.Footer) + len(passwordLine)
+	for _, f := range embed.Fields {
+		total += len(f.Name) + len(f.Value)
+	}
+	return total < discordEmbedMaxTotalChars
 }

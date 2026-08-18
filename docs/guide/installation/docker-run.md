@@ -11,7 +11,15 @@ Use `docker run` when you do not want Docker Compose. The settings below match t
 mkdir -p data
 ```
 
+Load variables from `.env` before running the container:
+
+```bash
+set -a && source .env && set +a
+```
+
 ## Stable release
+
+Set `FRM_HOST` to a hostname or IP reachable from the container (your game server's LAN IP, Docker service name on a shared network, or `host.docker.internal` on Docker Desktop). Do not rely on the placeholder `satisfactory-server` unless that container is on the same Docker network.
 
 ```bash
 docker run -d \
@@ -20,7 +28,7 @@ docker run -d \
   -p 3000:3000 \
   -e SESSION_SECRET="${SESSION_SECRET}" \
   -e DATABASE_PATH=/data/factorymate.db \
-  -e FRM_HOST="${FRM_HOST:-satisfactory-server}" \
+  -e FRM_HOST="${FRM_HOST}" \
   -e FRM_PORT="${FRM_PORT:-8080}" \
   -e BACKEND_URL=http://127.0.0.1:8080 \
   -e DISCORD_BOT_TOKEN="${DISCORD_BOT_TOKEN}" \
@@ -30,17 +38,13 @@ docker run -d \
   ghcr.io/ghotso/factorymate:latest
 ```
 
-Load variables from `.env` first:
-
-```bash
-set -a && source .env && set +a
-```
-
 ## Shared Docker network with game server
 
 If FRM runs in another container on the same host, attach FactoryMate to that network:
 
 ```bash
+set -a && source .env && set +a
+
 docker run -d \
   --name factorymate \
   --restart unless-stopped \

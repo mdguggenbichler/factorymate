@@ -544,7 +544,7 @@ func TestAdminEndpoints(t *testing.T) {
 			"name":         "Main Discord",
 			"providerType": "discord",
 			"config": map[string]string{
-				"channel_id": "123456789",
+				"channelId": "123456789",
 			},
 			"enabled": true,
 		})
@@ -610,7 +610,7 @@ func TestAdminEndpoints(t *testing.T) {
 			"name":         "Alerts",
 			"providerType": "discord",
 			"config": map[string]string{
-				"channel_id": "987654321",
+				"channelId": "987654321",
 			},
 			"enabled": true,
 		})
@@ -875,7 +875,7 @@ func TestAdminEndpoints(t *testing.T) {
 			"name":         "Template Test",
 			"providerType": "discord",
 			"config": map[string]string{
-				"channel_id": "template-channel",
+				"channelId": "template-channel",
 			},
 			"enabled": true,
 		})

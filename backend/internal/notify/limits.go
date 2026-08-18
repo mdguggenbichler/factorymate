@@ -1,5 +1,7 @@
 package notify
 
+import "time"
+
 // Discord embed limits (spec §5.4 validation).
 const (
 	discordTitleMaxLen       = 256
@@ -9,6 +11,7 @@ const (
 	discordMaxFields         = 25
 	discordFieldNameMaxLen   = 256
 	discordFieldValueMaxLen  = 1024
+	dmRateLimit              = 200 * time.Millisecond
 )
 
 func truncate(s string, max int) string {

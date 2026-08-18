@@ -237,5 +237,5 @@ func PublicURL() string {
 	if v := strings.TrimSpace(os.Getenv("FACTORYMATE_PUBLIC_URL")); v != "" {
 		return strings.TrimRight(v, "/")
 	}
-	return "https://factorymate.example.com"
+	return ""
 }

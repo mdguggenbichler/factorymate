@@ -10,7 +10,7 @@ services:
     ports:
       - "${FACTORYMATE_PORT:-3000}:3000"
     environment:
-      SESSION_SECRET: ${SESSION_SECRET:-dev-secret-change-me}
+      SESSION_SECRET: ${SESSION_SECRET:?SESSION_SECRET must be set}
       DATABASE_PATH: /data/factorymate.db
       FRM_HOST: ${FRM_HOST:-satisfactory-server}
       FRM_PORT: ${FRM_PORT:-8080}

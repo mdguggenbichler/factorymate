@@ -727,6 +727,7 @@
         "player": "Game player",
         "noPlayer": "None",
         "externalPlatform": "Platform",
+        "externalPlatformPlaceholder": "discord",
         "externalUserId": "External user ID",
         "externalUsername": "External username",
         "externalDisplayName": "Display name"

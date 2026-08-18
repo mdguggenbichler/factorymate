@@ -18,8 +18,32 @@ import (
 )
 
 type discordTargetConfig struct {
-	ChannelID string `json:"channel_id"`
-	ThreadID  string `json:"thread_id,omitempty"`
+	ChannelID string `json:"channelId"`
+	ThreadID  string `json:"threadId,omitempty"`
+}
+
+func discordConfigToStored(cfg discordTargetConfig) (string, error) {
+	stored := notify.DiscordConfig{
+		ChannelID: strings.TrimSpace(cfg.ChannelID),
+		ThreadID:  strings.TrimSpace(cfg.ThreadID),
+	}
+	raw, err := json.Marshal(stored)
+	if err != nil {
+		return "", err
+	}
+	return string(raw), nil
+}
+
+func discordConfigFromStored(raw string) map[string]any {
+	var stored notify.DiscordConfig
+	if err := json.Unmarshal([]byte(raw), &stored); err != nil {
+		return map[string]any{}
+	}
+	out := map[string]any{"channelId": stored.ChannelID}
+	if strings.TrimSpace(stored.ThreadID) != "" {
+		out["threadId"] = stored.ThreadID
+	}
+	return out
 }
 
 type notificationTargetRequest struct {
@@ -89,7 +113,7 @@ func (h *Handler) ListNotificationTargets(w http.ResponseWriter, r *http.Request
 			"id":           id,
 			"name":         name,
 			"providerType": providerType,
-			"config":       config,
+			"config":       discordConfigFromStored(configJSON),
 			"enabled":      enabled,
 			"createdAt":    createdAt,
 		})
@@ -117,7 +141,7 @@ func (h *Handler) CreateNotificationTarget(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	if strings.TrimSpace(req.Config.ChannelID) == "" {
-		writeError(w, r, http.StatusBadRequest, "channel_id is required")
+		writeError(w, r, http.StatusBadRequest, "channelId is required")
 		return
 	}
 	enabled := true
@@ -125,12 +149,12 @@ func (h *Handler) CreateNotificationTarget(w http.ResponseWriter, r *http.Reques
 		enabled = *req.Enabled
 	}
 
-	configJSON, err := json.Marshal(req.Config)
+	configJSON, err := discordConfigToStored(req.Config)
 	if err != nil {
 		writeError(w, r, http.StatusInternalServerError, "internal error")
 		return
 	}
-	if err := h.validateDiscordTargetChannel(r.Context(), string(configJSON)); err != nil {
+	if err := h.validateDiscordTargetChannel(r.Context(), configJSON); err != nil {
 		writeError(w, r, http.StatusBadRequest, err.Error())
 		return
 	}
@@ -139,7 +163,7 @@ func (h *Handler) CreateNotificationTarget(w http.ResponseWriter, r *http.Reques
 	res, err := h.db.ExecContext(r.Context(), `
 		INSERT INTO notification_targets (name, provider_type, config_json, enabled, created_at)
 		VALUES (?, ?, ?, ?, ?)`,
-		req.Name, req.ProviderType, string(configJSON), enabled, now,
+		req.Name, req.ProviderType, configJSON, enabled, now,
 	)
 	if err != nil {
 		writeError(w, r, http.StatusInternalServerError, "internal error")
@@ -198,7 +222,7 @@ func (h *Handler) UpdateNotificationTarget(w http.ResponseWriter, r *http.Reques
 		enabled = *req.Enabled
 	}
 
-	var existing discordTargetConfig
+	var existing notify.DiscordConfig
 	_ = json.Unmarshal([]byte(configJSON), &existing)
 	if strings.TrimSpace(req.Config.ChannelID) != "" {
 		existing.ChannelID = req.Config.ChannelID
@@ -224,13 +248,11 @@ func (h *Handler) UpdateNotificationTarget(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	var config map[string]any
-	_ = parseJSONColumn(string(newConfigJSON), &config)
 	writeJSON(w, http.StatusOK, map[string]any{
 		"id":           id,
 		"name":         name,
 		"providerType": providerType,
-		"config":       config,
+		"config":       discordConfigFromStored(string(newConfigJSON)),
 		"enabled":      enabled,
 	})
 }
@@ -627,6 +649,10 @@ func (h *Handler) PreviewMessageTypeTemplate(w http.ResponseWriter, r *http.Requ
 
 func (h *Handler) TestMessageTypeTemplate(w http.ResponseWriter, r *http.Request) {
 	key := chi.URLParam(r, "key")
+	if notify.IsDMOnlyMessageType(key) {
+		writeError(w, r, http.StatusBadRequest, "this message type is DM-only and cannot be test-sent to channel targets")
+		return
+	}
 
 	var req templatePreviewRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -673,6 +699,10 @@ func (h *Handler) TestMessageTypeTemplate(w http.ResponseWriter, r *http.Request
 
 func (h *Handler) UpdateMessageTypeTargets(w http.ResponseWriter, r *http.Request) {
 	key := chi.URLParam(r, "key")
+	if notify.IsDMOnlyMessageType(key) {
+		writeError(w, r, http.StatusBadRequest, "this message type is DM-only and cannot be assigned to channel targets")
+		return
+	}
 	var req targetIDsRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, r, http.StatusBadRequest, "invalid request body")

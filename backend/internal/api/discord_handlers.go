@@ -78,33 +78,55 @@ func (h *Handler) UpdateDiscordSettings(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	if len(req.RoleMappings) > 0 && !json.Valid(req.RoleMappings) {
+		writeError(w, r, http.StatusBadRequest, "roleMappings must be valid JSON")
+		return
+	}
+
+	tx, err := h.db.BeginTx(ctx, nil)
+	if err != nil {
+		writeError(w, r, http.StatusInternalServerError, "internal error")
+		return
+	}
+	defer tx.Rollback()
+
+	upsert := func(key, value string) error {
+		_, err := tx.ExecContext(ctx, `
+			INSERT INTO app_setting_kv (key, value) VALUES (?, ?)
+			ON CONFLICT(key) DO UPDATE SET value = excluded.value`,
+			key, value,
+		)
+		return err
+	}
+
 	if req.BotEnabled != nil {
-		if err := discord.SetSetting(ctx, h.db, discord.KeyBotEnabled, boolString(*req.BotEnabled)); err != nil {
+		if err := upsert(discord.KeyBotEnabled, boolString(*req.BotEnabled)); err != nil {
 			writeError(w, r, http.StatusInternalServerError, "internal error")
 			return
 		}
 	}
 	if req.GuildID != nil {
-		if err := discord.SetSetting(ctx, h.db, discord.KeyGuildID, strings.TrimSpace(*req.GuildID)); err != nil {
+		if err := upsert(discord.KeyGuildID, strings.TrimSpace(*req.GuildID)); err != nil {
 			writeError(w, r, http.StatusInternalServerError, "internal error")
 			return
 		}
 	}
 	if len(req.RoleMappings) > 0 {
-		if !json.Valid(req.RoleMappings) {
-			writeError(w, r, http.StatusBadRequest, "roleMappings must be valid JSON")
-			return
-		}
-		if err := discord.SetSetting(ctx, h.db, discord.KeyRoleMappingsJSON, string(req.RoleMappings)); err != nil {
+		if err := upsert(discord.KeyRoleMappingsJSON, string(req.RoleMappings)); err != nil {
 			writeError(w, r, http.StatusInternalServerError, "internal error")
 			return
 		}
 	}
 	if req.AutoApprove != nil {
-		if err := discord.SetSetting(ctx, h.db, discord.KeyAutoApprove, boolString(*req.AutoApprove)); err != nil {
+		if err := upsert(discord.KeyAutoApprove, boolString(*req.AutoApprove)); err != nil {
 			writeError(w, r, http.StatusInternalServerError, "internal error")
 			return
 		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		writeError(w, r, http.StatusInternalServerError, "internal error")
+		return
 	}
 
 	h.GetDiscordSettings(w, r)

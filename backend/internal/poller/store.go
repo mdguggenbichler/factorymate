@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"log"
 	"strings"
 	"time"
 
@@ -162,7 +163,7 @@ func upsertPlayerState(ctx context.Context, db *sql.DB, p frm.Player, lastSeenAt
 	}
 	if len(links) > 0 && OnPlayersAutoLinked != nil {
 		if err := OnPlayersAutoLinked(ctx, links); err != nil {
-			return err
+			log.Printf("poller: auto-link notification failed: %v", err)
 		}
 	}
 	return nil

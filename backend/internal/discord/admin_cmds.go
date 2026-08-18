@@ -24,14 +24,14 @@ func (b *Bot) handleStatusCommand(ctx context.Context, s *discordgo.Session, i *
 		WHERE a.id = 1`,
 	).Scan(&serverOnline, &serverName)
 	if err != nil {
-		respondEphemeral(s, i, "Could not load server status.")
+		respondEphemeral(ctx, s, i, "Could not load server status.")
 		_ = LogBotCommand(ctx, b.db, externalID, "status", false, err.Error())
 		return
 	}
 
 	var onlineCount int
 	if err := b.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM player_state WHERE online = 1`).Scan(&onlineCount); err != nil {
-		respondEphemeral(s, i, "Could not load player count.")
+		respondEphemeral(ctx, s, i, "Could not load player count.")
 		_ = LogBotCommand(ctx, b.db, externalID, "status", false, err.Error())
 		return
 	}
@@ -41,7 +41,7 @@ func (b *Bot) handleStatusCommand(ctx context.Context, s *discordgo.Session, i *
 		online = "online"
 	}
 	msg := fmt.Sprintf("**%s** is **%s**.\nPlayers online: **%d**", serverName, online, onlineCount)
-	respondEphemeral(s, i, msg)
+	respondEphemeral(ctx, s, i, msg)
 	_ = LogBotCommand(ctx, b.db, externalID, "status", true, "")
 }
 
@@ -49,7 +49,7 @@ func (b *Bot) handlePlayersCommand(ctx context.Context, s *discordgo.Session, i 
 	rows, err := b.db.QueryContext(ctx, `
 		SELECT name FROM player_state WHERE online = 1 ORDER BY name`)
 	if err != nil {
-		respondEphemeral(s, i, "Could not load online players.")
+		respondEphemeral(ctx, s, i, "Could not load online players.")
 		_ = LogBotCommand(ctx, b.db, externalID, "players", false, err.Error())
 		return
 	}
@@ -59,14 +59,14 @@ func (b *Bot) handlePlayersCommand(ctx context.Context, s *discordgo.Session, i 
 	for rows.Next() {
 		var name string
 		if err := rows.Scan(&name); err != nil {
-			respondEphemeral(s, i, "Could not load online players.")
+			respondEphemeral(ctx, s, i, "Could not load online players.")
 			_ = LogBotCommand(ctx, b.db, externalID, "players", false, err.Error())
 			return
 		}
 		names = append(names, name)
 	}
 	if err := rows.Err(); err != nil {
-		respondEphemeral(s, i, "Could not load online players.")
+		respondEphemeral(ctx, s, i, "Could not load online players.")
 		_ = LogBotCommand(ctx, b.db, externalID, "players", false, err.Error())
 		return
 	}
@@ -77,19 +77,19 @@ func (b *Bot) handlePlayersCommand(ctx context.Context, s *discordgo.Session, i 
 	} else {
 		msg = fmt.Sprintf("**Online players (%d):**\n%s", len(names), strings.Join(names, "\n"))
 	}
-	respondEphemeral(s, i, msg)
+	respondEphemeral(ctx, s, i, msg)
 	_ = LogBotCommand(ctx, b.db, externalID, "players", true, "")
 }
 
 func (b *Bot) handleBroadcastCommand(ctx context.Context, s *discordgo.Session, i *discordgo.InteractionCreate, externalID, message string) {
 	message = strings.TrimSpace(message)
 	if message == "" {
-		respondEphemeral(s, i, "Message is required.")
+		respondEphemeral(ctx, s, i, "Message is required.")
 		_ = LogBotCommand(ctx, b.db, externalID, "broadcast", false, "empty message")
 		return
 	}
-	if b.session == nil {
-		respondEphemeral(s, i, "Discord bot is not connected.")
+	if b.Session() == nil {
+		respondEphemeral(ctx, s, i, "Discord bot is not connected.")
 		_ = LogBotCommand(ctx, b.db, externalID, "broadcast", false, "bot offline")
 		return
 	}
@@ -98,49 +98,56 @@ func (b *Bot) handleBroadcastCommand(ctx context.Context, s *discordgo.Session, 
 		SELECT external_user_id FROM users
 		WHERE status = 'active' AND external_user_id IS NOT NULL AND external_platform = 'discord'`)
 	if err != nil {
-		respondEphemeral(s, i, "Could not load recipients.")
+		respondEphemeral(ctx, s, i, "Could not load recipients.")
 		_ = LogBotCommand(ctx, b.db, externalID, "broadcast", false, err.Error())
 		return
 	}
-	defer rows.Close()
 
-	provider := notify.NewDiscordProvider(b.session)
-	sent := 0
+	recipients := make([]string, 0)
 	for rows.Next() {
 		var recipient string
 		if err := rows.Scan(&recipient); err != nil {
-			respondEphemeral(s, i, "Could not load recipients.")
+			rows.Close()
+			respondEphemeral(ctx, s, i, "Could not load recipients.")
 			_ = LogBotCommand(ctx, b.db, externalID, "broadcast", false, err.Error())
 			return
 		}
+		recipients = append(recipients, recipient)
+	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		respondEphemeral(ctx, s, i, "Could not load recipients.")
+		_ = LogBotCommand(ctx, b.db, externalID, "broadcast", false, err.Error())
+		return
+	}
+	rows.Close()
+
+	provider := notify.NewDiscordProvider(b.Session())
+	sent := 0
+	for _, recipient := range recipients {
 		if err := provider.SendDirect(ctx, registration.PlatformDiscord, recipient, notify.RenderedMessage{Plain: message}); err == nil {
 			sent++
 		}
 	}
-	if err := rows.Err(); err != nil {
-		respondEphemeral(s, i, "Could not load recipients.")
-		_ = LogBotCommand(ctx, b.db, externalID, "broadcast", false, err.Error())
-		return
-	}
 
-	respondEphemeral(s, i, fmt.Sprintf("Broadcast sent to **%d** player(s).", sent))
+	respondEphemeral(ctx, s, i, fmt.Sprintf("Broadcast sent to **%d** player(s).", sent))
 	_ = LogBotCommand(ctx, b.db, externalID, "broadcast", true, fmt.Sprintf("sent=%d", sent))
 }
 
 func (b *Bot) handleSyncRolesCommand(ctx context.Context, s *discordgo.Session, i *discordgo.InteractionCreate, externalID string) {
 	guildID, err := EffectiveGuildID(ctx, b.db)
 	if err != nil {
-		respondEphemeral(s, i, "Could not load guild settings.")
+		respondEphemeral(ctx, s, i, "Could not load guild settings.")
 		_ = LogBotCommand(ctx, b.db, externalID, "sync-roles", false, err.Error())
 		return
 	}
-	updated, err := SyncAllLinkedRoles(ctx, b.db, b.session, guildID)
+	updated, err := SyncAllLinkedRoles(ctx, b.db, b.Session(), guildID)
 	if err != nil {
-		respondEphemeral(s, i, "Role sync failed.")
+		respondEphemeral(ctx, s, i, "Role sync failed.")
 		_ = LogBotCommand(ctx, b.db, externalID, "sync-roles", false, err.Error())
 		return
 	}
-	respondEphemeral(s, i, fmt.Sprintf("Role sync complete. Updated **%d** user(s).", updated))
+	respondEphemeral(ctx, s, i, fmt.Sprintf("Role sync complete. Updated **%d** user(s).", updated))
 	_ = LogBotCommand(ctx, b.db, externalID, "sync-roles", true, fmt.Sprintf("updated=%d", updated))
 }
 
@@ -153,18 +160,18 @@ func (b *Bot) handleNotificationsCommand(ctx context.Context, s *discordgo.Sessi
 		b.showNotificationPrefs(ctx, s, i, externalID, svc, userID)
 	case "category":
 		if category == "" || enabled == "" {
-			respondEphemeral(s, i, "Usage: `/notifications action:category name:<category> enabled:<on|off>`")
+			respondEphemeral(ctx, s, i, "Usage: `/notifications action:category name:<category> enabled:<on|off>`")
 			return
 		}
 		b.setNotificationCategory(ctx, s, i, externalID, svc, userID, category, enabled)
 	case "personal":
 		if enabled == "" {
-			respondEphemeral(s, i, "Usage: `/notifications action:personal enabled:<on|off>`")
+			respondEphemeral(ctx, s, i, "Usage: `/notifications action:personal enabled:<on|off>`")
 			return
 		}
 		b.setNotificationPersonal(ctx, s, i, externalID, svc, userID, enabled)
 	default:
-		respondEphemeral(s, i, "Unknown action.")
+		respondEphemeral(ctx, s, i, "Unknown action.")
 	}
 }
 
@@ -193,7 +200,7 @@ func ParseNotificationsOptionsForTest(data discordgo.ApplicationCommandInteracti
 func (b *Bot) showNotificationPrefs(ctx context.Context, s *discordgo.Session, i *discordgo.InteractionCreate, externalID string, svc *notifications.Service, userID int64) {
 	prefs, err := svc.GetUserPrefs(ctx, userID)
 	if err != nil {
-		respondEphemeral(s, i, "Could not load notification preferences.")
+		respondEphemeral(ctx, s, i, "Could not load notification preferences.")
 		_ = LogBotCommand(ctx, b.db, externalID, "notifications", false, err.Error())
 		return
 	}
@@ -212,47 +219,47 @@ func (b *Bot) showNotificationPrefs(ctx context.Context, s *discordgo.Session, i
 	}
 	lines = append(lines, "", fmt.Sprintf("Personal player events: **%s**", personal))
 	lines = append(lines, "", "Use `/notifications action:category name:<category> enabled:<on|off>` or `/notifications action:personal enabled:<on|off>` to change settings.")
-	respondEphemeral(s, i, strings.Join(lines, "\n"))
+	respondEphemeral(ctx, s, i, strings.Join(lines, "\n"))
 	_ = LogBotCommand(ctx, b.db, externalID, "notifications", true, "view")
 }
 
 func (b *Bot) setNotificationCategory(ctx context.Context, s *discordgo.Session, i *discordgo.InteractionCreate, externalID string, svc *notifications.Service, userID int64, category, enabled string) {
 	if !isValidCategory(category) {
-		respondEphemeral(s, i, "Unknown category.")
+		respondEphemeral(ctx, s, i, "Unknown category.")
 		_ = LogBotCommand(ctx, b.db, externalID, "notifications category", false, category)
 		return
 	}
 	on := enabled == "on"
 	prefs, err := svc.GetUserPrefs(ctx, userID)
 	if err != nil {
-		respondEphemeral(s, i, "Could not update preferences.")
+		respondEphemeral(ctx, s, i, "Could not update preferences.")
 		_ = LogBotCommand(ctx, b.db, externalID, "notifications category", false, err.Error())
 		return
 	}
 	prefs.Categories[category] = on
 	if _, err := svc.SetUserPrefs(ctx, userID, prefs); err != nil {
-		respondEphemeral(s, i, "Could not update preferences.")
+		respondEphemeral(ctx, s, i, "Could not update preferences.")
 		_ = LogBotCommand(ctx, b.db, externalID, "notifications category", false, err.Error())
 		return
 	}
-	respondEphemeral(s, i, fmt.Sprintf("`%s` DM notifications are now **%s**.", category, enabled))
+	respondEphemeral(ctx, s, i, fmt.Sprintf("`%s` DM notifications are now **%s**.", category, enabled))
 	_ = LogBotCommand(ctx, b.db, externalID, "notifications category", true, category+":"+enabled)
 }
 
 func (b *Bot) setNotificationPersonal(ctx context.Context, s *discordgo.Session, i *discordgo.InteractionCreate, externalID string, svc *notifications.Service, userID int64, enabled string) {
 	prefs, err := svc.GetUserPrefs(ctx, userID)
 	if err != nil {
-		respondEphemeral(s, i, "Could not update preferences.")
+		respondEphemeral(ctx, s, i, "Could not update preferences.")
 		_ = LogBotCommand(ctx, b.db, externalID, "notifications personal", false, err.Error())
 		return
 	}
 	prefs.DMPlayerPersonal = enabled == "on"
 	if _, err := svc.SetUserPrefs(ctx, userID, prefs); err != nil {
-		respondEphemeral(s, i, "Could not update preferences.")
+		respondEphemeral(ctx, s, i, "Could not update preferences.")
 		_ = LogBotCommand(ctx, b.db, externalID, "notifications personal", false, err.Error())
 		return
 	}
-	respondEphemeral(s, i, fmt.Sprintf("Personal player event DMs are now **%s**.", enabled))
+	respondEphemeral(ctx, s, i, fmt.Sprintf("Personal player event DMs are now **%s**.", enabled))
 	_ = LogBotCommand(ctx, b.db, externalID, "notifications personal", true, enabled)
 }
 
