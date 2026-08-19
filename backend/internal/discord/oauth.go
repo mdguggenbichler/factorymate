@@ -18,6 +18,7 @@ func buildRegisterOAuthURL(ctx context.Context, authSvc *auth.Service, meta auth
 	return authSvc.BuildOAuthAuthorizeURL(ctx, token)
 }
 
+func formatRegisterOAuthMessage(oauthURL string) string {
 	if oauthURL == "" {
 		return "Discord sign-in is not configured on this server. Ask an admin to set DISCORD_CLIENT_SECRET and FACTORYMATE_PUBLIC_URL."
 	}
