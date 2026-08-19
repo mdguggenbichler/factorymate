@@ -130,6 +130,34 @@
       "show_timestamp": true
     }
   },
+  "elevator_phase_done": {
+    "plain": "🚀 Elevator phase complete at {ElevatorName} (Phase {PhaseNumber}).",
+    "embed": {
+      "title": "🚀 Elevator phase complete",
+      "description": "",
+      "color": "#FEE75C",
+      "fields": [
+        { "name": "📊 Phase", "value": "{PhaseNumber}", "inline": true },
+        { "name": "📦 Delivered", "value": "{PhaseRequirements}", "inline": false }
+      ],
+      "footer": "🏭 {ServerName}",
+      "show_timestamp": true
+    }
+  },
+  "hub_tier_complete": {
+    "plain": "🏆 HUB Tier {TechTier} complete! ({MilestoneCount} milestones)",
+    "embed": {
+      "title": "🏆 HUB Tier {TechTier} complete",
+      "description": "",
+      "color": "#FEE75C",
+      "fields": [
+        { "name": "📊 Tier", "value": "{TechTier}", "inline": true },
+        { "name": "🏆 Milestones", "value": "{MilestoneNames}", "inline": false }
+      ],
+      "footer": "🏭 {ServerName}",
+      "show_timestamp": true
+    }
+  },
   "research_unlocked": {
     "plain": "🔬 Research unlocked: {NodeName} ({TreeName}, Tier {TechTier}).",
     "embed": {

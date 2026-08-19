@@ -11,8 +11,8 @@ func TestAllDefaultTemplatesValidateAndRender(t *testing.T) {
 	if err != nil {
 		t.Fatalf("LoadDefaults: %v", err)
 	}
-	if len(defaults) != 15 {
-		t.Fatalf("defaults count = %d, want 15", len(defaults))
+	if len(defaults) != 17 {
+		t.Fatalf("defaults count = %d, want 17", len(defaults))
 	}
 
 	for key, tmpl := range defaults {

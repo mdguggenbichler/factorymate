@@ -225,8 +225,8 @@ func assertMessageTypes(t *testing.T, ctx context.Context, database *sql.DB) {
 	if err := database.QueryRowContext(ctx, `SELECT COUNT(*) FROM message_types`).Scan(&count); err != nil {
 		t.Fatalf("count message_types: %v", err)
 	}
-	if count != 15 {
-		t.Fatalf("message_types count = %d, want 15", count)
+	if count != 17 {
+		t.Fatalf("message_types count = %d, want 17", count)
 	}
 
 	defaultsBody, err := os.ReadFile("data/message_defaults.json")

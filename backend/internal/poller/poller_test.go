@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -748,6 +749,187 @@ func assertElevatorPhase(t *testing.T, ctx context.Context, database *sql.DB, id
 	}
 	if phase != wantPhase {
 		t.Fatalf("elevator %s phase = %d, want %d", id, phase, wantPhase)
+	}
+}
+
+func TestElevatorPhaseReadyAndDone(t *testing.T) {
+	t.Chdir("../..")
+
+	ctx := context.Background()
+	database := openTestDB(t)
+	defer database.Close()
+
+	if err := db.Init(ctx, database, db.SeedConfig{}); err != nil {
+		t.Fatalf("init: %v", err)
+	}
+
+	phases, err := poller.LoadElevatorPhases("data/elevator_phases.json")
+	if err != nil {
+		t.Fatalf("load phases: %v", err)
+	}
+
+	engine := &poller.Engine{DB: database, ElevatorPhases: phases}
+	now := time.Date(2026, 8, 17, 12, 0, 0, 0, time.UTC)
+
+	phase2InProgress := []frm.PhaseItem{
+		{Name: "Smart Plating", ClassName: "Desc_SpaceElevatorPart_1_C", RemainingCost: 100, TotalCost: 1000},
+		{Name: "Versatile Framework", ClassName: "Desc_SpaceElevatorPart_2_C", RemainingCost: 200, TotalCost: 500},
+		{Name: "Automated Wiring", ClassName: "Desc_SpaceElevatorPart_3_C", RemainingCost: 50, TotalCost: 100},
+	}
+	phase2Ready := []frm.PhaseItem{
+		{Name: "Smart Plating", ClassName: "Desc_SpaceElevatorPart_1_C", RemainingCost: 0, TotalCost: 1000},
+		{Name: "Versatile Framework", ClassName: "Desc_SpaceElevatorPart_2_C", RemainingCost: 0, TotalCost: 500},
+		{Name: "Automated Wiring", ClassName: "Desc_SpaceElevatorPart_3_C", RemainingCost: 0, TotalCost: 100},
+	}
+	phase3 := []frm.PhaseItem{
+		{Name: "Versatile Framework", ClassName: "Desc_SpaceElevatorPart_2_C", RemainingCost: 1192, TotalCost: 2500},
+		{Name: "Modular Engine", ClassName: "Desc_SpaceElevatorPart_4_C", RemainingCost: 500, TotalCost: 500},
+		{Name: "Adaptive Control Unit", ClassName: "Desc_SpaceElevatorPart_5_C", RemainingCost: 100, TotalCost: 100},
+	}
+
+	elevatorID := "elevator-1"
+	makeElevator := func(items []frm.PhaseItem, upgradeReady bool) frm.FastPollResult {
+		return frm.FastPollResult{
+			Elevators: []frm.Elevator{{
+				ID:           elevatorID,
+				Name:         "Space Elevator",
+				CurrentPhase: items,
+				UpgradeReady: upgradeReady,
+			}},
+		}
+	}
+
+	if _, err := engine.PollOnce(ctx, makeElevator(phase2InProgress, false), now); err != nil {
+		t.Fatalf("baseline poll: %v", err)
+	}
+
+	readyEvents, err := engine.PollOnce(ctx, makeElevator(phase2Ready, true), now.Add(20*time.Second))
+	if err != nil {
+		t.Fatalf("ready poll: %v", err)
+	}
+	if len(readyEvents) != 1 || readyEvents[0].MessageTypeKey != "elevator_phase_complete" {
+		t.Fatalf("expected elevator_phase_complete, got %+v", readyEvents)
+	}
+	reqs := readyEvents[0].Variables["PhaseRequirements"]
+	if !strings.Contains(reqs, "Smart Plating: 1000/1000") {
+		t.Fatalf("PhaseRequirements = %q, want delivered/total", reqs)
+	}
+	if readyEvents[0].Variables["PhaseNumber"] != "2" {
+		t.Fatalf("PhaseNumber = %q, want 2", readyEvents[0].Variables["PhaseNumber"])
+	}
+
+	doneEvents, err := engine.PollOnce(ctx, makeElevator(phase3, false), now.Add(40*time.Second))
+	if err != nil {
+		t.Fatalf("done poll: %v", err)
+	}
+	if len(doneEvents) != 1 || doneEvents[0].MessageTypeKey != "elevator_phase_done" {
+		t.Fatalf("expected elevator_phase_done, got %+v", doneEvents)
+	}
+	if doneEvents[0].Variables["PhaseNumber"] != "2" {
+		t.Fatalf("done PhaseNumber = %q, want 2 (previous phase)", doneEvents[0].Variables["PhaseNumber"])
+	}
+	if !strings.Contains(doneEvents[0].Variables["PhaseRequirements"], "Automated Wiring: 100/100") {
+		t.Fatalf("done PhaseRequirements = %q", doneEvents[0].Variables["PhaseRequirements"])
+	}
+	assertElevatorPhase(t, ctx, database, elevatorID, 3)
+}
+
+func TestHubTierComplete(t *testing.T) {
+	t.Chdir("../..")
+
+	ctx := context.Background()
+	database := openTestDB(t)
+	defer database.Close()
+
+	if err := db.Init(ctx, database, db.SeedConfig{}); err != nil {
+		t.Fatalf("init: %v", err)
+	}
+
+	phases, _ := poller.LoadElevatorPhases("data/elevator_phases.json")
+	engine := &poller.Engine{DB: database, ElevatorPhases: phases}
+	now := time.Date(2026, 8, 17, 12, 0, 0, 0, time.UTC)
+
+	tier6Milestones := func(m1, m2, m3 bool) []frm.Schematic {
+		return []frm.Schematic{
+			{ID: "m6-1", Name: "Industrial Manufacturing", Type: "Milestone", TechTier: 6, Purchased: m1},
+			{ID: "m6-2", Name: "Monorail Train Technology", Type: "Milestone", TechTier: 6, Purchased: m2},
+			{ID: "m6-3", Name: "Pipeline Engineering Mk.2", Type: "Milestone", TechTier: 6, Purchased: m3},
+		}
+	}
+
+	if _, err := engine.PollOnce(ctx, frm.FastPollResult{
+		Schematics: tier6Milestones(true, true, false),
+	}, now); err != nil {
+		t.Fatalf("baseline poll: %v", err)
+	}
+
+	events, err := engine.PollOnce(ctx, frm.FastPollResult{
+		Schematics: tier6Milestones(true, true, true),
+	}, now.Add(20*time.Second))
+	if err != nil {
+		t.Fatalf("complete poll: %v", err)
+	}
+
+	var gotMilestone, gotHub bool
+	for _, ev := range events {
+		switch ev.MessageTypeKey {
+		case "milestone_unlocked":
+			gotMilestone = true
+			if ev.Variables["SchematicName"] != "Pipeline Engineering Mk.2" {
+				t.Fatalf("milestone_unlocked name = %q", ev.Variables["SchematicName"])
+			}
+		case "hub_tier_complete":
+			gotHub = true
+			if ev.Variables["TechTier"] != "6" {
+				t.Fatalf("hub_tier_complete tier = %q", ev.Variables["TechTier"])
+			}
+			if ev.Variables["MilestoneCount"] != "3" {
+				t.Fatalf("MilestoneCount = %q, want 3", ev.Variables["MilestoneCount"])
+			}
+		}
+	}
+	if !gotMilestone || !gotHub {
+		t.Fatalf("expected milestone_unlocked and hub_tier_complete, got %+v", events)
+	}
+}
+
+func TestHubTierCompletePartialDoesNotFire(t *testing.T) {
+	t.Chdir("../..")
+
+	ctx := context.Background()
+	database := openTestDB(t)
+	defer database.Close()
+
+	if err := db.Init(ctx, database, db.SeedConfig{}); err != nil {
+		t.Fatalf("init: %v", err)
+	}
+
+	phases, _ := poller.LoadElevatorPhases("data/elevator_phases.json")
+	engine := &poller.Engine{DB: database, ElevatorPhases: phases}
+	now := time.Date(2026, 8, 17, 12, 0, 0, 0, time.UTC)
+
+	schematics := []frm.Schematic{
+		{ID: "m6-1", Name: "Industrial Manufacturing", Type: "Milestone", TechTier: 6, Purchased: false},
+		{ID: "m6-2", Name: "Monorail Train Technology", Type: "Milestone", TechTier: 6, Purchased: false},
+		{ID: "m6-3", Name: "Pipeline Engineering Mk.2", Type: "Milestone", TechTier: 6, Purchased: false},
+	}
+
+	if _, err := engine.PollOnce(ctx, frm.FastPollResult{Schematics: schematics}, now); err != nil {
+		t.Fatalf("baseline poll: %v", err)
+	}
+
+	schematics[0].Purchased = true
+	events, err := engine.PollOnce(ctx, frm.FastPollResult{Schematics: schematics}, now.Add(20*time.Second))
+	if err != nil {
+		t.Fatalf("partial poll: %v", err)
+	}
+	for _, ev := range events {
+		if ev.MessageTypeKey == "hub_tier_complete" {
+			t.Fatalf("unexpected hub_tier_complete on partial tier: %+v", ev)
+		}
+	}
+	if len(events) != 1 || events[0].MessageTypeKey != "milestone_unlocked" {
+		t.Fatalf("expected single milestone_unlocked, got %+v", events)
 	}
 }
 

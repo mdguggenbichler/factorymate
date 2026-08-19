@@ -113,7 +113,21 @@ const PREVIEW_SAMPLE_VARS: Record<string, Record<string, string>> = {
   elevator_phase_complete: {
     ElevatorName: "Space Elevator",
     PhaseNumber: "2",
-    PhaseRequirements: "Smart Plating: 0/250",
+    PhaseRequirements: "Smart Plating: 1000/1000\nVersatile Framework: 500/500",
+    ServerName: "CBC | Conveyor Belt Cult",
+    Timestamp: "Aug 17, 2026 · 14:37 UTC",
+  },
+  elevator_phase_done: {
+    ElevatorName: "Space Elevator",
+    PhaseNumber: "2",
+    PhaseRequirements: "Smart Plating: 1000/1000\nVersatile Framework: 500/500",
+    ServerName: "CBC | Conveyor Belt Cult",
+    Timestamp: "Aug 17, 2026 · 14:37 UTC",
+  },
+  hub_tier_complete: {
+    TechTier: "6",
+    MilestoneNames: "Industrial Manufacturing\nMonorail Train Technology",
+    MilestoneCount: "5",
     ServerName: "CBC | Conveyor Belt Cult",
     Timestamp: "Aug 17, 2026 · 14:37 UTC",
   },

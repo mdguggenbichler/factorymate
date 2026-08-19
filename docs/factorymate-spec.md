@@ -660,8 +660,10 @@ All detection is **edge-triggered** (fires only on state transitions, not on eve
 | `fuse_tripped` | Circuit's `FuseTriggered`: `false` → `true` |
 | `power_restored` | Circuit's `FuseTriggered`: `true` → `false` |
 | `milestone_unlocked` | Schematic with `Type == "Milestone"`: `Purchased` `false` → `true` |
+| `hub_tier_complete` | Same poll emitted at least one `milestone_unlocked` for TechTier `T`, and every schematic with `Type == "Milestone"` and `TechTier == T` in the current poll payload has `Purchased == true` |
 | `hard_drive_ready` | Schematic with `Type == "Hard Drive"`: `Locked` `true` → `false` AND `Purchased == false` (i.e. newly available, awaiting recipe selection) |
-| `elevator_phase_complete` | Space Elevator's `UpgradeReady`: `false` → `true` |
+| `elevator_phase_complete` | Space Elevator's `UpgradeReady`: `false` → `true` (all parts delivered; elevator ready to send) |
+| `elevator_phase_done` | Space Elevator's `UpgradeReady`: `true` → `false` (elevator sent; next phase requirements now active) |
 | `research_unlocked` | Research Node's `State`: transitions **to** `"Purchased"` from any other value (deliberately not keyed off a specific "from" state — see note below on why) |
 | `train_derailed` | Train's `Derailed`: `false` → `true` |
 | `vehicle_out_of_fuel` | Vehicle's total `Fuel[]` amount: `> 0` → `0` |
@@ -687,7 +689,9 @@ This debounce avoids false positives from a vehicle merely stopped at a station 
 
 **Source-level confirmation (via direct inspection of the FRM repository, `porisius/FicsitRemoteMonitoring`):** `getSpaceElevator`'s `CurrentPhase` field is a direct pass-through of the base game's own `AFGGamePhaseManager::GetRemainingPhaseCosts()` — FRM defines no phase-to-part mapping itself, and no phase index is serialized anywhere in its source or documentation. Each item's `Name` is populated from `UFGItemDescriptor::GetItemName()` (the item's *current, localized display name* — confirmed subject to change, e.g. the historical Automated Wiring/"High-speed Wiring" rename), while `ClassName` is populated from `GetClassDisplayName()` (the stable Unreal class identifier). This is direct source-level confirmation that `ClassName`, not `Name`, is the correct field to key the lookup table on.
 
-**Live verification, Phase 2 (confirmed 2026-08-16):** A real `getSpaceElevator` call against the group's own server, taken while on Phase 2, returned exactly 3 items in `CurrentPhase` — `Desc_SpaceElevatorPart_1_C` (Smart Plating), `Desc_SpaceElevatorPart_2_C` (Versatile Framework), `Desc_SpaceElevatorPart_3_C` (Automated Wiring) — matching Phase 2's expected part count and ClassNames exactly. This confirms both open questions for this phase: **the "current phase only" scoping assumption holds** (no cumulative aggregation across phases), and **`_1_C`/`_2_C`/`_3_C` are correct against live data**, not just the wiki. Phases 3–5 remain wiki-sourced only, to be confirmed the same way as the group naturally reaches them (see self-correcting diagnostic logging below).
+**Live verification, Phase 2 (confirmed 2026-08-16):** A real `getSpaceElevator` call against the group's own server, taken while on Phase 2, returned exactly 3 items in `CurrentPhase` — `Desc_SpaceElevatorPart_1_C` (Smart Plating), `Desc_SpaceElevatorPart_2_C` (Versatile Framework), `Desc_SpaceElevatorPart_3_C` (Automated Wiring) — matching Phase 2's expected part count and ClassNames exactly. This confirms both open questions for this phase: **the "current phase only" scoping assumption holds** (no cumulative aggregation across phases), and **`_1_C`/`_2_C`/`_3_C` are correct against live data**, not just the wiki.
+
+**Live verification, Phase 3 (confirmed 2026-08-19):** While on Phase 3, live `getSpaceElevator` returned `Desc_SpaceElevatorPart_2_C` (Versatile Framework), `Desc_SpaceElevatorPart_4_C` (Modular Engine), and `Desc_SpaceElevatorPart_5_C` (Adaptive Control Unit) — matching Phase 3's expected ClassName set exactly. Phases 4–5 remain wiki-sourced only, to be confirmed the same way as the group naturally reaches them (see self-correcting diagnostic logging below).
 
 Also observed in the live response but not previously modeled: each `CurrentPhase[]` item includes `Amount` (current stock/delivered amount at the elevator) and `MaxAmount` (per-delivery cap, e.g. 50) in addition to `RemainingCost`/`TotalCost`. These aren't needed for phase-number derivation but are available if a future dashboard view wants to show delivered-vs-needed progress per item within the current phase.
 
@@ -697,11 +701,11 @@ Reference data (source: [official Satisfactory Wiki, Space Elevator](https://sat
 |---|---|---|---|---|
 | 1 | Distribution Platform | Smart Plating | `Desc_SpaceElevatorPart_1_C` | ✅ Live (2026-08-16, via Phase 2 response) |
 | 2 | Construction Dock | Smart Plating, Versatile Framework, Automated Wiring | `Desc_SpaceElevatorPart_1_C`, `Desc_SpaceElevatorPart_2_C`, `Desc_SpaceElevatorPart_3_C` | ✅ Live (2026-08-16) |
-| 3 | Main Body | Versatile Framework, Modular Engine, Adaptive Control Unit | `Desc_SpaceElevatorPart_2_C`, `Desc_SpaceElevatorPart_4_C`, `Desc_SpaceElevatorPart_5_C` | Wiki only |
+| 3 | Main Body | Versatile Framework, Modular Engine, Adaptive Control Unit | `Desc_SpaceElevatorPart_2_C`, `Desc_SpaceElevatorPart_4_C`, `Desc_SpaceElevatorPart_5_C` | ✅ Live (2026-08-19) |
 | 4 | Propulsion | Assembly Director System, Magnetic Field Generator, Thermal Propulsion Rocket, Nuclear Pasta | `Desc_SpaceElevatorPart_7_C`, `Desc_SpaceElevatorPart_6_C`, `Desc_SpaceElevatorPart_8_C`, `Desc_SpaceElevatorPart_9_C` | Wiki only |
 | 5 | Assembly | Nuclear Pasta, Biochemical Sculptor, AI Expansion Server, Ballistic Warp Drive | `Desc_SpaceElevatorPart_9_C`, `Desc_SpaceElevatorPart_10_C`, `Desc_SpaceElevatorPart_12_C`, `Desc_SpaceElevatorPart_11_C` | Wiki only |
 
-All twelve ClassNames (`_1_C` through `_12_C`) are individually confirmed from official wiki pages; Phases 1–2 are additionally confirmed against the group's own live server (see above). Phases 3–5 remain wiki-sourced only.
+All twelve ClassNames (`_1_C` through `_12_C`) are individually confirmed from official wiki pages; Phases 1–3 are additionally confirmed against the group's own live server (see above). Phases 4–5 remain wiki-sourced only.
 
 FactoryMate ships this table as a maintained data file (not hardcoded inline), matches the live, sorted `CurrentPhase[].ClassName` set against it on every poll, and sets `phase_number` accordingly. **If no match is found** (e.g. a future Satisfactory content update reshuffles phase part lists, the deliverable cost multiplier was set to something other than 1× at world creation — which changes quantities but not types, so this alone should not break matching — or a modded part is present), the backend does not guess: `phase_number` is left `null`/unknown, and any template referencing `{PhaseNumber}` falls back to omitting it (e.g. rendering "the next phase" instead of "Phase 4") rather than showing a wrong number.
 
@@ -728,11 +732,17 @@ When M3 emits `(message_type_key, variables map[string]string)`, populate variab
 | `milestone_unlocked` | `{SchematicName}` | FRM `getSchematics.Name` |
 | `milestone_unlocked` | `{TechTier}` | FRM `getSchematics.TechTier` as string |
 | `milestone_unlocked` | `{RecipeNames}` | Comma-joined `Recipes[].Name` |
+| `hub_tier_complete` | `{TechTier}` | Tech tier as string |
+| `hub_tier_complete` | `{MilestoneNames}` | Newline-joined names of all `Type == "Milestone"` schematics with that `TechTier` in the current poll payload |
+| `hub_tier_complete` | `{MilestoneCount}` | Count of milestones in that tier (integer string) |
 | `hard_drive_ready` | `{SchematicName}` | FRM `getSchematics.Name` |
 | `hard_drive_ready` | `{RecipeOptions}` | Newline-joined `Recipes[].Name` |
 | `elevator_phase_complete` | `{ElevatorName}` | FRM `getSpaceElevator.Name` |
 | `elevator_phase_complete` | `{PhaseNumber}` | `elevator_state.phase_number` as string; empty if NULL |
-| `elevator_phase_complete` | `{PhaseRequirements}` | Newline-joined `CurrentPhase[]` (`Name: RemainingCost/TotalCost`) |
+| `elevator_phase_complete` | `{PhaseRequirements}` | Newline-joined `CurrentPhase[]` at ready time (`Name: delivered/TotalCost` where `delivered = TotalCost - RemainingCost`) |
+| `elevator_phase_done` | `{ElevatorName}` | FRM `getSpaceElevator.Name` |
+| `elevator_phase_done` | `{PhaseNumber}` | **Previous** `elevator_state.phase_number` (the phase just sent); empty if NULL |
+| `elevator_phase_done` | `{PhaseRequirements}` | Newline-joined items from **previous** `elevator_state.current_phase_json` (`Name: delivered/TotalCost`) |
 | `research_unlocked` | `{NodeName}` | FRM node `Name` |
 | `research_unlocked` | `{TreeName}` | Parent tree `Name` |
 | `research_unlocked` | `{TechTier}` | Node `TechTier` as string |
@@ -750,7 +760,7 @@ When M3 emits `(message_type_key, variables map[string]string)`, populate variab
 
 ### 4.3 Known FRM Limitations (carried over from investigation)
 
-- `getSpaceElevator` provides `UpgradeReady` (boolean) but no explicit phase index/number in its own response. FactoryMate derives it separately via a static ClassName-set lookup table (see §4.2) — Phases 1–2 confirmed against the group's own live server, Phases 3–5 wiki-sourced pending live confirmation. If the current phase's part set doesn't match any table entry, `phase_number` is left unknown rather than guessed, and the `elevator_phase_complete` notification's `{PhaseNumber}` variable is simply omitted for that occurrence.
+- `getSpaceElevator` provides `UpgradeReady` (boolean) but no explicit phase index/number in its own response. FactoryMate derives it separately via a static ClassName-set lookup table (see §4.2) — Phases 1–3 confirmed against the group's own live server, Phases 4–5 wiki-sourced pending live confirmation. If the current phase's part set doesn't match any table entry, `phase_number` is left unknown rather than guessed, and elevator notifications' `{PhaseNumber}` variable is simply omitted for that occurrence. **`elevator_phase_done`** uses the stored phase number from *before* the send transition, because `CurrentPhase` already reflects the next phase once `UpgradeReady` drops back to `false`.
 - FRM's own built-in webhook notification system (JSON template files, configured via the in-game Server Manager UI) was evaluated and found unreliable in testing (a HUB milestone unlock incorrectly fired the Hard Drive notification template). FactoryMate's own polling-and-diffing approach is used instead, giving full control over trigger logic.
 - FRM's web server does not autostart by default; `Web_Autostart` must be enabled via the in-game **Server Manager → Server Settings** UI (this is a client-in-game setting, not a config file, as of the `FGUserSettings`-based config system introduced with Satisfactory 1.2 — legacy `.cfg` files under `FactoryGame/Configs/FicsitRemoteMonitoring/` are no longer read).
 - `getProdStats` requires the [Production Stats mod](https://ficsit.app/mod/3tsvcG3A6gqKX1) on the Satisfactory server (§4.1).
@@ -794,8 +804,10 @@ Fixed, seeded set of message types (not user-creatable in v1 — new event types
 | `fuse_tripped` | Fuse Tripped | power | `{Timestamp}`, `{ServerName}`, `{CircuitID}`, `{PowerProduction}`, `{PowerConsumed}`, `{PowerCapacity}`, `{BatteryPercent}`, `{BatteryTimeEmpty}` |
 | `power_restored` | Power Restored | power | `{Timestamp}`, `{ServerName}`, `{CircuitID}`, `{PowerProduction}`, `{PowerConsumed}`, `{PowerCapacity}`, `{BatteryPercent}`, `{BatteryTimeEmpty}` |
 | `milestone_unlocked` | Milestone Unlocked | progression | `{Timestamp}`, `{ServerName}`, `{SchematicName}`, `{TechTier}`, `{RecipeNames}` (comma-joined) |
+| `hub_tier_complete` | HUB Tier Complete | progression | `{Timestamp}`, `{ServerName}`, `{TechTier}`, `{MilestoneNames}`, `{MilestoneCount}` |
 | `hard_drive_ready` | Hard Drive Ready | progression | `{Timestamp}`, `{ServerName}`, `{SchematicName}`, `{RecipeOptions}` (newline-joined list) |
-| `elevator_phase_complete` | Elevator Phase Complete | progression | `{Timestamp}`, `{ServerName}`, `{ElevatorName}`, `{PhaseNumber}` (omitted if unknown), `{PhaseRequirements}` |
+| `elevator_phase_complete` | Elevator Phase Ready | progression | `{Timestamp}`, `{ServerName}`, `{ElevatorName}`, `{PhaseNumber}` (omitted if unknown), `{PhaseRequirements}` |
+| `elevator_phase_done` | Elevator Phase Complete | progression | `{Timestamp}`, `{ServerName}`, `{ElevatorName}`, `{PhaseNumber}` (omitted if unknown), `{PhaseRequirements}` |
 | `research_unlocked` | Research Unlocked | progression | `{Timestamp}`, `{ServerName}`, `{NodeName}`, `{TreeName}`, `{TechTier}`, `{ResearchCost}` |
 | `train_derailed` | Train Derailed | vehicle | `{Timestamp}`, `{ServerName}`, `{TrainName}`, `{StationName}`, `{TrainStatus}`, `{SelfDriving}` |
 | `vehicle_out_of_fuel` | Vehicle Out of Fuel | vehicle | `{Timestamp}`, `{ServerName}`, `{VehicleType}`, `{VehicleName}`, `{Driver}`, `{ForwardSpeed}` |
@@ -882,15 +894,17 @@ Two render paths exist, selected automatically by the target's `provider_type` a
 | `player_joined` / `player_left` | `PlayerName` = `Michael`, `OnlineCount` = `4` |
 | `fuse_tripped` / `power_restored` | `CircuitID` = `1`, `PowerProduction` = `120`, `PowerConsumed` = `95`, `PowerCapacity` = `100`, `BatteryPercent` = `68`, `BatteryTimeEmpty` = `2h 15m` |
 | `milestone_unlocked` | `SchematicName` = `Oil Processing`, `TechTier` = `5`, `RecipeNames` = `Plastic, Rubber` |
+| `hub_tier_complete` | `TechTier` = `6`, `MilestoneNames` = `Industrial Manufacturing\nMonorail Train Technology\n…`, `MilestoneCount` = `5` |
 | `hard_drive_ready` | `SchematicName` = `Hard Drive (MAM)`, `RecipeOptions` = `Steel Screw\nCopper Sheet` |
-| `elevator_phase_complete` | `ElevatorName` = `Space Elevator`, `PhaseNumber` = `2`, `PhaseRequirements` = `Smart Plating: 0/250\nVersatile Framework: 0/500` |
+| `elevator_phase_complete` | `ElevatorName` = `Space Elevator`, `PhaseNumber` = `2`, `PhaseRequirements` = `Smart Plating: 1000/1000\nVersatile Framework: 500/500\nAutomated Wiring: 100/100` |
+| `elevator_phase_done` | `ElevatorName` = `Space Elevator`, `PhaseNumber` = `2`, `PhaseRequirements` = `Smart Plating: 1000/1000\nVersatile Framework: 500/500\nAutomated Wiring: 100/100` |
 | `research_unlocked` | `NodeName` = `Oil Processing`, `TreeName` = `MAM`, `TechTier` = `5`, `ResearchCost` = `Copper Sheet × 10\nCable × 15` |
 | `train_derailed` | `TrainName` = `Train 1`, `StationName` = `Main Station`, `TrainStatus` = `Self-Driving`, `SelfDriving` = `No error` |
 | `vehicle_out_of_fuel` / `vehicle_stuck` | `VehicleType` = `Explorer`, `VehicleName` = `Tractor`, `Driver` = `Michael`, `ForwardSpeed` = `0.0 km/h` |
 
 ### 5.5 Default template catalog
 
-All 14 message types (13 game events plus optional `connection_details_changed` for template editing): see `backend/data/message_defaults.json`. M1 seed reads this file verbatim into `message_types.default_template_json` per key. The `connection_details_changed` type is editable in the template UI but delivery remains via `ConnectionDetailsService` (mandatory DM broadcast), not the game-event dispatcher.
+All 17 message types (15 game events plus optional `connection_details_changed` and `connection_details` for template editing): see `backend/data/message_defaults.json`. M1 seed reads this file verbatim into `message_types.default_template_json` per key. The `connection_details_changed` type is editable in the template UI but delivery remains via `ConnectionDetailsService` (mandatory DM broadcast), not the game-event dispatcher.
 
 ---
 
@@ -1141,7 +1155,7 @@ Category keys match `message_types.category` groupings (§9.3 in discord-bot-pla
 | `/mods` | viewer, admin (active users) | Full server mod list from FRM `getModList`; game build + SML header; disclaimer; download SMM profile; admin refresh | Table, cards, alert |
 | `/settings/notifications/targets` | admin only | CRUD for Notification Targets (Discord channel picker), per-target "Send test" button; legacy webhook deprecation banner | Data table, dialog forms |
 | `/settings/notifications/defaults` | admin only | Admin DM category defaults for newly registered users (`dmPlayerPersonalDefault` included) | Form, switches |
-| `/settings/notifications/templates` | admin only | List of message types (14 keys including optional `connection_details_changed`); selecting one opens the template editor (plain-text + embed fields, variable picker, live preview, target assignment checkboxes for that type, reset-to-default) | Data table + detail panel, live preview card |
+| `/settings/notifications/templates` | admin only | List of message types (17 keys including optional `connection_details_changed` and `connection_details`); selecting one opens the template editor (plain-text + embed fields, variable picker, live preview, target assignment checkboxes for that type, reset-to-default) | Data table + detail panel, live preview card |
 | `/settings/notifications/log` | admin only | Recent sent notifications with success/failure status | Data table |
 | `/settings/general` | admin only | FRM host/port/token, poll interval, production snapshot interval/retention; server display name shown read-only (auto-fetched from FRM) | Form, test-connection button |
 | `/settings/discord` | admin only | Bot status, invite URL, guild ID, role mapping editor, auto-approve toggle | Form, table, badges |
@@ -1250,6 +1264,6 @@ Everything below was genuinely open earlier in this project's design discussion 
 - **`hard_drive_ready` follow-up notification on recipe selection** (`Purchased` transitioning to `true` after the fact): **decided against for v1.** The moment worth notifying on is "a choice is now available" — the actual selection is a single-person, low-stakes action with little group-relevant signal. `schematic_state` already captures `purchased`/`locked` either way, so adding this later is a small, additive change to §4.2's diff table, not a schema migration.
 - **Additional notification providers** (ntfy, Telegram, generic webhook): **decided against for v1.** Discord is the group's actual, confirmed destination; building providers with no real target to point them at is speculative work. The `Provider` interface (§2.3) exists specifically so this is a contained addition later — a new struct implementing `Send`/`Type`, no changes to the poller, templating, or dispatch layers.
 - **Per-message-type polling cadence** (e.g. faster polling for player join/leave than for schematics): **decided against for v1.** A single shared `poll_interval_seconds` (default 20s, §4.1) is well under any latency the group would notice for a 5–6 player casual server, and per-type scheduling would meaningfully complicate M3's poll loop for no observed benefit.
-- **Confirming Phases 3–5's Space Elevator ClassName mapping against live data**: not a decision to make, just not yet possible — the group hasn't reached those phases. The self-correcting `elevator_phase_unknown_log` mechanism (§4.2) closes this automatically as the save progresses; no action needed until an entry actually appears there.
+- **Confirming Phases 4–5's Space Elevator ClassName mapping against live data**: not a decision to make, just not yet possible — the group hasn't reached those phases. The self-correcting `elevator_phase_unknown_log` mechanism (§4.2) closes this automatically as the save progresses; no action needed until an entry actually appears there. Phase 3 was confirmed live on 2026-08-19.
 - **Additional UI languages** (German, etc.): **deferred for v1.** i18n infrastructure ships with English only (§8.2); adding locales is additive (`messages/de.json` + switcher) once the group wants it.
 - **Discord embed footer/timestamp:** implemented in v1 — embed model includes `footer` (interpolated text) and `show_timestamp` (Discord native ISO timestamp). Footer icon URL is not supported in v1.

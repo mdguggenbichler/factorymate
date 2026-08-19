@@ -67,7 +67,11 @@ func formatResearchCost(items []frm.Item) string {
 func formatPhaseRequirements(items []frm.PhaseItem) string {
 	lines := make([]string, 0, len(items))
 	for _, item := range items {
-		lines = append(lines, fmt.Sprintf("%s: %d/%d", item.Name, item.RemainingCost, item.TotalCost))
+		delivered := item.TotalCost - item.RemainingCost
+		if delivered < 0 {
+			delivered = 0
+		}
+		lines = append(lines, fmt.Sprintf("%s: %d/%d", item.Name, delivered, item.TotalCost))
 	}
 	return strings.Join(lines, "\n")
 }

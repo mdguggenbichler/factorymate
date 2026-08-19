@@ -28,6 +28,12 @@ func SampleVariables(messageTypeKey string) map[string]string {
 			"TechTier":      "5",
 			"RecipeNames":   "Plastic, Rubber",
 		})
+	case "hub_tier_complete":
+		return withSystemVars(map[string]string{
+			"TechTier":       "6",
+			"MilestoneNames": "Industrial Manufacturing\nMonorail Train Technology\nPipeline Engineering Mk.2",
+			"MilestoneCount": "5",
+		})
 	case "hard_drive_ready":
 		return withSystemVars(map[string]string{
 			"SchematicName": "Hard Drive (MAM)",
@@ -37,7 +43,13 @@ func SampleVariables(messageTypeKey string) map[string]string {
 		return withSystemVars(map[string]string{
 			"ElevatorName":      "Space Elevator",
 			"PhaseNumber":       "2",
-			"PhaseRequirements": "Smart Plating: 0/250\nVersatile Framework: 0/500",
+			"PhaseRequirements": "Smart Plating: 1000/1000\nVersatile Framework: 500/500\nAutomated Wiring: 100/100",
+		})
+	case "elevator_phase_done":
+		return withSystemVars(map[string]string{
+			"ElevatorName":      "Space Elevator",
+			"PhaseNumber":       "2",
+			"PhaseRequirements": "Smart Plating: 1000/1000\nVersatile Framework: 500/500\nAutomated Wiring: 100/100",
 		})
 	case "research_unlocked":
 		return withSystemVars(map[string]string{
@@ -99,9 +111,11 @@ func AllowedVariables(messageTypeKey string) []string {
 		)
 	case "milestone_unlocked":
 		return append(system, "SchematicName", "TechTier", "RecipeNames")
+	case "hub_tier_complete":
+		return append(system, "TechTier", "MilestoneNames", "MilestoneCount")
 	case "hard_drive_ready":
 		return append(system, "SchematicName", "RecipeOptions")
-	case "elevator_phase_complete":
+	case "elevator_phase_complete", "elevator_phase_done":
 		return append(system, "ElevatorName", "PhaseNumber", "PhaseRequirements")
 	case "research_unlocked":
 		return append(system, "NodeName", "TreeName", "TechTier", "ResearchCost")

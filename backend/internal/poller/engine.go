@@ -228,6 +228,8 @@ func (e *Engine) processCircuits(ctx context.Context, circuits []frm.Circuit, se
 
 func (e *Engine) processSchematics(ctx context.Context, schematics []frm.Schematic, now time.Time) ([]Event, error) {
 	var events []Event
+	tiersWithUnlocks := make(map[int]struct{})
+
 	for _, s := range schematics {
 		prev, err := loadSchematicState(ctx, e.DB, s.ID)
 		if err != nil {
@@ -249,6 +251,7 @@ func (e *Engine) processSchematics(ctx context.Context, schematics []frm.Schemat
 		if s.Type == "Milestone" && !prev.Purchased && s.Purchased {
 			ts := now.UTC().Format(time.RFC3339)
 			purchasedAt = &ts
+			tiersWithUnlocks[s.TechTier] = struct{}{}
 			events = append(events, Event{
 				MessageTypeKey: "milestone_unlocked",
 				Variables: map[string]string{
@@ -272,7 +275,47 @@ func (e *Engine) processSchematics(ctx context.Context, schematics []frm.Schemat
 			return nil, err
 		}
 	}
+
+	for tier := range tiersWithUnlocks {
+		if !hubTierComplete(schematics, tier) {
+			continue
+		}
+		names := milestoneNamesForTier(schematics, tier)
+		events = append(events, Event{
+			MessageTypeKey: "hub_tier_complete",
+			Variables: map[string]string{
+				"TechTier":        intToString(tier),
+				"MilestoneNames":  strings.Join(names, "\n"),
+				"MilestoneCount":  intToString(len(names)),
+			},
+		})
+	}
+
 	return events, nil
+}
+
+func hubTierComplete(schematics []frm.Schematic, tier int) bool {
+	found := false
+	for _, s := range schematics {
+		if s.Type != "Milestone" || s.TechTier != tier {
+			continue
+		}
+		found = true
+		if !s.Purchased {
+			return false
+		}
+	}
+	return found
+}
+
+func milestoneNamesForTier(schematics []frm.Schematic, tier int) []string {
+	names := make([]string, 0)
+	for _, s := range schematics {
+		if s.Type == "Milestone" && s.TechTier == tier {
+			names = append(names, s.Name)
+		}
+	}
+	return names
 }
 
 func (e *Engine) processElevators(ctx context.Context, elevators []frm.Elevator, now time.Time) ([]Event, error) {
@@ -317,6 +360,23 @@ func (e *Engine) processElevators(ctx context.Context, elevators []frm.Elevator,
 			}
 			events = append(events, Event{
 				MessageTypeKey: "elevator_phase_complete",
+				Variables:      vars,
+			})
+		}
+
+		if prev.UpgradeReady && !el.UpgradeReady {
+			vars := map[string]string{"ElevatorName": el.Name}
+			if prev.PhaseNumber != nil {
+				vars["PhaseNumber"] = intToString(*prev.PhaseNumber)
+			}
+			if prev.CurrentPhaseJSON != "" {
+				var items []frm.PhaseItem
+				if err := json.Unmarshal([]byte(prev.CurrentPhaseJSON), &items); err == nil && len(items) > 0 {
+					vars["PhaseRequirements"] = formatPhaseRequirements(items)
+				}
+			}
+			events = append(events, Event{
+				MessageTypeKey: "elevator_phase_done",
 				Variables:      vars,
 			})
 		}

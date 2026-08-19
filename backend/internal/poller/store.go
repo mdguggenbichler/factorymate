@@ -279,15 +279,19 @@ func upsertSchematicState(ctx context.Context, db *sql.DB, s frm.Schematic, purc
 }
 
 type elevatorStateRow struct {
-	Exists       bool
-	UpgradeReady bool
+	Exists           bool
+	UpgradeReady     bool
+	PhaseNumber      *int
+	CurrentPhaseJSON string
 }
 
 func loadElevatorState(ctx context.Context, db *sql.DB, elevatorID string) (elevatorStateRow, error) {
 	var row elevatorStateRow
+	var phaseNumber sql.NullInt64
+	var phaseJSON sql.NullString
 	err := db.QueryRowContext(ctx,
-		`SELECT upgrade_ready FROM elevator_state WHERE elevator_id = ?`, elevatorID,
-	).Scan(&row.UpgradeReady)
+		`SELECT upgrade_ready, phase_number, current_phase_json FROM elevator_state WHERE elevator_id = ?`, elevatorID,
+	).Scan(&row.UpgradeReady, &phaseNumber, &phaseJSON)
 	if err == sql.ErrNoRows {
 		return row, nil
 	}
@@ -295,6 +299,13 @@ func loadElevatorState(ctx context.Context, db *sql.DB, elevatorID string) (elev
 		return row, err
 	}
 	row.Exists = true
+	if phaseNumber.Valid {
+		n := int(phaseNumber.Int64)
+		row.PhaseNumber = &n
+	}
+	if phaseJSON.Valid {
+		row.CurrentPhaseJSON = phaseJSON.String
+	}
 	return row, nil
 }
 
