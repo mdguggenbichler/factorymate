@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"database/sql"
 
 	"factorymate/internal/auth"
@@ -12,6 +13,19 @@ import (
 	"factorymate/internal/registration"
 )
 
+// DiscordBot is the bot surface used by admin settings and registration DMs.
+type DiscordBot interface {
+	Connected() bool
+	ClearSlashCommands(ctx context.Context, guildID string) error
+	RegisterSlashCommands(ctx context.Context) error
+	ListGuildTextChannels(ctx context.Context) ([]discord.Channel, error)
+	InviteURL() (string, error)
+	SendWelcomeDM(ctx context.Context, externalUserID, username string)
+	SendRegistrationDeclinedDM(ctx context.Context, externalUserID, comment string)
+}
+
+var _ DiscordBot = (*discord.Bot)(nil)
+
 type Handler struct {
 	db            *sql.DB
 	auth          *auth.Service
@@ -19,8 +33,9 @@ type Handler struct {
 	connection    *connection.Service
 	mods          *mods.Service
 	dispatcher    *notify.Dispatcher
-	discord       *discord.Bot
+	discord       DiscordBot
 	notifications *notifications.Service
+	oauthExchange func(context.Context, string) (auth.DiscordUserResponse, error)
 }
 
 func NewHandler(db *sql.DB, authSvc *auth.Service, bot *discord.Bot, regSvc *registration.Service, connSvc *connection.Service, modsSvc *mods.Service) *Handler {
@@ -38,13 +53,17 @@ func NewHandlerWithDiscordSession(db *sql.DB, authSvc *auth.Service, regSvc *reg
 }
 
 func newHandlerWithProvider(db *sql.DB, authSvc *auth.Service, bot *discord.Bot, regSvc *registration.Service, connSvc *connection.Service, modsSvc *mods.Service, provider notify.Provider) *Handler {
+	var discordBot DiscordBot
+	if bot != nil {
+		discordBot = bot
+	}
 	return &Handler{
 		db:            db,
 		auth:          authSvc,
 		registration:  regSvc,
 		connection:    connSvc,
 		mods:          modsSvc,
-		discord:       bot,
+		discord:       discordBot,
 		notifications: notifications.NewService(db),
 		dispatcher: notify.NewDispatcher(db, map[string]notify.Provider{
 			"discord": provider,
@@ -54,4 +73,14 @@ func newHandlerWithProvider(db *sql.DB, authSvc *auth.Service, bot *discord.Bot,
 
 func (h *Handler) AuthService() *auth.Service {
 	return h.auth
+}
+
+// SetDiscordBot replaces the Discord bot used by settings handlers (tests).
+func (h *Handler) SetDiscordBot(bot DiscordBot) {
+	h.discord = bot
+}
+
+// SetOAuthCodeExchange replaces Discord token exchange (tests).
+func (h *Handler) SetOAuthCodeExchange(fn func(context.Context, string) (auth.DiscordUserResponse, error)) {
+	h.oauthExchange = fn
 }

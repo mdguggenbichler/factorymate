@@ -92,7 +92,11 @@ func (h *Handler) DiscordOAuthCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	discordUser, err := h.auth.ExchangeDiscordOAuthCode(r.Context(), code)
+	exchange := h.auth.ExchangeDiscordOAuthCode
+	if h.oauthExchange != nil {
+		exchange = h.oauthExchange
+	}
+	discordUser, err := exchange(r.Context(), code)
 	if err != nil {
 		writeError(w, r, http.StatusBadGateway, "discord authorization failed")
 		return

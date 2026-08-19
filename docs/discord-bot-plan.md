@@ -902,12 +902,12 @@ Channel and DM are **independent** — a message type can go to channels only, D
 
 **Command access rules:**
 
-| User state | `/register` | `/register user` | `/connection`, `/mods` | Admin commands |
+| User state | `/register` | `/register-user` | `/connection`, `/mods` | Admin commands |
 |------------|-------------|------------------|------------------------|----------------|
 | Unregistered member | If role allows | Admin only | ❌ | ❌ |
 | `pending_approval` | ❌ | ❌ | ❌ | ❌ |
-| `active`, linked | ❌ | Admin only | ✅ | If admin role |
-| `active`, not linked | ❌ | Admin only | ❌ | ❌; use `/link` |
+| `active`, linked | ❌ (already registered) | Admin only | ✅ | If admin role |
+| `active`, not linked | ❌ | Admin only | ❌ | ❌ — link Discord from **Account** on the web |
 
 **Fallback:** `DISCORD_ADMIN_ROLE_IDS` env var until UI config exists.
 
@@ -919,20 +919,22 @@ Register slash commands **per guild** (instant updates during development). `gui
 
 ## 11. Proposed Discord Commands
 
-### 11.1 Core commands (M15)
+### 11.1 Core commands (M15 / M17)
 
 | Command | Permission | Description |
 |---------|------------|-------------|
-| `/register` | Member with `register` permission; not already linked | Self-serve account; modals for in-game name + password |
-| `/register user` | Admin (`admin` command group) | DM target user to complete registration; always auto-approved (§6.3) |
-| `/link` | Discord user not yet linked; has existing active FM account | Attach Discord to existing account |
+| `/register` | Member with `register` permission; not already linked | DM an OAuth link to finish registration on the web (Discord sign-in, **no password modal**) |
+| `/register-user` | Admin (`admin` command group) | DM target user an OAuth registration link; always auto-approved (§6.3) |
 | `/set-player <name>` | Active registered user | Update in-game player mapping |
-| `/connection` | Active registered user | DM current join details |
+| `/clear-player` | Active registered user | Remove in-game player mapping |
+| `/connection get` | Active registered user | DM current join details |
 | `/connection set` | Admin | Set join details; triggers DM broadcast |
 | `/mods` | Active registered user | `list` (default): full mod table; `export`: SMM profile download |
 | `/whoami` | Anyone | Link status: FM username, role, mapped player, approval state |
 | `/help` | Anyone | Command list + dashboard URL + onboarding steps (see Appendix G) |
 | `/registration auto-approve` | Admin | Toggle `registration.auto_approve` (`on` / `off`) |
+
+Linking an existing password account uses **Account → Link Discord** on the web (`purpose=link`). There is no `/link` slash command.
 
 ### 11.2 Admin / optional (M16)
 
@@ -945,7 +947,7 @@ Register slash commands **per guild** (instant updates during development). `gui
 | `/unlink @user` | Admin | Remove external link (keeps FM account) |
 | `/broadcast <message>` | Admin | Admin DM all registered players |
 | `/sync-roles` | Admin | Re-apply Discord → FM role mapping |
-| `/password-reset @user` | Admin | Trigger password reset flow |
+| `/password-reset @user` | Admin | Points admin to web **Settings → Users** (no secret DM / temp password) |
 | `/notifications` | Active registered user | View/toggle DM category preferences |
 
 ### 11.3 Out of scope (v1 bot)

@@ -1151,6 +1151,7 @@ Category keys match `message_types.category` groupings (§9.3 in discord-bot-pla
 | `PUT /api/settings/notification-defaults` | `{ "categories": { "server"?: bool, "player"?: bool, "power"?: bool, "progression"?: bool, "vehicle"?: bool }, "dmPlayerPersonalDefault": bool }` |
 | `POST /api/settings/frm/test` | `{ "frmHost", "frmPort", "frmAuthToken"? }` |
 | `POST /api/invites` | `{ "role": "admin" \| "viewer" }` |
+| `POST /api/auth/register/complete` | `{ "token", "username", "pendingPlayerName" }` — Discord OAuth registration after `/register` |
 | `POST /api/invites/:token/accept` | `{ "username", "password" }` |
 | `PUT /api/users/:id` | `{ "role"?, "password"?, "playerId"? }` (`playerId: null` clears mapping) |
 
