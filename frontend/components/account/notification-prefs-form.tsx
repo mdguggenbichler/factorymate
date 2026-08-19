@@ -4,7 +4,8 @@ import { useState } from "react"
 import { useTranslations } from "next-intl"
 import { toast } from "sonner"
 
-import { CategoryPrefFields } from "@/components/notifications/category-pref-fields"
+import { TypePrefFields } from "@/components/notifications/type-pref-fields"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -25,18 +26,29 @@ export function NotificationPrefsForm({
   initialPrefs,
 }: NotificationPrefsFormProps) {
   const t = useTranslations("account.notifications")
+  const tLayers = useTranslations("notifications.layers")
   const tCommon = useTranslations("common")
   const [prefs, setPrefs] = useState(initialPrefs)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  function handleCategoryChange(category: string, enabled: boolean) {
+  function handleTypeChange(key: string, enabled: boolean) {
     setPrefs((current) => ({
       ...current,
-      categories: {
-        ...current.categories,
-        [category]: enabled,
+      types: {
+        ...current.types,
+        [key]: enabled,
       },
     }))
+  }
+
+  function handleCategorySet(keys: string[], enabled: boolean) {
+    setPrefs((current) => {
+      const types = { ...current.types }
+      for (const key of keys) {
+        types[key] = enabled
+      }
+      return { ...current, types }
+    })
   }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -48,7 +60,10 @@ export function NotificationPrefsForm({
         "/account/notifications",
         {
           method: "PUT",
-          body: JSON.stringify(prefs),
+          body: JSON.stringify({
+            types: prefs.types,
+            dmPlayerPersonal: prefs.dmPlayerPersonal,
+          }),
         }
       )
       setPrefs(updated)
@@ -67,6 +82,15 @@ export function NotificationPrefsForm({
         <p className="text-muted-foreground">{t("description")}</p>
       </div>
 
+      <Alert className="max-w-2xl">
+        <AlertTitle>{tLayers("title")}</AlertTitle>
+        <AlertDescription>
+          <p>{tLayers("intro")}</p>
+          <p className="mt-2">{tLayers("channel")}</p>
+          <p>{tLayers("dm")}</p>
+        </AlertDescription>
+      </Alert>
+
       <Card className="max-w-2xl">
         <CardHeader>
           <CardTitle>{t("formTitle")}</CardTitle>
@@ -74,9 +98,11 @@ export function NotificationPrefsForm({
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit}>
-            <CategoryPrefFields
-              categories={prefs.categories}
-              onCategoryChange={handleCategoryChange}
+            <TypePrefFields
+              types={prefs.types}
+              catalog={prefs.catalog ?? []}
+              onTypeChange={handleTypeChange}
+              onCategorySet={handleCategorySet}
               personalEnabled={prefs.dmPlayerPersonal}
               onPersonalChange={(enabled) =>
                 setPrefs((current) => ({

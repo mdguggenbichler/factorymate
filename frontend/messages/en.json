@@ -416,6 +416,18 @@
     "resolveSuccess": "Diagnostic entry marked as resolved."
   },
   "notifications": {
+    "layers": {
+      "title": "Two independent layers",
+      "intro": "A game event can post to a guild channel, arrive as your personal DM, both, or neither. Enabling a DM does not turn off the channel post.",
+      "channel": "Guild / channel: admins choose which event types post to which Discord channel (Settings → Notifications → Templates and Targets).",
+      "dm": "Personal / DM: you choose which of those same events also arrive in your DMs. Discord /notifications is a coarse category shortcut; this page is per type."
+    },
+    "types": {
+      "enableAll": "Enable all",
+      "enableNone": "Enable none",
+      "globallyDisabled": "Admin has turned this event off for everyone.",
+      "overlapHint": "Also posted to Discord via {targets}. Mute that channel if you only want DMs."
+    },
     "categories": {
       "server": {
         "label": "Server status",
@@ -440,7 +452,7 @@
     },
     "personalDm": {
       "label": "Personal player events",
-      "description": "When your linked character joins or leaves, send a personal DM to you even if the Players category is off.",
+      "description": "When your linked character joins or leaves, send a personal DM even if you did not opt into player join/leave DMs.",
       "defaultLabel": "Personal player events (default)",
       "defaultDescription": "Default for new users: send a personal DM when their linked character joins or leaves."
     }
@@ -450,16 +462,16 @@
       "title": "Notification preferences",
       "description": "Choose which game events also reach you as Discord direct messages.",
       "formTitle": "Direct message preferences",
-      "formDescription": "Channel notifications are configured by admins. These toggles only affect DMs sent to your linked Discord account.",
+      "formDescription": "These toggles only affect DMs. Channel posts are a separate layer configured by admins. Connection-detail DMs are always sent.",
       "saved": "Notification preferences saved."
     }
   },
   "settings": {
     "notificationDefaults": {
       "title": "Notification defaults",
-      "description": "Default DM preferences applied to newly registered users.",
+      "description": "Default per-type DM preferences applied to newly registered users.",
       "formTitle": "DM defaults for new users",
-      "formDescription": "Existing users keep their own preferences. Connection-detail DMs are always mandatory and are not controlled here.",
+      "formDescription": "Existing users keep their own preferences. Connection-detail DMs are always mandatory and are not controlled here. Channels and DMs are independent layers.",
       "saved": "Notification defaults saved."
     },
     "general": {
@@ -611,6 +623,8 @@
     "templates": {
       "title": "Message templates",
       "description": "Customize notification content, preview embeds, and assign targets per message type.",
+      "twoLayerTitle": "Channels vs personal DMs",
+      "twoLayerCallout": "This page is the guild/channel layer: enabled types plus assigned Discord targets. Personal DMs are a separate layer — each user chooses types on Account → Notifications (or coarsely with Discord /notifications).",
       "listTitle": "Message types",
       "selectMessageType": "Select a message type to edit its template.",
       "targetAssignment": "Send to targets",

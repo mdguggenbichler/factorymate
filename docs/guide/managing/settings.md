@@ -62,7 +62,7 @@ See [Users & registration](users.md).
 
 **Path:** `/account/notifications` (all active users)
 
-Per-user toggles for DM notification categories. New users inherit admin defaults from **Settings → Notifications → Defaults**.
+Per-type toggles for personal Discord DMs (independent of guild-channel posts). New users inherit admin defaults from **Settings → Notifications → Defaults**. Discord `/notifications` is a category-level shortcut.
 
 ## Dashboard pages (non-settings)
 

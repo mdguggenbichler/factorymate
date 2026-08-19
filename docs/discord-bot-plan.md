@@ -18,7 +18,7 @@ This plan introduces a **single Discord bot** (same Go process, same container) 
 3. Optional **registration approval** (`auto_approve` on by default) before dashboard access and connection credentials.
 4. Admins and authorized users can **set and retrieve game connection details** (host, port, optional client password) via Discord commands and the web UI.
 5. When connection details change, all **active** linked players receive an automatic DM broadcast.
-6. **Game-event notifications** are delivered by the **same bot** to configured channels (replacing webhooks), with optional per-user DM opt-in by category (M16).
+6. **Game-event notifications** are delivered by the **same bot** to configured channels (replacing webhooks), with optional per-user DM opt-in by message type (M16/M18).
 7. **Server mod list** (`getModList`) on web `/mods` and Discord `/mods` — full list with game build + SML version.
 8. **SMM profile export** — one-click `.smmprofile` download for Satisfactory Mod Manager import.
 
@@ -43,7 +43,7 @@ This plan introduces a **single Discord bot** (same Go process, same container) 
 | G9 | **Single Discord setup for self-hosters** — one application, one bot token, one invite; no separate webhook URLs |
 | G10 | **Refactor notification transport** — bot channel posts replace webhooks; keep template engine + dispatcher |
 | G11 | **Pending player mapping** — save in-game name at registration even if not on server; auto-link when player appears |
-| G12 | **Hybrid notification routing** — admin channel config + per-user DM opt-in by category |
+| G12 | **Hybrid notification routing** — admin channel config + per-user DM opt-in by message type |
 | G13 | **Optional registration approval** — `auto_approve` default on; when off, admin approve/reject via Discord DM buttons |
 | G14 | **Server mod list** — web page + `/mods` Discord command from FRM `getModList` (full list + game build + SML) |
 | G15 | **SMM profile export** — downloadable `.smmprofile` generated from live mod list + ficsit.app lockfile resolution |
@@ -801,27 +801,29 @@ The poller fires asynchronously, so per-user routing is a **dispatcher concern**
 
 ### 9.2 Recommendation: hybrid — admin channels + optional per-user DMs
 
-For a ~5–6 player private group, **do not** make every message type fully per-user configurable in v1 — too much UI for little gain. Use two layers:
+For a ~5–6 player private group, keep Discord `/notifications` as **category-level** coarse control. The dashboard (`/account/notifications`) is **per-type** (M18). Use two layers:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │  Layer 1 — Admin (global)          Layer 2 — User (opt-in)  │
 │  Which types → which channels        Which types → my DMs     │
 │  Settings → Notifications            Account → Notifications  │
-│  (existing model, channel picker)    (new, category toggles)  │
+│  (existing model, channel picker)    (per-type checkboxes;  │
+│                                      Discord `/notifications` │
+│                                      is category-level only)  │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 | Layer | Who configures | What it controls | Default |
 |-------|----------------|------------------|---------|
 | **Channel routing** | Admin | Message type → `#factory-alerts` (etc.) | Unchanged — global stream everyone in channel sees |
-| **DM preferences** | Each user | Whether *they* also get DMs for selected categories | Conservative defaults (see below) |
+| **DM preferences** | Each user | Whether *they* also get DMs for selected **message types** | Conservative defaults (see below) |
 
 **Why both?** Channel is the shared "factory ticker" — one place admins tune for the group. DMs are for people who want alerts on their phone without watching the channel, or for inherently personal messages.
 
 ### 9.3 Message categories and default DM prefs
 
-Group message types into **categories** (not 13 individual toggles per user):
+Group message types into **categories** for Discord `/notifications` coarse control and for UI headers. The dashboard (`/account/notifications`) exposes **per-type** checkboxes (M18). Discord does **not** add per-type slash-command toggles.
 
 | Category | Message types | Channel (admin) | DM default (user) |
 |----------|---------------|-----------------|-------------------|
@@ -832,7 +834,7 @@ Group message types into **categories** (not 13 individual toggles per user):
 | `vehicle` | train, fuel, stuck | optional | off |
 | `account` | `connection_details_changed` (M16 template only, if added) | n/a (no channel) | n/a — connection DMs are mandatory via `ConnectionDetailsService` (§8.4), not this pref |
 
-New users inherit admin-configured **DM defaults** (stored in `app_settings`). Users override via web UI (`/account/notifications`) or `/notifications` Discord command (M16).
+New users inherit admin-configured **DM defaults** (stored in `app_settings` as **per-type** booleans). Users override via web UI (`/account/notifications`) or `/notifications` Discord command (`action:category` sets **all** types in that category, overwriting mixed state). Fine-grained choice lives only on the dashboard. `connection_details` / `connection_details_changed` are excluded from the prefs catalog.
 
 ### 9.4 Personal routing (M16) — "only notify me about MY player"
 
@@ -842,7 +844,7 @@ Once `player_id` is linked, the dispatcher can optionally send a **personal DM**
 |-------|--------------|-------------|
 | `player_joined` — Michael | "Michael joined (4 online)" to `#alerts` | DM to user linked as Michael: "Your character joined" |
 | `player_joined` — someone else | same channel post | no DM to Michael |
-| `fuse_tripped` | channel only | only if user enabled `power` DM category |
+| `fuse_tripped` | channel only | only if user enabled the `fuse_tripped` DM type |
 
 Implementation: on dispatch, if message type is `player_joined` / `player_left` and event `{PlayerName}` matches a user's linked `player_state.name` (or resolved `pending_player_name`), and user has `dm_player_personal` enabled → `SendDirect` to that user.
 
@@ -859,7 +861,7 @@ Poller event → render template
         ├─▶ Channel targets (admin config, message_type_targets)     [M15]
         │       └─▶ DiscordProvider.Send(channel_id, msg)
         │
-        └─▶ DM recipients (user prefs + personal routing rules)      [M16]
+        └─▶ DM recipients (user prefs by message type key + personal routing) [M16/M18]
                 └─▶ FOR EACH eligible user: SendDirect(platform, external_user_id, msg)
 ```
 
@@ -869,7 +871,7 @@ Channel and DM are **independent** — a message type can go to channels only, D
 
 - Per-user control over which **channels** receive messages (admin-only)
 - Per-user template customization
-- 13 individual per-type DM toggles (use categories instead)
+- Per-type toggles on Discord `/notifications` (dashboard only; slash command stays category-level)
 
 ---
 
@@ -948,12 +950,12 @@ Linking an existing password account uses **Account → Link Discord** on the we
 | `/broadcast <message>` | Admin | Admin DM all registered players |
 | `/sync-roles` | Admin | Re-apply Discord → FM role mapping |
 | `/password-reset @user` | Admin | Points admin to web **Settings → Users** (no secret DM / temp password) |
-| `/notifications` | Active registered user | View/toggle DM category preferences |
+| `/notifications` | Active registered user | View/toggle DM prefs (category coarse control + dashboard link) |
 
 ### 11.3 Out of scope (v1 bot)
 
 - In-game actions via FRM write endpoints
-- Per-message-type DM toggles (use categories instead — §9.3)
+- Per-message-type DM toggles **in Discord** (dashboard `/account/notifications` is per-type; `/notifications` stays category-level — §9.3)
 - Generic command framework for other platforms
 
 ---
@@ -1010,25 +1012,21 @@ CREATE TABLE registration_audit_log (
 );
 ```
 
-### 12.2 `user_notification_prefs` table (new, M16)
+### 12.2 `user_notification_prefs` table (M16 category → M18 per type)
 
-Per-user DM opt-in by category (§9.3). Absent row = use admin default from `app_settings`.
+Per-user DM opt-in by **message type key**. Absent row = use admin default from `app_settings`. M18 rebuilds the M16 category PK.
 
 ```sql
 CREATE TABLE user_notification_prefs (
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    category TEXT NOT NULL
-        CHECK (category IN ('server', 'player', 'power', 'progression', 'vehicle')),
+    message_type_key TEXT NOT NULL REFERENCES message_types(key),
     dm_enabled BOOLEAN NOT NULL,
     updated_at TEXT NOT NULL,
-    PRIMARY KEY (user_id, category)
+    PRIMARY KEY (user_id, message_type_key)
 );
-
--- Personal "your player joined/left" DM — on users table (§19 O6)
--- (declared above with users ALTER)
 ```
 
-Admin defaults in `app_settings`: `notifications.dm_defaults_json` e.g. `{ "player": false, "power": false, ... }` plus `notifications.dm_player_personal_default` (bool, default `false`). Used starting M16. **Does not affect** mandatory connection-detail DMs (§8.4). Connection-detail broadcasts stay **outside** `message_types` / dispatcher in M15; optional `connection_details_changed` template type is M16-only if we add it (§19 O11).
+Admin defaults in `app_settings`: `notifications.dm_defaults_json` e.g. `{ "fuse_tripped": false, "player_joined": false, ... }` plus `notifications.dm_player_personal_default` (bool, default `false`). **Does not affect** mandatory connection-detail DMs (§8.4). Connection types are excluded from the prefs catalog.
 
 ### 12.3 `notification_targets` config migration
 
@@ -1051,7 +1049,7 @@ If `webhook_url` present and bot connected: **do not auto-migrate** — show ban
 | `registration.auto_approve` | bool | Default `true` — see §6.2 |
 | `connection.details_json` | JSON | Host, port, password, notes, updated_at, updated_by — stored in DB for authorized retrieval; **never log password field** (§8.6) |
 | `mods.smm_profile_name` | string | SMM export profile name (default `"FactoryMate Server"`) |
-| `notifications.dm_defaults_json` | JSON | Default DM category toggles for new users (M16) |
+| `notifications.dm_defaults_json` | JSON | Default DM per-type toggles for new users (M16/M18) |
 | `notifications.dm_player_personal_default` | bool | Default for `users.dm_player_personal` on new registrations (M16, default `false`) |
 
 Bot token: **env var only** (`DISCORD_BOT_TOKEN`) — never in SQLite.
@@ -1126,8 +1124,8 @@ CREATE TABLE bot_command_log (
 | GET | `/api/discord/channels` | admin | List guild text channels (for target picker) |
 | GET | `/api/discord/invite-url` | admin | OAuth URL to add bot to guild |
 | PUT | `/api/users/:id/external` | admin | Override/unlink external identity |
-| GET | `/api/account/notifications` | session (M16) | Current user's DM category prefs |
-| PUT | `/api/account/notifications` | session (M16) | Update DM category prefs |
+| GET | `/api/account/notifications` | session (M16/M18) | Current user's per-type DM prefs + catalog |
+| PUT | `/api/account/notifications` | session (M16/M18) | Partial update of DM type prefs |
 | GET | `/api/settings/notification-defaults` | admin (M16) | DM defaults for new users |
 | PUT | `/api/settings/notification-defaults` | admin (M16) | Update DM defaults |
 | POST | `/api/notification-targets` | admin | `{ channel_id }` instead of `{ webhook_url }` |
@@ -1140,7 +1138,7 @@ CREATE TABLE bot_command_log (
 |----------|-----|-----|
 | Channel posts (game events) | ✅ Replaces webhooks | unchanged |
 | Connection-detail DMs | ✅ Mandatory broadcast | unchanged |
-| Game-event DMs (user prefs) | ❌ | ✅ Per-category opt-in |
+| Game-event DMs (user prefs) | ❌ | ✅ Per-type opt-in (M18; M16 shipped categories) |
 | Personal player-event DMs | ❌ | ✅ |
 
 ---
@@ -1153,9 +1151,9 @@ CREATE TABLE bot_command_log (
 | **Settings → Connection** (new) | Game join details + SMM profile name (§19 O9) |
 | **`/mods`** (new top-level page, all active users) | Full mod table; game build + SML header; disclaimer; **Download SMM profile** |
 | **Settings → Notifications → Targets** | Channel picker replaces webhook URL + override fields |
-| **Settings → Notifications → Defaults** (new, M16) | Admin DM category defaults for new users |
+| **Settings → Notifications → Defaults** (new, M16; per-type M18) | Admin DM defaults for new users |
 | **Settings → Users** | External identity, pending player badge, unmapped players panel, **pending approvals queue** |
-| **Account → Notifications** (new, M16) | Per-user DM category toggles (all roles) |
+| **Account → Notifications** (new, M16; per-type M18) | Per-user DM type toggles (all roles) |
 | **Dashboard** (optional) | "How to join" card for viewers |
 
 All strings in `messages/en.json`.
@@ -1338,7 +1336,7 @@ All planning questions resolved — safe defaults below.
 | Broadcast trigger? | **Any source** — shared `ConnectionDetailsService` |
 | Connection-detail DMs? | **Mandatory** for all active linked users | Critical info; not opt-outable in v1 |
 | Game event routing? | **Hybrid** — admin channels (M15) + per-user DM opt-in (M16) |
-| Per-user DM control? | **Yes** — category toggles; not per-message-type in v1 |
+| Per-user DM control? | **Yes** — per-type on dashboard (M18); Discord `/notifications` category-level only |
 | Player mapping when not on server? | **Always save `pending_player_name`**; auto-link on poller ingest |
 | Registration approval default? | **`auto_approve = true`** | Role gating suffices for private group; approval is opt-in |
 | Approval UX? | **Discord DM buttons** + web queue fallback | Mobile-friendly; optional reject reason modal |

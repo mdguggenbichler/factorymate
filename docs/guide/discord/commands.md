@@ -38,7 +38,7 @@ FactoryMate registers slash commands in your Discord guild when the bot starts *
 | `/broadcast <message>` | Admin | DM all registered players |
 | `/sync-roles` | Admin | Re-apply Discord → FM role mapping |
 | `/password-reset @user` | Admin | Points admin to web **Settings → Users** (no DM temp password) |
-| `/notifications` | Active registered user | View/toggle DM notification preferences by category |
+| `/notifications` | Active registered user | View/toggle DM prefs: category on/off (all types in the group) or personal player events; includes a dashboard link for per-type checkboxes |
 
 ## Registration flow
 

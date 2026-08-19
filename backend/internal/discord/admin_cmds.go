@@ -205,21 +205,22 @@ func (b *Bot) showNotificationPrefs(ctx context.Context, s *discordgo.Session, i
 		return
 	}
 
-	lines := []string{"**DM notification preferences**", ""}
+	lines := []string{
+		"**DM notification preferences**",
+		"Guild channels and personal DMs are independent. Admins control channels; you control DMs.",
+		"",
+	}
 	for _, category := range notifications.AllCategories {
-		state := "off"
-		if prefs.Categories[category] {
-			state = "on"
-		}
-		lines = append(lines, fmt.Sprintf("- `%s`: **%s**", category, state))
+		enabled, total := notifications.CategorySummary(prefs.Types, prefs.Catalog, category)
+		lines = append(lines, fmt.Sprintf("- `%s`: **%s**", category, categoryStateLabel(enabled, total)))
 	}
 	personal := "off"
 	if prefs.DMPlayerPersonal {
 		personal = "on"
 	}
 	lines = append(lines, "", fmt.Sprintf("Personal player events: **%s**", personal))
-	lines = append(lines, "", "Use `/notifications action:category name:<category> enabled:<on|off>` or `/notifications action:personal enabled:<on|off>` to change settings.")
-	respondEphemeral(ctx, s, i, strings.Join(lines, "\n"))
+	lines = append(lines, "", "Use `/notifications action:category name:<category> enabled:<on|off>` (sets every type in that category) or `/notifications action:personal enabled:<on|off>`.")
+	respondNotifications(ctx, s, i, strings.Join(lines, "\n"))
 	_ = LogBotCommand(ctx, b.db, externalID, "notifications", true, "view")
 }
 
@@ -230,37 +231,50 @@ func (b *Bot) setNotificationCategory(ctx context.Context, s *discordgo.Session,
 		return
 	}
 	on := enabled == "on"
-	prefs, err := svc.GetUserPrefs(ctx, userID)
+	keys, err := svc.TypeKeysInCategory(ctx, category)
 	if err != nil {
 		respondEphemeral(ctx, s, i, "Could not update preferences.")
 		_ = LogBotCommand(ctx, b.db, externalID, "notifications category", false, err.Error())
 		return
 	}
-	prefs.Categories[category] = on
-	if _, err := svc.SetUserPrefs(ctx, userID, prefs); err != nil {
+	types := make(map[string]bool, len(keys))
+	for _, key := range keys {
+		types[key] = on
+	}
+	prefs, err := svc.SetUserPrefs(ctx, userID, notifications.UserPrefsPatch{Types: types})
+	if err != nil {
 		respondEphemeral(ctx, s, i, "Could not update preferences.")
 		_ = LogBotCommand(ctx, b.db, externalID, "notifications category", false, err.Error())
 		return
 	}
-	respondEphemeral(ctx, s, i, fmt.Sprintf("`%s` DM notifications are now **%s**.", category, enabled))
+
+	msg := fmt.Sprintf("`%s` DM notifications are now **%s** for all types in that category.", category, enabled)
+	if names := notifications.CategoryOverlapTargetNames(prefs.Catalog, category); len(names) > 0 {
+		msg += fmt.Sprintf("\nAlso posted to Discord channels (via: %s). Mute those channels if you only want DMs.", strings.Join(names, ", "))
+	}
+	respondNotifications(ctx, s, i, msg)
 	_ = LogBotCommand(ctx, b.db, externalID, "notifications category", true, category+":"+enabled)
 }
 
 func (b *Bot) setNotificationPersonal(ctx context.Context, s *discordgo.Session, i *discordgo.InteractionCreate, externalID string, svc *notifications.Service, userID int64, enabled string) {
-	prefs, err := svc.GetUserPrefs(ctx, userID)
-	if err != nil {
+	on := enabled == "on"
+	if _, err := svc.SetUserPrefs(ctx, userID, notifications.UserPrefsPatch{DMPlayerPersonal: &on}); err != nil {
 		respondEphemeral(ctx, s, i, "Could not update preferences.")
 		_ = LogBotCommand(ctx, b.db, externalID, "notifications personal", false, err.Error())
 		return
 	}
-	prefs.DMPlayerPersonal = enabled == "on"
-	if _, err := svc.SetUserPrefs(ctx, userID, prefs); err != nil {
-		respondEphemeral(ctx, s, i, "Could not update preferences.")
-		_ = LogBotCommand(ctx, b.db, externalID, "notifications personal", false, err.Error())
-		return
-	}
-	respondEphemeral(ctx, s, i, fmt.Sprintf("Personal player event DMs are now **%s**.", enabled))
+	respondNotifications(ctx, s, i, fmt.Sprintf("Personal player event DMs are now **%s**.", enabled))
 	_ = LogBotCommand(ctx, b.db, externalID, "notifications personal", true, enabled)
+}
+
+func categoryStateLabel(enabled, total int) string {
+	if total == 0 || enabled == 0 {
+		return "off"
+	}
+	if enabled == total {
+		return "on"
+	}
+	return fmt.Sprintf("mixed (%d/%d)", enabled, total)
 }
 
 func isValidCategory(category string) bool {

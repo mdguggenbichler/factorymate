@@ -1,14 +1,18 @@
 # Notifications
 
-FactoryMate sends game-event alerts as Discord embeds to channels you configure. The same bot also handles optional direct messages (see per-user preferences).
+FactoryMate sends game-event alerts as Discord embeds to channels you configure. The same bot also handles optional direct messages. **Channels and DMs are independent layers** — an event can post to a guild channel, arrive as a personal DM, both, or neither.
 
 ## How it works
 
 ```
-FRM poll → diff engine detects change → template renderer → Discord bot → channel post
+FRM poll → diff engine detects change → template renderer → Discord bot
+                                         ├─ guild channel (admin targets)
+                                         └─ personal DMs (per-type user prefs)
 ```
 
-Message types (e.g. `player_joined`, `fuse_tripped`, `server_offline`) are defined in the system. You control which fire, what they say, and where they go.
+Message types (e.g. `player_joined`, `fuse_tripped`, `server_offline`) are defined in the system. Admins control which fire, what they say, and which **channel** they go to. Each user chooses which of those types also arrive in **DMs**.
+
+`Enabled` off on a message type is a global kill switch: no channel post and no DM.
 
 ## Notification targets
 
@@ -65,15 +69,19 @@ See the full list in the Templates UI.
 
 **Settings → Notifications → Defaults**
 
-Set default category toggles for new users' DM preferences (M16). Categories group related events (power, players, milestones, etc.).
+Set default **per-type** DM toggles for new users. Types are grouped by category for convenience. Existing users keep their own preferences.
+
+This page is the personal-DM layer defaults. Channel routing stays on Templates and Targets. Overlap hints (when a type already posts to a channel) are informational — they do not block enabling DMs.
 
 ## Per-user DM preferences
 
 **Account → Notifications** (each user)
 
-Users with linked Discord accounts can opt in or out of DM categories. Personal player join/leave DMs are a separate toggle.
+Users with linked Discord accounts opt in or out **per message type**. Discord `/notifications` can turn a whole category on or off (overwrites mixed types) and always links to this page for fine-grained control.
 
-Connection-detail broadcasts always DM all active linked players regardless of category prefs.
+Personal player join/leave DMs are a separate toggle (“DM me when *my* character joins/leaves”).
+
+Connection-detail broadcasts always DM all active linked players regardless of these prefs.
 
 ## Notification log
 

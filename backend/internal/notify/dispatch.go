@@ -37,7 +37,7 @@ func NewDispatcher(db *sql.DB, providers map[string]Provider) *Dispatcher {
 
 // HandleEvent implements poller.EventHandler — render and send for enabled types/targets.
 func (d *Dispatcher) HandleEvent(ctx context.Context, messageTypeKey string, vars map[string]string) error {
-	enabled, category, defaultJSON, err := d.loadMessageType(ctx, messageTypeKey)
+	enabled, _, defaultJSON, err := d.loadMessageType(ctx, messageTypeKey)
 	if err != nil {
 		return err
 	}
@@ -62,9 +62,9 @@ func (d *Dispatcher) HandleEvent(ctx context.Context, messageTypeKey string, var
 		}
 	}
 
-	sent, err := d.dispatchCategoryDMs(ctx, messageTypeKey, category, rendered)
+	sent, err := d.dispatchTypeDMs(ctx, messageTypeKey, rendered)
 	if err != nil {
-		log.Printf("notify: category dm %q failed: %v", messageTypeKey, err)
+		log.Printf("notify: type dm %q failed: %v", messageTypeKey, err)
 	}
 	if messageTypeKey == "player_joined" || messageTypeKey == "player_left" {
 		if err := d.dispatchPersonalPlayerDMs(ctx, messageTypeKey, vars, rendered, sent); err != nil {
@@ -227,9 +227,9 @@ func (d *Dispatcher) dispatchToTarget(ctx context.Context, messageTypeKey string
 	return sendErr
 }
 
-func (d *Dispatcher) dispatchCategoryDMs(ctx context.Context, messageTypeKey, category string, rendered template.RenderedMessage) (map[string]struct{}, error) {
+func (d *Dispatcher) dispatchTypeDMs(ctx context.Context, messageTypeKey string, rendered template.RenderedMessage) (map[string]struct{}, error) {
 	sent := make(map[string]struct{})
-	if category == "" || d.Prefs == nil {
+	if messageTypeKey == "" || d.Prefs == nil {
 		return sent, nil
 	}
 	provider, ok := d.directProvider()
@@ -237,9 +237,9 @@ func (d *Dispatcher) dispatchCategoryDMs(ctx context.Context, messageTypeKey, ca
 		return sent, nil
 	}
 
-	recipients, err := d.Prefs.ListDMRecipients(ctx, category)
+	recipients, err := d.Prefs.ListDMRecipients(ctx, messageTypeKey)
 	if err != nil {
-		return sent, fmt.Errorf("list dm recipients for %q: %w", category, err)
+		return sent, fmt.Errorf("list dm recipients for %q: %w", messageTypeKey, err)
 	}
 	if len(recipients) == 0 {
 		return sent, nil

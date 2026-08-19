@@ -32,9 +32,10 @@ func TestDispatcher_DMFanOutRespectsPrefs(t *testing.T) {
 		t.Fatalf("insert users: %v", err)
 	}
 	if _, err := database.ExecContext(ctx, `
-		INSERT INTO user_notification_prefs (user_id, category, dm_enabled, updated_at)
-		VALUES (10, 'power', 1, ?), (11, 'power', 0, ?)`,
-		now.Format(time.RFC3339), now.Format(time.RFC3339),
+		INSERT INTO user_notification_prefs (user_id, message_type_key, dm_enabled, updated_at)
+		VALUES (10, 'fuse_tripped', 1, ?), (10, 'power_restored', 0, ?),
+			(11, 'fuse_tripped', 0, ?), (11, 'power_restored', 0, ?)`,
+		now.Format(time.RFC3339), now.Format(time.RFC3339), now.Format(time.RFC3339), now.Format(time.RFC3339),
 	); err != nil {
 		t.Fatalf("insert prefs: %v", err)
 	}
@@ -166,8 +167,8 @@ func TestDispatcher_DMRegressionSkipsWhenTypeDisabled(t *testing.T) {
 		t.Fatalf("insert user: %v", err)
 	}
 	if _, err := database.ExecContext(ctx, `
-		INSERT INTO user_notification_prefs (user_id, category, dm_enabled, updated_at)
-		VALUES (30, 'player', 1, ?)`, now.Format(time.RFC3339)); err != nil {
+		INSERT INTO user_notification_prefs (user_id, message_type_key, dm_enabled, updated_at)
+		VALUES (30, 'player_joined', 1, ?)`, now.Format(time.RFC3339)); err != nil {
 		t.Fatalf("insert prefs: %v", err)
 	}
 

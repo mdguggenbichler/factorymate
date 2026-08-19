@@ -291,19 +291,34 @@ Build order:
 
 **Goal:** Discord OAuth for Discord-origin users (no FM password). Local password only for `/setup` and break-glass invites. Remove Discord password collection. Fix guild-save slash command registration bug.
 
-- [ ] Spec §2.1/§3/§6/§7/§7.1/§7.2/§8/§9 — Discord OAuth, nullable `password_hash`, `oauth_states`; discord-bot-plan §6 + command tables + Appendix G
-- [ ] Migration 008: nullable `password_hash`, `oauth_states` table (token_hash SHA-256, purpose, TTL, single-use)
-- [ ] OAuth: `GET /api/auth/discord` (login — existing users only), callback; register flow via `/register` slash → OAuth state=register → web complete form (username + in-game name, no password); Account → Link Discord (logged-in OAuth link)
-- [ ] `LinkExternal`; `Register` without password when Discord external present; password login rejects NULL hash
-- [ ] Discord: `/register` and `/register-user` DM OAuth URLs (no modals); remove `/link` command; remove or replace `/password-reset` (no DM secrets — admin sets password on web)
-- [ ] Re-register slash commands when guild ID saved in Settings → Discord (fix bug: only registered on bot Start today); clear commands on old guild if ID changed
-- [ ] Rewrite `/help` and all slash command `Description` strings in commands.go
-- [ ] Frontend: `/login` Continue with Discord (when OAuth configured); register-complete page; Account Link Discord; hide Discord UI when not configured; i18n in messages/en.json
-- [ ] `.env.example`, docker-compose, guides (commands.md, users.md, first-run.md, development.md, discord configuration)
-- [ ] Add M17 to `.agents/project/orchestrator/milestone-scopes.md` with READ/WRITE + scoped CI
-- [ ] Tests: SSO login vs provision separation; link while logged in; no Discord password fields; guild-save re-registers commands (mock discordgo if needed)
+- [x] Spec §2.1/§3/§6/§7/§7.1/§7.2/§8/§9 — Discord OAuth, nullable `password_hash`, `oauth_states`; discord-bot-plan §6 + command tables + Appendix G
+- [x] Migration 008: nullable `password_hash`, `oauth_states` table (token_hash SHA-256, purpose, TTL, single-use)
+- [x] OAuth: `GET /api/auth/discord` (login — existing users only), callback; register flow via `/register` slash → OAuth state=register → web complete form (username + in-game name, no password); Account → Link Discord (logged-in OAuth link)
+- [x] `LinkExternal`; `Register` without password when Discord external present; password login rejects NULL hash
+- [x] Discord: `/register` and `/register-user` DM OAuth URLs (no modals); remove `/link` command; remove or replace `/password-reset` (no DM secrets — admin sets password on web)
+- [x] Re-register slash commands when guild ID saved in Settings → Discord (fix bug: only registered on bot Start today); clear commands on old guild if ID changed
+- [x] Rewrite `/help` and all slash command `Description` strings in commands.go
+- [x] Frontend: `/login` Continue with Discord (when OAuth configured); register-complete page; Account Link Discord; hide Discord UI when not configured; i18n in messages/en.json
+- [x] `.env.example`, docker-compose, guides (commands.md, users.md, first-run.md, development.md, discord configuration)
+- [x] Add M17 to `.agents/project/orchestrator/milestone-scopes.md` with READ/WRITE + scoped CI
+- [x] Tests: SSO login vs provision separation; link while logged in; no Discord password fields; guild-save re-registers commands (mock discordgo if needed)
 
 **DoD:** Discord `/register` finishes on web via OAuth (no password modals); login with Discord for linked users; setup/invite users link Discord from Account; slash commands appear after saving guild ID without container restart; `/help` and descriptions current; spec and docs updated.
+
+---
+
+## M18 — Per-type DM prefs & two-layer notification UX
+
+**Goal:** Per-message-type personal DM preferences on the dashboard; Discord `/notifications` stays category-level coarse control with a dashboard link; clearly communicate independent guild-channel vs personal-DM layers; informational channel-overlap hints (never block enabling DMs).
+
+- [ ] Spec §3/§7/§7.1/§7.2/§8/§8.1: per-type user prefs + catalog on GET /api/account/notifications; admin defaults per-type; Account and Defaults pages described as two-layer + type checkboxes + overlap hints. Reverse “categories only / no per-type DM toggles” in docs/discord-bot-plan.md §9.3, §9.6, §11.3. Guide copy in docs/guide/managing/notifications.md (and related settings/commands docs if they still say categories-only). Add M18 to docs/factorymate-roadmap.md (unchecked tasks) and `.agents/project/orchestrator/milestone-scopes.md` (M18 WRITE/READ + scoped CI). Update `.agents/project/orchestrator/doc-index.md` milestone table if needed.
+- [ ] SQLite migration (next numbered file after existing migrations): rebuild `user_notification_prefs` to PK (user_id, message_type_key) FK message_types(key). Expand old category rows to all types in that category. Expand `notifications.dm_defaults_json` from five category booleans to per-type booleans. Exclude `connection_details` and `connection_details_changed` from prefs catalog.
+- [ ] API: GET/PUT /api/account/notifications uses `types` map + `dmPlayerPersonal` + `catalog` (key, label, category, globallyEnabled, channelTargets [{id, name}]). PUT may be partial. GET/PUT /api/settings/notification-defaults uses per-type `types` map + dmPlayerPersonalDefault. Viewers must not need admin GET /api/message-types.
+- [ ] Dispatcher: DM fan-out by message type key (not category). `message_types.enabled` remains global kill switch (no channel and no DM). Channel delivery still needs assigned enabled targets. Personal player DMs unchanged (`dm_player_personal` for player_joined/left matching linked player). Tests updated.
+- [ ] Frontend: Account → Notifications and Settings → Notifications → Defaults: two-layer intro copy; types grouped by category; per-type Switch/checkbox using API labels; category enable-all/none optional; overlap hint when channelTargets nonempty (informational, not AlertDialog); disabled row when globallyEnabled false; personal-player toggle kept. All chrome via frontend/messages/en.json (spec §8.2). Short callout on Templates page about two layers.
+- [ ] Discord `/notifications`: keep action view|category|personal. Category on/off sets ALL types in that category (overwrites mixed). View shows two-layer one-liner, category summary on/off/mixed (n/m), personal toggle. ALWAYS append dashboard URL `{FACTORYMATE_PUBLIC_URL}/account/notifications` when set; prefer Discord Link button (style 5) plus URL in body. If public URL empty, say dashboard URL is not configured. After category enable, overlap hint if any of those types have channel targets. Do NOT add per-type Discord toggles. Do NOT put prefs URL on every game-event DM footer.
+
+**DoD:** Per-type DM prefs persist and dispatch; catalog is available to viewers on the account API; Discord `/notifications` remains category-level with a dashboard link; two-layer copy and overlap hints never block enabling DMs; scoped tests and frontend lint/build pass.
 
 ---
 

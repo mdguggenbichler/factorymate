@@ -242,7 +242,7 @@ func slashCommands() []*discordgo.ApplicationCommand {
 		},
 		{
 			Name:        "notifications",
-			Description: "View or update your DM notification preferences",
+			Description: "View or update DM prefs (category shortcut; dashboard is per-type)",
 			Options: []*discordgo.ApplicationCommandOption{
 				{
 					Type:        discordgo.ApplicationCommandOptionString,

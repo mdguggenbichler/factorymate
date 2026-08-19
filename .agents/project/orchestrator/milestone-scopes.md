@@ -366,3 +366,46 @@ docker compose build
 ```
 
 **DoD:** Human deploy to GuggiRaid is manual verification — not required for autonomous verifier PASS if `docker compose build` succeeds.
+
+---
+
+## M18 — Per-type DM prefs & two-layer notification UX
+
+**READ:** spec §3, §5.3, §7, §7.1, §7.2, §8, §8.1, §8.2; `docs/discord-bot-plan.md` §9, §11.2, §12.2; `docs/guide/managing/notifications.md`; existing M16 prefs/dispatch/discord/frontend notification pages; `backend/internal/db/migrations/` (next number).
+
+**WRITE:**
+
+```
+docs/factorymate-roadmap.md              # M18 section only (unchecked)
+docs/factorymate-spec.md
+docs/discord-bot-plan.md
+docs/guide/managing/notifications.md
+docs/guide/managing/settings.md
+docs/guide/discord/commands.md
+docs/testing.md
+.agents/project/orchestrator/milestone-scopes.md   # this file — M18 block
+.agents/project/orchestrator/doc-index.md
+backend/internal/db/migrations/**
+backend/internal/notifications/**
+backend/internal/notify/**
+backend/internal/discord/**
+backend/internal/api/**
+backend/internal/registration/**         # only if SeedUserPrefs signatures change
+frontend/app/**
+frontend/components/**
+frontend/lib/**
+frontend/messages/en.json
+```
+
+**Scoped CI:**
+
+```bash
+cd backend && go test ./internal/notifications/... ./internal/notify/... ./internal/discord/... ./internal/api/... && go vet ./internal/notifications/... ./internal/notify/... ./internal/discord/... ./internal/api/...
+cd frontend && npm run lint && npm run build
+```
+
+If `backend/internal/registration` was changed, include it in go test/vet.
+
+**Notes:** Do not add per-type Discord slash toggles. Do not put prefs URL on game-event DM footers. Do not mark roadmap checkboxes `[x]` — verifier only.
+
+---

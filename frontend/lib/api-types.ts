@@ -489,14 +489,29 @@ export const NOTIFICATION_DM_CATEGORIES = [
 export type NotificationDMCategory =
   (typeof NOTIFICATION_DM_CATEGORIES)[number]
 
+export type NotificationChannelTarget = {
+  id: number
+  name: string
+}
+
+export type NotificationCatalogEntry = {
+  key: string
+  label: string
+  category: string
+  globallyEnabled: boolean
+  channelTargets: NotificationChannelTarget[]
+}
+
 export type UserNotificationPrefs = {
-  categories: Record<string, boolean>
+  types: Record<string, boolean>
   dmPlayerPersonal: boolean
+  catalog: NotificationCatalogEntry[]
 }
 
 export type AdminNotificationDefaults = {
-  categories: Record<string, boolean>
+  types: Record<string, boolean>
   dmPlayerPersonalDefault: boolean
+  catalog: NotificationCatalogEntry[]
 }
 
 export type AppUser = {

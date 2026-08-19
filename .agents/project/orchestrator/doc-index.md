@@ -61,6 +61,9 @@ Reference sections as `§N`, e.g. `spec §4.2`, `spec §7.1`.
 | M9 | spec §4.1 (slow poll) |
 | M10–M12 | spec §8, §8.1, **§8.2** |
 | M13 | spec §2.4, §9 |
+| M16 | spec §5.3, §7, discord-bot-plan §9 |
+| M17 | spec §2.1, §3, §6, §7, §8, §9; discord-bot-plan OAuth |
+| M18 | spec §3, §5.3, §7, §7.1, §7.2, §8, §8.1, §8.2; discord-bot-plan §9, §12.2 |
 
 ## Default verification (from project.config.md)
 

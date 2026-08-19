@@ -625,20 +625,61 @@ func (b *Bot) logAndDeny(ctx context.Context, s *discordgo.Session, i *discordgo
 }
 
 func respondEphemeral(ctx context.Context, s *discordgo.Session, i *discordgo.InteractionCreate, content string) {
+	respondEphemeralWithComponents(ctx, s, i, content, nil)
+}
+
+func respondEphemeralWithComponents(ctx context.Context, s *discordgo.Session, i *discordgo.InteractionCreate, content string, components []discordgo.MessageComponent) {
 	if interactionDeferred(ctx) {
-		editEphemeral(s, i, content)
+		edit := &discordgo.WebhookEdit{Content: &content}
+		if len(components) > 0 {
+			edit.Components = &components
+		}
+		if _, err := s.InteractionResponseEdit(i.Interaction, edit); err != nil {
+			log.Printf("discord bot: ephemeral edit: %v", err)
+		}
 		return
 	}
 	err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
 		Data: &discordgo.InteractionResponseData{
-			Content: content,
-			Flags:   discordgo.MessageFlagsEphemeral,
+			Content:    content,
+			Flags:      discordgo.MessageFlagsEphemeral,
+			Components: components,
 		},
 	})
 	if err != nil {
 		log.Printf("discord bot: ephemeral respond: %v", err)
 	}
+}
+
+func dashboardLinkComponents(url string) []discordgo.MessageComponent {
+	if url == "" {
+		return nil
+	}
+	return []discordgo.MessageComponent{
+		discordgo.ActionsRow{
+			Components: []discordgo.MessageComponent{
+				discordgo.Button{
+					Style: discordgo.LinkButton,
+					Label: "Open dashboard",
+					URL:   url,
+				},
+			},
+		},
+	}
+}
+
+func respondNotifications(ctx context.Context, s *discordgo.Session, i *discordgo.InteractionCreate, body string) {
+	url := NotificationsDashboardURL()
+	content := body + "\n\n" + dashboardPrefsFooter(url)
+	respondEphemeralWithComponents(ctx, s, i, content, dashboardLinkComponents(url))
+}
+
+func dashboardPrefsFooter(url string) string {
+	if url == "" {
+		return "Dashboard URL is not configured (set FACTORYMATE_PUBLIC_URL)."
+	}
+	return "Per-type checkboxes: " + url
 }
 
 func editEphemeral(s *discordgo.Session, i *discordgo.InteractionCreate, content string) {

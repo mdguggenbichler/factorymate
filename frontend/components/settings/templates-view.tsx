@@ -8,6 +8,7 @@ import { ColorPicker } from "@/components/settings/template-editor/color-picker"
 import { EmbedFieldsEditor } from "@/components/settings/template-editor/embed-fields-editor"
 import { EmbedPreview } from "@/components/settings/template-editor/embed-preview"
 import { VariablePicker } from "@/components/settings/template-editor/variable-picker"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -448,6 +449,10 @@ export function TemplatesView({
       <div className="flex flex-col gap-2">
         <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
         <p className="text-muted-foreground">{t("description")}</p>
+        <Alert>
+          <AlertTitle>{t("twoLayerTitle")}</AlertTitle>
+          <AlertDescription>{t("twoLayerCallout")}</AlertDescription>
+        </Alert>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">

@@ -277,6 +277,17 @@ CREATE TABLE message_type_targets (
     PRIMARY KEY (message_type_key, target_id)
 );
 
+-- Per-user personal DM opt-in by message type (M18). Absent row = admin default
+-- from app_setting_kv `notifications.dm_defaults_json` (per-type booleans).
+-- Excludes `connection_details` / `connection_details_changed` (mandatory connection DMs).
+CREATE TABLE user_notification_prefs (
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    message_type_key TEXT NOT NULL REFERENCES message_types(key),
+    dm_enabled BOOLEAN NOT NULL,
+    updated_at TEXT NOT NULL,
+    PRIMARY KEY (user_id, message_type_key)
+);
+
 -- Audit log of sent notifications (dispatch outcomes only — NOT a substitute for
 -- player_session_events or power_circuit_events; disabled message types produce
 -- no rows here even when the underlying game event occurred)
@@ -835,7 +846,9 @@ Each row's `variables_json` in the DB is a **JSON array of strings** matching th
 
 Each message type has its own `enabled` flag (default: on), independent of which targets it's assigned to. This is the mechanism for "only notify on join/leave": leave `player_joined`/`player_left` enabled with the Discord target assigned, and either disable the other message types outright or simply leave them unassigned — disabling is the clearer choice when the intent is "we don't want this at all right now, but keep the target assignment for later," whereas leaving a type enabled with zero targets just means "nothing to send it to yet."
 
-Target assignment itself is many-to-many: an enabled message type can be sent to zero, one, or multiple targets (e.g. everything to the main status channel, but `fuse_tripped` additionally to a personal ntfy target once that provider exists). A disabled message type is never dispatched regardless of its target assignments — the poller still detects the underlying state transition (so player online/offline state stays correct either way), it simply skips rendering and sending for that type.
+Target assignment itself is many-to-many: an enabled message type can be sent to zero, one, or multiple targets (e.g. everything to the main status channel, but `fuse_tripped` additionally to a personal ntfy target once that provider exists). A disabled message type is never dispatched regardless of its target assignments — the poller still detects the underlying state transition (so player online/offline state stays correct either way), it simply skips rendering and sending for that type. `message_types.enabled` is also the **global kill switch for personal DMs**: when a type is off, FactoryMate sends neither channel posts nor DMs. Channel delivery still requires at least one assigned enabled target; personal DMs still require the user's per-type opt-in (or the personal-player toggle for matching join/leave).
+
+**Two independent layers.** Guild/channel routing (this page: enabled + target assignment) is separate from personal DMs (`/account/notifications`, coarse Discord `/notifications`). A type can be channel-only, DM-only, both, or neither (enabled but no targets and no DM prefs). Overlap is informational — users may enable a DM for a type that already posts to a channel.
 
 Both the enable toggle and target checkboxes live on the **Notification Templates** dashboard page (`/settings/notifications/templates`, see §8) alongside the template editor for that type, so operators see "is it on," "what it looks like," and "where it goes" together.
 
@@ -962,8 +975,8 @@ All endpoints under `/api`, JSON in/out, session-cookie authenticated unless not
 | POST | `/api/auth/logout` | session | Clear session |
 | GET | `/api/auth/me` | session | Current user + role |
 | PUT | `/api/account/password` | session | Change the current user's own password (any role — this is distinct from `/api/users/:id`, which is admin-only and manages *other* users) |
-| GET | `/api/account/notifications` | session, active | Per-user DM category preferences and personal player-event toggle (see §7.1) |
-| PUT | `/api/account/notifications` | session, active | Update current user's DM preferences |
+| GET | `/api/account/notifications` | session, active | Per-user DM preferences by message type, personal player-event toggle, and a viewer-safe catalog (see §7.1) |
+| PUT | `/api/account/notifications` | session, active | Partial update of the current user's DM preferences (`types` map and/or `dmPlayerPersonal`) |
 | GET | `/api/status` | session | Server online state, online player count, active fuse trips, latest milestone summary, elevator phase summary (see §7.1) |
 | GET | `/api/players` | session | Current player list with online status |
 | GET | `/api/players/history` | session | Join/leave events from `player_session_events`, paginated |
@@ -1001,8 +1014,8 @@ All endpoints under `/api`, JSON in/out, session-cookie authenticated unless not
 | GET | `/api/notification-log?type=&target=&delivery=&limit=&offset=` | admin | Recent sent-notification audit log (`notification_log`), paginated. Response items include `deliveryMode` (`channel` \| `dm`), nullable `targetId`, `targetName`, and `recipientExternalUserId` (DM rows). Query with a LEFT JOIN on `notification_targets` (not INNER JOIN) so rows whose `target_id` no longer exists are still returned; `target_id` has no FK (§3). |
 | GET | `/api/settings` | admin | App settings (FRM host/port, poll intervals, retention, cached serverName) |
 | PUT | `/api/settings` | admin | Update app settings; when `frmHost` is set, probes FRM `getSessionInfo` and updates `serverName` |
-| GET | `/api/settings/notification-defaults` | admin | Admin DM category defaults for new users (see §7.1) |
-| PUT | `/api/settings/notification-defaults` | admin | Update admin DM defaults for new users |
+| GET | `/api/settings/notification-defaults` | admin | Admin per-type DM defaults for new users plus catalog (see §7.1) |
+| PUT | `/api/settings/notification-defaults` | admin | Partial update of admin DM defaults for new users |
 | POST | `/api/settings/frm/test` | admin | `{ frmHost, frmPort, frmAuthToken? }` → `{ sessionName, reachable: true }` (preview only) |
 | GET | `/api/users` | admin | List users (includes `status`, optional `playerId`/`playerName`) |
 | PUT | `/api/users/:id` | admin | Update user (`role?`, `password?`, `playerId?` — `null` clears mapping) |
@@ -1102,32 +1115,32 @@ JSON field names use **camelCase** in API responses; DB columns remain snake_cas
 **`GET /api/account/notifications`** and **`PUT /api/account/notifications`** response:
 ```json
 {
-  "categories": {
-    "server": false,
-    "player": false,
-    "power": false,
-    "progression": false,
-    "vehicle": false
-  },
-  "dmPlayerPersonal": false
+  "types": { "fuse_tripped": false, "power_restored": true },
+  "dmPlayerPersonal": false,
+  "catalog": [
+    {
+      "key": "fuse_tripped",
+      "label": "Fuse tripped",
+      "category": "power",
+      "globallyEnabled": true,
+      "channelTargets": [{ "id": 1, "name": "Factory alerts" }]
+    }
+  ]
 }
 ```
+
+`catalog` is viewer-safe (no admin `GET /api/message-types` required). It omits `connection_details` and `connection_details_changed`. `channelTargets` lists enabled assigned guild targets for overlap hints. Missing per-user rows inherit admin defaults on read.
 
 **`GET /api/settings/notification-defaults`** and **`PUT /api/settings/notification-defaults`** response:
 ```json
 {
-  "categories": {
-    "server": false,
-    "player": false,
-    "power": false,
-    "progression": false,
-    "vehicle": false
-  },
-  "dmPlayerPersonalDefault": false
+  "types": { "fuse_tripped": false, "power_restored": false },
+  "dmPlayerPersonalDefault": false,
+  "catalog": []
 }
 ```
 
-Category keys match `message_types.category` groupings (§9.3 in discord-bot-plan). Missing per-user rows inherit admin defaults on read.
+`types` keys are `message_types.key` values (not categories). `notifications.dm_defaults_json` stores the same per-type booleans.
 
 **Errors:** `400` validation, `401` unauthenticated, `403` forbidden, `404` not found, `500` internal. Error body: `{ "error": "message" }`.
 
@@ -1138,7 +1151,7 @@ Category keys match `message_types.category` groupings (§9.3 in discord-bot-pla
 | `POST /api/auth/setup` | `{ "username", "password" }` |
 | `POST /api/auth/login` | `{ "username", "password" }` |
 | `PUT /api/account/password` | `{ "password" }` (new password) |
-| `PUT /api/account/notifications` | `{ "categories": { "server"?: bool, "player"?: bool, "power"?: bool, "progression"?: bool, "vehicle"?: bool }, "dmPlayerPersonal": bool }` |
+| `PUT /api/account/notifications` | `{ "types"?: { "<message_type_key>": bool }, "dmPlayerPersonal"?: bool }` — omitted keys are left unchanged; unknown/`connection_*` keys ignored |
 | `POST /api/notification-targets` | `{ "name", "providerType": "discord", "config": { "channel_id", "thread_id?" }, "enabled": true }` |
 | `PUT /api/notification-targets/:id` | same fields, partial update allowed |
 | `PUT /api/connection-details` | `{ "gameHost", "gamePort", "gamePassword?", "notes?", "clearPassword?", "smmProfileName?" }` |
@@ -1148,7 +1161,7 @@ Category keys match `message_types.category` groupings (§9.3 in discord-bot-pla
 | `POST /api/message-types/:key/template/preview` | `{ "variant", "template" }` |
 | `PUT /api/message-types/:key/targets` | `{ "targetIds": [1, 2, ...] }` |
 | `PUT /api/settings` | subset of settings fields from `GET /api/settings` (excluding `serverName` — read-only, auto-synced) |
-| `PUT /api/settings/notification-defaults` | `{ "categories": { "server"?: bool, "player"?: bool, "power"?: bool, "progression"?: bool, "vehicle"?: bool }, "dmPlayerPersonalDefault": bool }` |
+| `PUT /api/settings/notification-defaults` | `{ "types"?: { "<message_type_key>": bool }, "dmPlayerPersonalDefault"?: bool }` — partial; omitted keys unchanged |
 | `POST /api/settings/frm/test` | `{ "frmHost", "frmPort", "frmAuthToken"? }` |
 | `POST /api/invites` | `{ "role": "admin" \| "viewer" }` |
 | `POST /api/auth/register/complete` | `{ "token", "username", "pendingPlayerName" }` — Discord OAuth registration after `/register` |
@@ -1178,15 +1191,15 @@ Category keys match `message_types.category` groupings (§9.3 in discord-bot-pla
 | `/elevator` | viewer, admin | Current phase required-items progress bars, upgrade-ready indicator; admins additionally see an alert banner if `elevator_phase_unknown_log` has unresolved entries, with the raw mismatched data and a "mark resolved" action | Progress bars, card, admin-only alert |
 | `/mods` | viewer, admin (active users) | Full server mod list from FRM `getModList`; game build + SML header; disclaimer; download SMM profile; admin refresh | Table, cards, alert |
 | `/settings/notifications/targets` | admin only | CRUD for Notification Targets (Discord channel picker), per-target "Send test" button; legacy webhook deprecation banner | Data table, dialog forms |
-| `/settings/notifications/defaults` | admin only | Admin DM category defaults for newly registered users (`dmPlayerPersonalDefault` included) | Form, switches |
-| `/settings/notifications/templates` | admin only | List of message types (17 keys including optional `connection_details_changed` and `connection_details`); selecting one opens the template editor (plain-text + embed fields, variable picker, live preview, target assignment checkboxes for that type, reset-to-default) | Data table + detail panel, live preview card |
+| `/settings/notifications/defaults` | admin only | Admin per-type DM defaults for newly registered users (`dmPlayerPersonalDefault` included); two-layer copy + overlap hints | Form, switches |
+| `/settings/notifications/templates` | admin only | List of message types (17 keys including optional `connection_details_changed` and `connection_details`); selecting one opens the template editor (plain-text + embed fields, variable picker, live preview, target assignment checkboxes for that type, reset-to-default). Short callout that this page is the channel layer vs personal DMs. | Data table + detail panel, live preview card |
 | `/settings/notifications/log` | admin only | Recent sent notifications with success/failure status | Data table |
 | `/settings/general` | admin only | FRM host/port/token, poll interval, production snapshot interval/retention; server display name shown read-only (auto-fetched from FRM) | Form, test-connection button |
 | `/settings/discord` | admin only | Bot status, invite URL, guild ID, role mapping editor, auto-approve toggle | Form, table, badges |
 | `/settings/connection` | admin only | Game join details + SMM profile name | Form |
 | `/settings/users` | admin only | User management: Discord-first onboarding copy, break-glass invites, pending approval queue, unmapped players panel, external identity columns, promote to admin, optional player mapping, edit/delete | Data table, dialog forms |
 | `/account` | viewer, admin | Change own password (when set); **Link Discord** when OAuth configured | Form, button |
-| `/account/notifications` | viewer, admin (active users) | Per-user DM category toggles and personal player-event toggle | Form, switches |
+| `/account/notifications` | viewer, admin (active users) | Per-type DM checkboxes grouped by category, two-layer intro, overlap hints, personal player-event toggle | Form, switches |
 
 Navigation: a persistent sidebar (shadcn `Sidebar` pattern) with the dashboard pages always visible to both roles, and a "Settings" section only rendered/routable for admins.
 
@@ -1210,13 +1223,13 @@ Concrete shadcn/ui components — and, where one exists, a full shadcn **block**
 | `/vehicles` | — | `Tabs` (Trains / Wheeled Vehicles), `Table` (both groups), `Badge` (derailed/fuel-empty/stuck states) | None |
 | `/elevator` | — | `Card`, `Progress` (per required item), `Alert` (destructive variant, admin-only unresolved diagnostics) | None |
 | `/settings/notifications/targets` | — | `Table`, `Dialog` (create/edit form), `AlertDialog` (delete confirmation — important given cascade-delete warning in §5.1), `Form`, `Input`, `Select` (provider type), `Switch` (enabled) | None |
-| `/settings/notifications/defaults` | — | `Card`, `Form`, `Switch` (per category + personal default) | None |
-| `/settings/notifications/templates` | — | `Table`/list (left pane, with `Switch` per row for `enabled`), `Tabs` (Plain / Embed sub-editor), `Textarea` (plain template, embed description), `Input` (embed title, footer), `Switch` (show timestamp), `Command`+`Popover` (variable-insert picker), `Checkbox`/`Toggle Group` (target assignment), `Card`+`Separator` (embed live-preview with footer row) | **Three real gaps here, no stock component:** (1) a repeatable "Fields" array editor for embed fields (build with `react-hook-form`'s `useFieldArray` + `Input` pairs + an "Add field" `Button`); (2) a hex color picker (shadcn has none — pair a `Popover` with a small custom swatch grid, or a plain `Input type="color"`); (3) the Discord-embed-style preview card itself (colored left border, title/description/fields/footer layout) is a custom composition of `Card`+`Separator`, not a stock look |
+| `/settings/notifications/defaults` | — | `Card`, `Form`, `Alert` (two-layer copy), `Switch` (per type + personal default) | Informational overlap hints (not `AlertDialog`) |
+| `/settings/notifications/templates` | — | `Table`/list (left pane, with `Switch` per row for `enabled`), `Alert` (two-layer callout), `Tabs` (Plain / Embed sub-editor), `Textarea` (plain template, embed description), `Input` (embed title, footer), `Switch` (show timestamp), `Command`+`Popover` (variable-insert picker), `Checkbox`/`Toggle Group` (target assignment), `Card`+`Separator` (embed live-preview with footer row) | **Three real gaps here, no stock component:** (1) a repeatable "Fields" array editor for embed fields (build with `react-hook-form`'s `useFieldArray` + `Input` pairs + an "Add field" `Button`); (2) a hex color picker (shadcn has none — pair a `Popover` with a small custom swatch grid, or a plain `Input type="color"`); (3) the Discord-embed-style preview card itself (colored left border, title/description/fields/footer layout) is a custom composition of `Card`+`Separator`, not a stock look |
 | `/settings/notifications/log` | — | `Table`, `Badge` (success/fail) | Channel rows: when `target_id` no longer resolves to a `notification_targets` row (target was deleted; `target_id` has no FK, §3), render "Deleted target" (or similar) instead of crashing or showing a blank. DM rows: show delivery mode and `recipientExternalUserId`. `GET /api/notification-log` LEFT JOINs so channel rows are present (§7). |
 | `/settings/general` | — | `Form`, `Input`, `Label` | None |
 | `/settings/users` | — | `Table`, `Dialog`, `AlertDialog`, `Select` (role) | None |
 | `/account` | — | `Card`, `Form`, `Input`, `Button` | None |
-| `/account/notifications` | — | `Card`, `Form`, `Switch` (per category + personal player events) | None |
+| `/account/notifications` | — | `Card`, `Form`, `Alert` (two-layer copy), `Switch` (per type + personal player events) | Informational overlap hints (not `AlertDialog`); disabled row when `globallyEnabled` is false |
 | Global | — | `Sonner` (toast: save confirmations, test-send results, errors) | None |
 
 **Net effect:** most of the app — auth, shell/navigation, tables, dialogs, forms, charts, badges — is genuinely copy-paste from shadcn's registry with no custom styling work. The one page that needs real hand-built UI is the notification template editor (`/settings/notifications/templates`), specifically the repeatable embed-fields array, the color picker, and the Discord-style preview card — all straightforward compositions of existing primitives, just not single-command installs.

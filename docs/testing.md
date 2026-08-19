@@ -96,12 +96,12 @@ Game-event dispatch sends channel posts (admin-configured targets) **and** optio
 
 | Test | Asserts |
 | --- | --- |
-| `TestDispatcher_DMFanOutRespectsPrefs` | User with `power` DM enabled receives fuse-trip DM; user with `power` off does not; channel send still occurs |
+| `TestDispatcher_DMFanOutRespectsPrefs` | User with `fuse_tripped` DM enabled receives fuse-trip DM; user with that type off does not; channel send still occurs |
 | `TestDispatcher_PersonalPlayerDM` | User with `dm_player_personal` and linked player name receives personal join/leave DM |
 
-Prefs are stored in `user_notification_prefs` (per category) and `users.dm_player_personal`. New users inherit admin defaults from `app_settings` (`notifications.dm_defaults_json`, `notifications.dm_player_personal_default`). Frontend: `/account/notifications` (all active users) and `/settings/notifications/defaults` (admin).
+Prefs are stored in `user_notification_prefs` (per **message type key**) and `users.dm_player_personal`. New users inherit admin defaults from `app_settings` (`notifications.dm_defaults_json` per-type booleans, `notifications.dm_player_personal_default`). Frontend: `/account/notifications` (all active users) and `/settings/notifications/defaults` (admin). Discord `/notifications` is category-level only.
 
-Connection-detail DMs bypass category prefs — see `ConnectionDetailsService` tests in `backend/internal/connection/`.
+Connection-detail DMs bypass type prefs — see `ConnectionDetailsService` tests in `backend/internal/connection/`.
 
 ### Optional integration test guild
 
@@ -118,9 +118,9 @@ Run tagged integration tests against a private test guild when validating slash 
 
 1. Settings → Discord — verify bot status badge and invite URL load
 2. Settings → Notifications → Targets — channel picker populated; legacy webhook banner if old targets exist
-3. Settings → Notifications → Defaults — category toggles load and save
+3. Settings → Notifications → Defaults — per-type toggles load and save
 4. Settings → Notifications → Templates — `connection_details_changed` appears in message type list when seeded
-5. Account → Notifications (user menu) — per-user DM toggles load and save
+5. Account → Notifications (user menu) — per-type DM toggles load and save
 6. Settings → Users — pending approval queue and unmapped players panels
 7. `/mods` — mod table, download SMM profile, admin refresh
 

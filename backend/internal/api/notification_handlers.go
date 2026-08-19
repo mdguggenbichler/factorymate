@@ -35,13 +35,10 @@ func (h *Handler) PutAccountNotifications(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	var input notifications.UserPrefs
+	var input notifications.UserPrefsPatch
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		writeError(w, r, http.StatusBadRequest, "invalid request body")
 		return
-	}
-	if input.Categories == nil {
-		input.Categories = map[string]bool{}
 	}
 
 	prefs, err := h.notifications.SetUserPrefs(r.Context(), user.ID, input)
@@ -66,13 +63,10 @@ func (h *Handler) GetNotificationDefaults(w http.ResponseWriter, r *http.Request
 }
 
 func (h *Handler) PutNotificationDefaults(w http.ResponseWriter, r *http.Request) {
-	var input notifications.AdminDefaults
+	var input notifications.AdminDefaultsPatch
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		writeError(w, r, http.StatusBadRequest, "invalid request body")
 		return
-	}
-	if input.Categories == nil {
-		input.Categories = map[string]bool{}
 	}
 
 	defaults, err := h.notifications.SetAdminDefaults(r.Context(), input)

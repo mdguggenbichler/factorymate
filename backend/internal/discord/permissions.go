@@ -239,3 +239,12 @@ func PublicURL() string {
 	}
 	return ""
 }
+
+// NotificationsDashboardURL is the Account → Notifications page, when the public URL is set.
+func NotificationsDashboardURL() string {
+	base := PublicURL()
+	if base == "" {
+		return ""
+	}
+	return base + "/account/notifications"
+}
