@@ -7,9 +7,10 @@ After creating the bot in the [Developer Portal](setup.md), configure FactoryMat
 | Variable | Required | Description |
 | --- | --- | --- |
 | `DISCORD_BOT_TOKEN` | For Discord features | Bot token from Developer Portal |
+| `DISCORD_CLIENT_SECRET` | For SSO | OAuth client secret (same application). With `FACTORYMATE_PUBLIC_URL`, enables dashboard Discord login and `/register` OAuth |
 | `DISCORD_GUILD_ID` | Recommended | Bootstrap guild ID until set in Settings → Discord |
 | `DISCORD_ADMIN_ROLE_IDS` | Optional | Comma-separated admin role IDs before UI role mapping exists |
-| `FACTORYMATE_PUBLIC_URL` | Optional | Public dashboard URL used in `/help` and welcome DMs |
+| `FACTORYMATE_PUBLIC_URL` | Required for SSO | Public dashboard URL — OAuth redirect `{url}/api/auth/discord/callback`, `/help`, welcome DMs |
 
 Without `DISCORD_BOT_TOKEN`, the web dashboard and FRM polling still run. Bot commands, channel notifications, and DMs are disabled, and **Settings → Discord** shows a warning.
 
@@ -19,13 +20,15 @@ Without `DISCORD_BOT_TOKEN`, the web dashboard and FRM polling still run. Bot co
 
 ```
 1. Discord Developer Portal → create application → copy bot token
-2. .env → DISCORD_BOT_TOKEN, DISCORD_GUILD_ID
-3. docker compose up -d
-4. Web UI → /setup → create first admin account
-5. Settings → Discord → invite bot → configure role mappings
-6. Settings → Notifications → Targets → pick a channel
-7. Settings → Notifications → Templates → enable and assign message types
-8. Players run /register in Discord
+2. .env → DISCORD_BOT_TOKEN, DISCORD_CLIENT_SECRET, FACTORYMATE_PUBLIC_URL, DISCORD_GUILD_ID
+3. Developer Portal → OAuth2 → add redirect `{FACTORYMATE_PUBLIC_URL}/api/auth/discord/callback`
+4. docker compose up -d
+5. Web UI → /setup → create first admin account
+6. Settings → Discord → invite bot → set guild ID → configure role mappings
+7. Account → Link Discord (first admin)
+8. Settings → Notifications → Targets → pick a channel
+9. Settings → Notifications → Templates → enable and assign message types
+10. Players run /register in Discord
 ```
 
 ## Settings → Discord

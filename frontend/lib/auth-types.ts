@@ -5,6 +5,7 @@ export type User = {
   username: string
   role: UserRole
   status?: string
+  hasPassword?: boolean
   registrationSource?: string | null
   pendingPlayerName?: string | null
   externalPlatform?: string | null

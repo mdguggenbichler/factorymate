@@ -287,6 +287,26 @@ Build order:
 
 ---
 
+## M17 — Discord SSO & secure onboarding
+
+**Goal:** Discord OAuth for Discord-origin users (no FM password). Local password only for `/setup` and break-glass invites. Remove Discord password collection. Fix guild-save slash command registration bug.
+
+- [ ] Spec §2.1/§3/§6/§7/§7.1/§7.2/§8/§9 — Discord OAuth, nullable `password_hash`, `oauth_states`; discord-bot-plan §6 + command tables + Appendix G
+- [ ] Migration 008: nullable `password_hash`, `oauth_states` table (token_hash SHA-256, purpose, TTL, single-use)
+- [ ] OAuth: `GET /api/auth/discord` (login — existing users only), callback; register flow via `/register` slash → OAuth state=register → web complete form (username + in-game name, no password); Account → Link Discord (logged-in OAuth link)
+- [ ] `LinkExternal`; `Register` without password when Discord external present; password login rejects NULL hash
+- [ ] Discord: `/register` and `/register-user` DM OAuth URLs (no modals); remove `/link` command; remove or replace `/password-reset` (no DM secrets — admin sets password on web)
+- [ ] Re-register slash commands when guild ID saved in Settings → Discord (fix bug: only registered on bot Start today); clear commands on old guild if ID changed
+- [ ] Rewrite `/help` and all slash command `Description` strings in commands.go
+- [ ] Frontend: `/login` Continue with Discord (when OAuth configured); register-complete page; Account Link Discord; hide Discord UI when not configured; i18n in messages/en.json
+- [ ] `.env.example`, docker-compose, guides (commands.md, users.md, first-run.md, development.md, discord configuration)
+- [ ] Add M17 to `.agents/project/orchestrator/milestone-scopes.md` with READ/WRITE + scoped CI
+- [ ] Tests: SSO login vs provision separation; link while logged in; no Discord password fields; guild-save re-registers commands (mock discordgo if needed)
+
+**DoD:** Discord `/register` finishes on web via OAuth (no password modals); login with Discord for linked users; setup/invite users link Discord from Account; slash commands appear after saving guild ID without container restart; `/help` and descriptions current; spec and docs updated.
+
+---
+
 ## M14 — Deferred Backlog
 
 Per **spec §10** — not v1:

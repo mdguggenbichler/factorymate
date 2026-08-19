@@ -5,24 +5,25 @@ import "fmt"
 const helpMessageTemplate = `🏭 FactoryMate — quick start
 
 **New here?**
-1. /register — create your dashboard account
-2. /mods export — download SMM profile → import in Satisfactory Mod Manager
-3. /connection get — get server host, port, and password (sent to your DMs)
-4. %s
+1. /register — get a DM with a dashboard link (Discord sign-in, no password)
+2. Finish registration on the web: choose username + in-game name
+3. /mods export — download SMM profile → import in Satisfactory Mod Manager
+4. /connection get — get server host, port, and password (sent to your DMs)
+5. %s
 
 **Already registered?**
 /connection get — join details (DM)
 /mods — full mod list
 /set-player — fix your in-game name mapping
 /clear-player — remove your in-game player mapping
-/whoami — check your link status
+/whoami — check your account status
 
-**Have a web account but new to Discord?**
-/link — attach Discord to your existing login
+**Have a web account (setup or invite)?**
+Link Discord from **Account** on the dashboard after signing in with your password.
 
 **Admins**
 /connection set — update join details (broadcasts to all players)
-/register-user — invite someone to complete registration
+/register-user — DM someone a registration link
 /registration auto-approve — toggle approval gate
 
 %s`
@@ -31,7 +32,7 @@ func formatHelpMessage() string {
 	loginLine := "Log in via the dashboard (ask an admin for the URL)."
 	dashboardLine := ""
 	if url := PublicURL(); url != "" {
-		loginLine = fmt.Sprintf("Log in: %s", url)
+		loginLine = fmt.Sprintf("Log in: %s (Continue with Discord or password)", url+"/login")
 		dashboardLine = fmt.Sprintf("Dashboard: %s", url)
 	}
 	return fmt.Sprintf(helpMessageTemplate, loginLine, dashboardLine)
@@ -55,7 +56,7 @@ func formatWelcomeApprovedDM(username string) string {
 	if url := PublicURL(); url != "" {
 		dashboard = url
 	}
-	return fmt.Sprintf("✅ **Registration approved!**\n\nWelcome to FactoryMate.\nDashboard: %s\nUsername: %s", dashboard, username)
+	return fmt.Sprintf("✅ **Registration approved!**\n\nWelcome to FactoryMate.\nDashboard: %s\nUsername: %s\nSign in with **Continue with Discord** or your password if you set one.", dashboard, username)
 }
 
 func formatRegistrationDeclinedDM(comment string) string {

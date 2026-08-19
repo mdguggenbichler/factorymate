@@ -100,7 +100,7 @@ It replaces an earlier n8n-based polling workflow with a single self-contained G
 | Frontend i18n | **next-intl** | All UI strings via locale files — see §8.2; English only in v1 |
 | UI components | shadcn/ui + Tailwind CSS | Copy-paste component model, minimal custom CSS |
 | Charts | Recharts | Pairs natively with shadcn's chart components |
-| Auth | Session-cookie based, password login (bcrypt hashes in SQLite) | No OAuth/SSO in v1 |
+| Auth | Session-cookie based; username/password for setup and break-glass invites; **Discord OAuth** (`identify` scope) for linked Discord users when `DISCORD_CLIENT_SECRET` + `FACTORYMATE_PUBLIC_URL` are set | Discord-only users have `password_hash` NULL |
 | Deployment | Docker, **one container** (Go backend + Next.js frontend) | Runs alongside the existing `satisfactory-server` container on the group's host; Next.js proxies `/api` to the Go process on localhost (see §2.4) |
 
 ### 2.2 Why not shoutrrr
@@ -178,7 +178,7 @@ v1 uses **one container** in `docker-compose.yml` running two processes:
 CREATE TABLE users (
     id INTEGER PRIMARY KEY,
     username TEXT UNIQUE NOT NULL,
-    password_hash TEXT NOT NULL,
+    password_hash TEXT,
     role TEXT NOT NULL CHECK (role IN ('admin', 'viewer')),
     player_id TEXT REFERENCES player_state(player_id),  -- optional mapping to game player
     created_at TEXT NOT NULL,
@@ -213,6 +213,22 @@ CREATE TABLE invites (
 CREATE INDEX idx_invites_token ON invites(token);
 CREATE INDEX idx_invites_pending ON invites(accepted_at, revoked_at, expires_at);
 CREATE INDEX idx_users_player_id ON users(player_id);
+
+-- OAuth CSRF state (M17): SHA-256 hashed nonce, 10-minute TTL, single-use
+CREATE TABLE oauth_states (
+    token_hash TEXT PRIMARY KEY,
+    purpose TEXT NOT NULL CHECK (purpose IN ('login', 'register', 'link', 'register_complete')),
+    external_user_id TEXT,
+    external_username TEXT,
+    external_display_name TEXT,
+    force_approve INTEGER NOT NULL DEFAULT 0,
+    fm_role TEXT,
+    user_id INTEGER REFERENCES users(id),
+    created_at TEXT NOT NULL,
+    expires_at TEXT NOT NULL,
+    used_at TEXT
+);
+CREATE INDEX idx_oauth_states_expires ON oauth_states(expires_at);
 
 -- Server-side session store (SQLite — sessions survive process restarts)
 CREATE TABLE sessions (
@@ -910,15 +926,16 @@ All 17 message types (15 game events plus optional `connection_details_changed` 
 
 ## 6. Authentication & Authorization
 
-- Username + password login, session cookie (HTTP-only, secure, SameSite=Lax), backed by the **`sessions` table in SQLite** (§3) — sessions survive process restarts; expired rows cleaned up periodically.
-- New passwords (setup, invite accept, admin reset, self-service change) require at least **8 characters**.
+- Username + password login for **setup** and **break-glass web invites**; session cookie (HTTP-only, secure, SameSite=Lax), backed by the **`sessions` table in SQLite** (§3) — sessions survive process restarts; expired rows cleaned up periodically.
+- **Discord OAuth** (M17): when `DISCORD_CLIENT_SECRET` and `FACTORYMATE_PUBLIC_URL` are configured, linked Discord users sign in via **Continue with Discord** on `/login`. OAuth uses the same Discord application as the bot; scopes: `identify` only. OAuth state: random nonce, **SHA-256 stored** in `oauth_states`, 10-minute TTL, single-use. **`GET /api/auth/discord`** (login) provisions **no** accounts — unknown Discord IDs receive an error directing them to `/register` in Discord. **`/register`** slash DMs an OAuth URL (`purpose=register`); callback redirects to `/register/complete` (username + in-game name, no password). **Account → Link Discord** (`purpose=link`) attaches Discord to an existing password session. Discord-origin users have **`password_hash` NULL**; password login rejects NULL hash.
+- New passwords (setup, invite accept, admin reset, self-service change) require at least **8 characters** (Discord-only users may omit password until an admin sets one via Settings → Users).
 - **Session cookie:** name `factorymate_session`; value = opaque session ID (matches `sessions.id`). **Max age:** 30 days (`expires_at = now + 30d` on login). **Flags:** `HttpOnly`, `Secure` when request is HTTPS (omit in local HTTP dev), `SameSite=Lax`, `Path=/`. **Cleanup:** background job every hour deletes rows where `expires_at < now()` and invalidates matching cookies on next request.
 - Passwords hashed with bcrypt.
 - Two roles:
   - **admin** — full access: settings, notification targets, message templates, target assignment, user management.
   - **viewer** — read-only access to all dashboard pages (status, players, production, power, resource sink, drones, doggos, milestones, research, vehicles, elevator); no access to settings/templates/targets/users pages (these routes 403 for viewers, and are hidden from navigation).
 - First-run: if the `users` table is empty, the app serves a one-time setup page to create the first admin account instead of the login page.
-- Additional accounts are created primarily via **Discord `/register`** (M15). Admins generate break-glass **web invite links** only when Discord registration is unavailable: single-use links (preset role, 7-day TTL); invitees set their own username and password at `/invite/:token`. No admin-set passwords.
+- Additional accounts are created primarily via **Discord `/register`** (M15, M17 OAuth completion on web). Admins generate break-glass **web invite links** only when Discord registration is unavailable: single-use links (preset role, 7-day TTL); invitees set their own username and password at `/invite/:token`. No admin-set passwords.
 
 ---
 
@@ -934,7 +951,12 @@ All endpoints under `/api`, JSON in/out, session-cookie authenticated unless not
 |---|---|---|---|
 | GET | `/healthz` | none | Liveness probe — `200 {"status":"ok"}`; no DB or FRM check |
 | POST | `/api/auth/setup` | none (only when no users exist) | Create first admin account |
-| POST | `/api/auth/login` | none | Login, sets session cookie |
+| POST | `/api/auth/login` | none | Login, sets session cookie (rejects users with NULL `password_hash`) |
+| GET | `/api/auth/config` | none | `{ "discordOAuthEnabled": bool }` — true when OAuth env configured |
+| GET | `/api/auth/discord` | none | Start Discord OAuth (default `purpose=login`; optional `state` from prior server-side create) |
+| GET | `/api/auth/discord/callback` | none | OAuth callback — sets session (login/link) or redirects to `/register/complete` |
+| POST | `/api/auth/register/complete` | none | `{ token, username, pendingPlayerName }` — finish Discord registration after OAuth |
+| GET | `/api/account/discord/link` | session, active | Start logged-in OAuth link flow |
 | GET | `/api/invites/:token` | none | Validate invite; return `{ role, expiresAt, status }` if pending |
 | POST | `/api/invites/:token/accept` | none | `{ username, password }` — create account, mark invite accepted, set session cookie |
 | POST | `/api/auth/logout` | session | Clear session |
@@ -1139,7 +1161,8 @@ Category keys match `message_types.category` groupings (§9.3 in discord-bot-pla
 | Route | Access | Purpose | Key Components |
 |---|---|---|---|
 | `/setup` | public, only if no users exist | First-run: create initial admin account | Form (username, password, confirm) |
-| `/login` | public | Login | Form (username, password) |
+| `/login` | public | Login | Form (username/password); **Continue with Discord** when OAuth configured |
+| `/register/complete` | public | Finish Discord OAuth registration (username + in-game name) | Form |
 | `/invite/:token` | public | Accept invite — set username/password, preset role from invite | Form (username, password, confirm) |
 | `/` (Dashboard Overview) | viewer, admin | At-a-glance status from `GET /api/status` (server badge, players, fuse warnings, latest milestone, elevator progress) | Status cards, badge, progress bar |
 | `/players` | viewer, admin | Full player roster (online/offline), last-seen timestamps, join/leave history timeline | Table, timeline list |
@@ -1161,7 +1184,7 @@ Category keys match `message_types.category` groupings (§9.3 in discord-bot-pla
 | `/settings/discord` | admin only | Bot status, invite URL, guild ID, role mapping editor, auto-approve toggle | Form, table, badges |
 | `/settings/connection` | admin only | Game join details + SMM profile name | Form |
 | `/settings/users` | admin only | User management: Discord-first onboarding copy, break-glass invites, pending approval queue, unmapped players panel, external identity columns, promote to admin, optional player mapping, edit/delete | Data table, dialog forms |
-| `/account` | viewer, admin | Change own password | Form |
+| `/account` | viewer, admin | Change own password (when set); **Link Discord** when OAuth configured | Form, button |
 | `/account/notifications` | viewer, admin (active users) | Per-user DM category toggles and personal player-event toggle | Form, switches |
 
 Navigation: a persistent sidebar (shadcn `Sidebar` pattern) with the dashboard pages always visible to both roles, and a "Settings" section only rendered/routable for admins.
@@ -1250,6 +1273,10 @@ Verifier checks for M11 edge cases — concrete acceptance beyond "renders real 
 | `FRM_HOST` | `""` | Initial FRM host; seeded into `app_settings.frm_host` on first boot (editable via UI) |
 | `FRM_PORT` | `8080` | Initial FRM port; seeded into `app_settings.frm_port` |
 | `NEXT_PUBLIC_API_URL` | `http://localhost:8080` | Frontend dev: direct backend URL. Production: omit (same-origin `/api` proxy) |
+| `DISCORD_BOT_TOKEN` | `""` | Discord bot gateway token (slash commands, channel posts, DMs) |
+| `DISCORD_CLIENT_SECRET` | `""` | Discord OAuth client secret (same application as bot). Required with `FACTORYMATE_PUBLIC_URL` for SSO |
+| `FACTORYMATE_PUBLIC_URL` | `""` | Public dashboard base URL (OAuth redirect `{url}/api/auth/discord/callback`, bot copy). Required for SSO |
+| `DISCORD_GUILD_ID` | `""` | Optional env fallback for guild ID (prefer Settings → Discord) |
 
 **Startup behavior:** If `SESSION_SECRET` is unset, the backend exits with a clear error. If `FRM_HOST` is unset, seed `app_settings` with empty `frm_host` — poller logs errors until configured via `/settings/general`.
 

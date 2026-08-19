@@ -2,15 +2,12 @@ package discord
 
 import (
 	"context"
-	"crypto/rand"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"strconv"
 	"strings"
 
 	"factorymate/internal/auth"
-	"factorymate/internal/notify"
 	"factorymate/internal/registration"
 
 	"github.com/bwmarrin/discordgo"
@@ -227,46 +224,31 @@ func (b *Bot) handlePasswordResetCommand(ctx context.Context, s *discordgo.Sessi
 		return
 	}
 
-	tempPassword, err := generateTempPassword()
+	hasPassword, err := auth.NewService(b.db).HasPassword(ctx, fmUser.ID)
 	if err != nil {
-		respondEphemeral(ctx, s, i, "Could not generate temporary password.")
-		_ = LogBotCommand(ctx, b.db, externalID, "password-reset", false, err.Error())
+		respondEphemeral(ctx, s, i, "Something went wrong.")
 		return
 	}
 
-	authSvc := auth.NewService(b.db)
-	if err := authSvc.UpdatePassword(ctx, fmUser.ID, tempPassword); err != nil {
-		respondEphemeral(ctx, s, i, "Could not update password.")
-		_ = LogBotCommand(ctx, b.db, externalID, "password-reset", false, err.Error())
+	settingsURL := dashboardURL("/settings/users")
+	if !hasPassword {
+		msg := fmt.Sprintf(
+			"**%s** signs in with Discord only (no dashboard password). They can use **Continue with Discord** on the login page.",
+			fmUser.Username,
+		)
+		respondEphemeral(ctx, s, i, msg)
+		_ = LogBotCommand(ctx, b.db, externalID, "password-reset", true, "discord-only")
 		return
 	}
 
-	if b.Session() == nil {
-		respondEphemeral(ctx, s, i, "Discord bot is not connected — password updated but DM failed.")
-		_ = LogBotCommand(ctx, b.db, externalID, "password-reset", false, "bot offline")
-		return
-	}
-
-	loginURL := dashboardURL("/login")
-	dmText := fmt.Sprintf(
-		"Your FactoryMate password was reset by an admin.\n\nTemporary password: **%s**",
-		tempPassword,
+	msg := fmt.Sprintf(
+		"Reset **%s**'s password in the dashboard: Settings → Users → edit user → set password.",
+		fmUser.Username,
 	)
-	if loginURL != "" {
-		dmText += fmt.Sprintf("\nSign in: %s", loginURL)
+	if settingsURL != "" {
+		msg += fmt.Sprintf("\n%s", settingsURL)
 	}
-	dmText += "\n\nChange your password after logging in."
-	provider := notify.NewDiscordProvider(b.Session())
-	if err := provider.SendDirect(ctx, registration.PlatformDiscord, target.ID, notify.RenderedMessage{Plain: dmText}); err != nil {
-		respondEphemeral(ctx, s, i, fmt.Sprintf(
-			"Password updated but the DM failed. Share this temporary password with <@%s> securely: **%s**",
-			target.ID, tempPassword,
-		))
-		_ = LogBotCommand(ctx, b.db, externalID, "password-reset", false, "dm failed")
-		return
-	}
-
-	respondEphemeral(ctx, s, i, fmt.Sprintf("Temporary password sent to <@%s> via DM.", target.ID))
+	respondEphemeral(ctx, s, i, msg)
 	_ = LogBotCommand(ctx, b.db, externalID, "password-reset", true, fmUser.Username)
 }
 
@@ -304,12 +286,4 @@ func optionUserValue(opts []*discordgo.ApplicationCommandInteractionDataOption, 
 		}
 	}
 	return nil
-}
-
-func generateTempPassword() (string, error) {
-	buf := make([]byte, 12)
-	if _, err := rand.Read(buf); err != nil {
-		return "", err
-	}
-	return hex.EncodeToString(buf), nil
 }

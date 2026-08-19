@@ -35,15 +35,33 @@ func (b *Bot) registerSlashCommands(ctx context.Context) error {
 	return nil
 }
 
+// RegisterSlashCommands registers guild slash commands for the effective guild ID.
+func (b *Bot) RegisterSlashCommands(ctx context.Context) error {
+	return b.registerSlashCommands(ctx)
+}
+
+// ClearSlashCommands removes all slash commands from a guild.
+func (b *Bot) ClearSlashCommands(ctx context.Context, guildID string) error {
+	session := b.Session()
+	if session == nil || guildID == "" {
+		return nil
+	}
+	_, err := session.ApplicationCommandBulkOverwrite(session.State.User.ID, guildID, []*discordgo.ApplicationCommand{}, discordgo.WithContext(ctx))
+	if err != nil {
+		return fmt.Errorf("clear slash commands for guild %s: %w", guildID, err)
+	}
+	return nil
+}
+
 func slashCommands() []*discordgo.ApplicationCommand {
 	return []*discordgo.ApplicationCommand{
 		{
 			Name:        "register",
-			Description: "Create your FactoryMate dashboard account",
+			Description: "Get a dashboard link to finish registration (Discord login, no password)",
 		},
 		{
 			Name:        "register-user",
-			Description: "Invite a Discord user to complete registration (admin)",
+			Description: "DM a user an OAuth link to register (admin)",
 			Options: []*discordgo.ApplicationCommandOption{
 				{
 					Type:        discordgo.ApplicationCommandOptionUser,
@@ -54,12 +72,8 @@ func slashCommands() []*discordgo.ApplicationCommand {
 			},
 		},
 		{
-			Name:        "link",
-			Description: "Attach Discord to an existing FactoryMate web account",
-		},
-		{
 			Name:        "set-player",
-			Description: "Update your in-game player name mapping",
+			Description: "Set or update your in-game player name",
 			Options: []*discordgo.ApplicationCommandOption{
 				{
 					Type:        discordgo.ApplicationCommandOptionString,
@@ -75,7 +89,7 @@ func slashCommands() []*discordgo.ApplicationCommand {
 		},
 		{
 			Name:        "whoami",
-			Description: "Show your FactoryMate link status",
+			Description: "Show your FactoryMate account and link status",
 		},
 		{
 			Name:        "connection",
@@ -123,7 +137,7 @@ func slashCommands() []*discordgo.ApplicationCommand {
 		},
 		{
 			Name:        "help",
-			Description: "FactoryMate quick start and command list",
+			Description: "Quick start guide and command list",
 		},
 		{
 			Name:        "registration",
@@ -192,12 +206,12 @@ func slashCommands() []*discordgo.ApplicationCommand {
 		},
 		{
 			Name:        "password-reset",
-			Description: "Reset a user's dashboard password and DM a temporary password (admin)",
+			Description: "How to reset a user's dashboard password (admin — use web Settings → Users)",
 			Options: []*discordgo.ApplicationCommandOption{
 				{
 					Type:        discordgo.ApplicationCommandOptionUser,
 					Name:        "user",
-					Description: "Discord user",
+					Description: "Discord user (for lookup only)",
 					Required:    true,
 				},
 			},

@@ -17,7 +17,7 @@ Admins can run **`/register user:@someone`** to invite a specific person. The bo
 
 ### Linking an existing account
 
-If someone already has a web-only account, they run **`/link`** in Discord to attach their Discord identity.
+If someone already has a web-only account (setup admin or break-glass invite), they link Discord from **Account → Link Discord** on the dashboard after signing in with their password.
 
 ## Web invite links (break-glass)
 
@@ -27,7 +27,7 @@ Admins can create single-use invite links (7-day expiry) for recovery when Disco
 
 1. Create invite → copy URL.
 2. User visits `/invite/:token` → sets username and password.
-3. User should **`/link`** Discord afterward if possible.
+3. User should link Discord from **Account** on the web afterward if possible.
 
 Do not use web invites as the normal onboarding path.
 
@@ -63,7 +63,7 @@ When a matching player joins the FRM player list, FactoryMate auto-links `player
 
 ### Unlink Discord
 
-Admins can unlink a user's Discord identity from the user table or via **`/unlink @user`**. The FactoryMate account remains; the user can **`/link`** again.
+Admins can unlink a user's Discord identity from the user table or via **`/unlink @user`**. The FactoryMate account remains; the user can link again from **Account → Link Discord**.
 
 ## Registration approval
 

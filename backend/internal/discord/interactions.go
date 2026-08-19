@@ -10,19 +10,16 @@ import (
 	"time"
 
 	"factorymate/internal/auth"
+	"factorymate/internal/notify"
 	"factorymate/internal/registration"
 
 	"github.com/bwmarrin/discordgo"
 )
 
 const (
-	modalRegister      = "modal_register"
-	modalRegisterAdmin = "modal_register_admin:"
-	modalLink          = "modal_link"
-	modalRejectReason  = "modal_reject:"
-	btnCompleteReg     = "btn_complete_reg:"
-	btnRegApprove      = "btn_reg_approve:"
-	btnRegReject       = "btn_reg_reject:"
+	modalRejectReason = "modal_reject:"
+	btnRegApprove     = "btn_reg_approve:"
+	btnRegReject      = "btn_reg_reject:"
 )
 
 type deferredInteractionKey struct{}
@@ -77,11 +74,8 @@ func (b *Bot) handleInteraction(s *discordgo.Session, i *discordgo.InteractionCr
 func (b *Bot) handleApplicationCommand(ctx context.Context, s *discordgo.Session, i *discordgo.InteractionCreate) {
 	data := i.ApplicationCommandData()
 	cmdName := data.Name
-	modalFirst := cmdName == "register" || cmdName == "link"
-	if !modalFirst {
-		if deferEphemeral(s, i) {
-			ctx = withDeferred(ctx)
-		}
+	if deferEphemeral(s, i) {
+		ctx = withDeferred(ctx)
 	}
 
 	externalID := interactionUserID(i)
@@ -119,8 +113,7 @@ func (b *Bot) handleApplicationCommand(ctx context.Context, s *discordgo.Session
 			_ = LogBotCommand(ctx, b.db, externalID, "register", false, "already registered")
 			return
 		}
-		showRegisterModal(s, i, modalRegister, "FactoryMate registration")
-		_ = LogBotCommand(ctx, b.db, externalID, "register", true, "modal opened")
+		b.handleRegisterOAuth(ctx, s, i, externalID, interactionMember(i), false)
 	case "register-user":
 		if !CanRunAdminCommand(perms, state, user) {
 			b.logAndDeny(ctx, s, i, externalID, "register-user", "forbidden")
@@ -137,25 +130,13 @@ func (b *Bot) handleApplicationCommand(ctx context.Context, s *discordgo.Session
 			return
 		}
 		b.handleRegisterUser(ctx, s, i, target)
-	case "link":
-		if !CanRunCommand(perms, CommandGroupRegister, state) {
-			b.logAndDeny(ctx, s, i, externalID, "link", "forbidden")
-			return
-		}
-		if state != LinkStateUnregistered {
-			respondEphemeral(ctx, s, i, "Your Discord is already linked. Use /whoami to check your status.")
-			_ = LogBotCommand(ctx, b.db, externalID, "link", false, "already linked")
-			return
-		}
-		showLinkModal(s, i)
-		_ = LogBotCommand(ctx, b.db, externalID, "link", true, "modal opened")
 	case "set-player":
 		if !CanRunCommand(perms, CommandGroupPlayer, state) {
 			b.logAndDeny(ctx, s, i, externalID, "set-player", "forbidden")
 			return
 		}
 		if user == nil {
-			respondEphemeral(ctx, s, i, "You must be registered first. Use /register or /link.")
+			respondEphemeral(ctx, s, i, "You must be registered first. Use /register.")
 			return
 		}
 		name := ""
@@ -171,7 +152,7 @@ func (b *Bot) handleApplicationCommand(ctx context.Context, s *discordgo.Session
 			return
 		}
 		if user == nil {
-			respondEphemeral(ctx, s, i, "You must be registered first. Use /register or /link.")
+			respondEphemeral(ctx, s, i, "You must be registered first. Use /register.")
 			return
 		}
 		b.handleClearPlayer(ctx, s, i, externalID, user.ID)
@@ -261,7 +242,7 @@ func (b *Bot) handleWhoami(ctx context.Context, s *discordgo.Session, i *discord
 	var lines []string
 	switch state {
 	case LinkStateUnregistered:
-		lines = []string{"Status: **not registered**", "Use /register to create an account or /link for an existing web account."}
+		lines = []string{"Status: **not registered**", "Use /register to get a dashboard link and finish registration."}
 	case LinkStatePendingApproval:
 		lines = []string{"Status: **pending approval**", "An admin must approve your registration before you can log in."}
 	case LinkStateActiveNotLinked:
@@ -284,6 +265,41 @@ func (b *Bot) handleWhoami(ctx context.Context, s *discordgo.Session, i *discord
 	_ = LogBotCommand(ctx, b.db, externalID, "whoami", true, "")
 }
 
+func (b *Bot) handleRegisterOAuth(ctx context.Context, s *discordgo.Session, i *discordgo.InteractionCreate, externalID string, member *discordgo.Member, forceApprove bool) {
+	authSvc := auth.NewService(b.db)
+	role, err := FMRoleForMember(ctx, b.db, memberRoleIDsFromMember(member))
+	if err != nil {
+		respondEphemeral(ctx, s, i, "Something went wrong.")
+		_ = LogBotCommand(ctx, b.db, externalID, "register", false, err.Error())
+		return
+	}
+
+	ext := externalFromMember(member, externalID)
+	oauthURL, err := buildRegisterOAuthURL(ctx, authSvc, auth.OAuthStateMeta{
+		ExternalUserID:      ext.UserID,
+		ExternalUsername:    ext.Username,
+		ExternalDisplayName: ext.DisplayName,
+		ForceApprove:        forceApprove,
+		Role:                role,
+	})
+	if err != nil {
+		respondEphemeral(ctx, s, i, formatRegisterOAuthMessage(""))
+		_ = LogBotCommand(ctx, b.db, externalID, "register", false, err.Error())
+		return
+	}
+
+	dmText := formatRegisterOAuthMessage(oauthURL)
+	provider := notify.NewDiscordProvider(s)
+	if err := provider.SendDirect(ctx, registration.PlatformDiscord, externalID, notify.RenderedMessage{Plain: dmText}); err != nil {
+		respondEphemeral(ctx, s, i, dmText+"\n\n(Could not DM you — DMs may be disabled.)")
+		_ = LogBotCommand(ctx, b.db, externalID, "register", true, "ephemeral fallback")
+		return
+	}
+
+	respondEphemeral(ctx, s, i, "Check your DMs for the registration link.")
+	_ = LogBotCommand(ctx, b.db, externalID, "register", true, "oauth dm sent")
+}
+
 func (b *Bot) handleRegisterUser(ctx context.Context, s *discordgo.Session, i *discordgo.InteractionCreate, target *discordgo.User) {
 	if target == nil {
 		respondEphemeral(ctx, s, i, "Could not resolve target user.")
@@ -304,34 +320,33 @@ func (b *Bot) handleRegisterUser(ctx context.Context, s *discordgo.Session, i *d
 		return
 	}
 
-	dmChannel, err := s.UserChannelCreate(target.ID)
+	authSvc := auth.NewService(b.db)
+	role, err := FMRoleForMember(ctx, b.db, []string{})
 	if err != nil {
+		role = auth.RoleViewer
+	}
+	oauthURL, err := buildRegisterOAuthURL(ctx, authSvc, auth.OAuthStateMeta{
+		ExternalUserID:      target.ID,
+		ExternalUsername:    target.Username,
+		ExternalDisplayName: target.Username,
+		ForceApprove:        true,
+		Role:                role,
+	})
+	if err != nil {
+		respondEphemeral(ctx, s, i, "Discord sign-in is not configured on this server.")
+		_ = LogBotCommand(ctx, b.db, interactionUserID(i), "register-user", false, err.Error())
+		return
+	}
+
+	dmText := "An admin invited you to join FactoryMate.\n\n" + formatRegisterOAuthMessage(oauthURL)
+	provider := notify.NewDiscordProvider(s)
+	if err := provider.SendDirect(ctx, registration.PlatformDiscord, target.ID, notify.RenderedMessage{Plain: dmText}); err != nil {
 		respondEphemeral(ctx, s, i, "Could not DM the user. They may have DMs disabled.")
 		_ = LogBotCommand(ctx, b.db, interactionUserID(i), "register-user", false, "dm failed")
 		return
 	}
 
-	_, err = s.ChannelMessageSendComplex(dmChannel.ID, &discordgo.MessageSend{
-		Content: "An admin invited you to join FactoryMate. Tap **Complete Registration** to continue.",
-		Components: []discordgo.MessageComponent{
-			discordgo.ActionsRow{
-				Components: []discordgo.MessageComponent{
-					discordgo.Button{
-						Label:    "Complete Registration",
-						Style:    discordgo.PrimaryButton,
-						CustomID: btnCompleteReg + target.ID,
-					},
-				},
-			},
-		},
-	})
-	if err != nil {
-		respondEphemeral(ctx, s, i, "Could not send invitation DM.")
-		_ = LogBotCommand(ctx, b.db, interactionUserID(i), "register-user", false, "dm send failed")
-		return
-	}
-
-	respondEphemeral(ctx, s, i, fmt.Sprintf("Invitation sent to <@%s>.", target.ID))
+	respondEphemeral(ctx, s, i, fmt.Sprintf("Registration link sent to <@%s>.", target.ID))
 	_ = LogBotCommand(ctx, b.db, interactionUserID(i), "register-user", true, target.ID)
 }
 
@@ -377,13 +392,8 @@ func (b *Bot) handleModalSubmit(ctx context.Context, s *discordgo.Session, i *di
 	}
 	customID := i.ModalSubmitData().CustomID
 	externalID := interactionUserID(i)
-	member := interactionMember(i)
 
 	switch {
-	case customID == modalRegister || strings.HasPrefix(customID, modalRegisterAdmin):
-		b.submitRegisterModal(ctx, s, i, customID, externalID, member)
-	case customID == modalLink:
-		b.submitLinkModal(ctx, s, i, externalID, member)
 	case strings.HasPrefix(customID, modalRejectReason):
 		b.submitRejectModal(ctx, s, i, customID, externalID)
 	default:
@@ -391,110 +401,17 @@ func (b *Bot) handleModalSubmit(ctx context.Context, s *discordgo.Session, i *di
 	}
 }
 
-func (b *Bot) submitRegisterModal(ctx context.Context, s *discordgo.Session, i *discordgo.InteractionCreate, customID, externalID string, member *discordgo.Member) {
-	values := modalValues(i)
-	password := values["password"]
-	playerName := values["player_name"]
-	forceApprove := strings.HasPrefix(customID, modalRegisterAdmin)
-
-	if password == "" || playerName == "" {
-		respondEphemeral(ctx, s, i, "All fields are required.")
-		return
-	}
-
-	username := registration.DeriveUsername(memberDisplayName(member), memberDisplay(member))
-
-	role, err := FMRoleForMember(ctx, b.db, memberRoleIDsFromMember(member))
-	if err != nil {
-		respondEphemeral(ctx, s, i, "Something went wrong.")
-		return
-	}
-
-	ext := externalFromMember(member, externalID)
-	result, err := b.registration.Register(ctx, registration.RegisterParams{
-		Username:          username,
-		Password:          password,
-		PendingPlayerName: playerName,
-		External:          ext,
-		Role:              role,
-		ForceApprove:      forceApprove,
-	})
-	if err != nil {
-		msg := "Registration failed."
-		switch {
-		case errors.Is(err, registration.ErrAlreadyRegistered):
-			msg = "You are already registered."
-		case errors.Is(err, auth.ErrWeakPassword):
-			msg = err.Error()
-		}
-		respondEphemeral(ctx, s, i, msg)
-		_ = LogBotCommand(ctx, b.db, externalID, "register", false, err.Error())
-		return
-	}
-
-	if result.PendingApproval {
-		respondEphemeral(ctx, s, i, formatRegistrationPendingMessage(playerName))
-		if err := b.notifyAdminsPending(ctx, s, result.User, playerName, member); err != nil {
-			log.Printf("discord bot: notify admins: %v", err)
-		}
-		_ = LogBotCommand(ctx, b.db, externalID, "register", true, "pending_approval")
-		return
-	}
-
-	playerLine := playerDisplayLine(result.User.PlayerName, playerName, result.PlayerLinked)
-	respondEphemeral(ctx, s, i, formatRegistrationApprovedMessage(result.User.Username, string(result.User.Role), playerLine))
-	b.SendWelcomeDM(ctx, externalID, result.User.Username)
-	_ = LogBotCommand(ctx, b.db, externalID, "register", true, "active")
-}
-
-func (b *Bot) submitLinkModal(ctx context.Context, s *discordgo.Session, i *discordgo.InteractionCreate, externalID string, member *discordgo.Member) {
-	values := modalValues(i)
-	username := values["fm_username"]
-	password := values["password"]
-	if username == "" || password == "" {
-		respondEphemeral(ctx, s, i, "Username and password are required.")
-		return
-	}
-
-	ext := externalFromMember(member, externalID)
-	linked, err := b.registration.LinkAccount(ctx, username, password, ext)
-	if err != nil {
-		msg := "Link failed. Check your credentials."
-		switch {
-		case errors.Is(err, auth.ErrInvalidCredentials):
-			msg = "Invalid username or password."
-		case errors.Is(err, auth.ErrPendingApproval):
-			msg = "That account is pending approval."
-		case errors.Is(err, registration.ErrAlreadyRegistered):
-			msg = "This Discord account or FM user is already linked."
-		}
-		respondEphemeral(ctx, s, i, msg)
-		_ = LogBotCommand(ctx, b.db, externalID, "link", false, err.Error())
-		return
-	}
-
-	respondEphemeral(ctx, s, i, fmt.Sprintf("✅ Linked to **%s**. Use /whoami to check your status.", linked.Username))
-	_ = LogBotCommand(ctx, b.db, externalID, "link", true, linked.Username)
-}
-
 func (b *Bot) handleMessageComponent(ctx context.Context, s *discordgo.Session, i *discordgo.InteractionCreate) {
 	customID := i.MessageComponentData().CustomID
 	externalID := interactionUserID(i)
 
-	if !strings.HasPrefix(customID, btnCompleteReg) && !strings.HasPrefix(customID, btnRegReject) {
+	if !strings.HasPrefix(customID, btnRegReject) {
 		if deferEphemeral(s, i) {
 			ctx = withDeferred(ctx)
 		}
 	}
 
 	switch {
-	case strings.HasPrefix(customID, btnCompleteReg):
-		targetID := strings.TrimPrefix(customID, btnCompleteReg)
-		if externalID != targetID {
-			respondEphemeral(ctx, s, i, "This invitation is not for you.")
-			return
-		}
-		showRegisterModal(s, i, modalRegisterAdmin+targetID, "Complete FactoryMate registration")
 	case strings.HasPrefix(customID, btnRegApprove):
 		b.handleApproveButton(ctx, s, i, customID, externalID)
 	case strings.HasPrefix(customID, btnRegReject):
@@ -705,42 +622,6 @@ func (b *Bot) linkState(ctx context.Context, externalID string) (LinkState, *aut
 func (b *Bot) logAndDeny(ctx context.Context, s *discordgo.Session, i *discordgo.InteractionCreate, externalID, command, detail string) {
 	respondEphemeral(ctx, s, i, "You don't have permission to run this command.")
 	_ = LogBotCommand(ctx, b.db, externalID, command, false, detail)
-}
-
-func showRegisterModal(s *discordgo.Session, i *discordgo.InteractionCreate, customID, title string) {
-	_ = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-		Type: discordgo.InteractionResponseModal,
-		Data: &discordgo.InteractionResponseData{
-			CustomID: customID,
-			Title:    title,
-			Components: []discordgo.MessageComponent{
-				discordgo.ActionsRow{Components: []discordgo.MessageComponent{discordgo.TextInput{
-					CustomID: "player_name", Label: "In-game player name", Style: discordgo.TextInputShort, Required: true, MaxLength: 64,
-				}}},
-				discordgo.ActionsRow{Components: []discordgo.MessageComponent{discordgo.TextInput{
-					CustomID: "password", Label: "Dashboard password", Style: discordgo.TextInputShort, Required: true, MinLength: 8,
-				}}},
-			},
-		},
-	})
-}
-
-func showLinkModal(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	_ = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-		Type: discordgo.InteractionResponseModal,
-		Data: &discordgo.InteractionResponseData{
-			CustomID: modalLink,
-			Title:    "Link FactoryMate account",
-			Components: []discordgo.MessageComponent{
-				discordgo.ActionsRow{Components: []discordgo.MessageComponent{discordgo.TextInput{
-					CustomID: "fm_username", Label: "FactoryMate username", Style: discordgo.TextInputShort, Required: true,
-				}}},
-				discordgo.ActionsRow{Components: []discordgo.MessageComponent{discordgo.TextInput{
-					CustomID: "password", Label: "Dashboard password", Style: discordgo.TextInputShort, Required: true,
-				}}},
-			},
-		},
-	})
 }
 
 func respondEphemeral(ctx context.Context, s *discordgo.Session, i *discordgo.InteractionCreate, content string) {

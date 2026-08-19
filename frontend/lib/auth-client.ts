@@ -53,3 +53,27 @@ export async function acceptInvite(
     body: JSON.stringify({ username, password }),
   })
 }
+
+export type AuthConfig = {
+  discordOAuthEnabled: boolean
+}
+
+export async function getAuthConfig(): Promise<AuthConfig> {
+  return apiFetch<AuthConfig>("/auth/config")
+}
+
+export type RegisterCompleteResult = {
+  user: User
+  pendingApproval: boolean
+}
+
+export async function completeRegistration(
+  token: string,
+  username: string,
+  pendingPlayerName: string
+): Promise<RegisterCompleteResult> {
+  return apiFetch<RegisterCompleteResult>("/auth/register/complete", {
+    method: "POST",
+    body: JSON.stringify({ token, username, pendingPlayerName }),
+  })
+}

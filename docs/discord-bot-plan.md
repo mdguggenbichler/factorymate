@@ -235,7 +235,7 @@ The webhook → bot refactor changes **transport only** for game-event notificat
 
 ## 6. Identity & Onboarding
 
-### 6.1 Registration flow (replaces admin-created web invites for normal users)
+### 6.1 Registration flow (M17 — Discord OAuth, no password modals)
 
 ```
 User runs /register in Discord
@@ -244,17 +244,22 @@ User runs /register in Discord
 Bot checks: guild member? allowed role? not already registered?
         │
         ▼
-Bot opens Modal (single interaction — Discord allows one modal submit per flow):
-  - "In-game username" (required)
-  - "Dashboard password" (required, ≥8 chars)
+Bot DMs OAuth URL (ephemeral fallback if DMs blocked)
+  purpose=register, state=SHA-256 nonce (10 min TTL, single-use)
+        │
+        ▼
+User authorizes Discord (identify scope only)
+        │
+        ▼
+Web form /register/complete: username + in-game player name (no password)
         │
         ▼
 Backend creates users row:
-  - username derived from Discord display name (deduplicated)
+  - username from web form (deduplicated)
+  - password_hash = NULL (Discord SSO login)
   - external_platform = 'discord', external_user_id, external_username
-  - pending_player_name = in-game name from modal (always saved)
-  - player_id set only if player_state match found; otherwise NULL (§7.2)
-  - role from Discord role mapping (default: viewer)
+  - pending_player_name = in-game name from form
+  - role from Discord role mapping snapshot in OAuth state
   - status = active OR pending_approval (§6.2)
         │
         ├─ auto_approve = true (default) ──▶ §6.1a
@@ -264,9 +269,9 @@ Backend creates users row:
 #### 6.1a Flow when approved immediately (`auto_approve = true`)
 
 ```
-Bot replies ephemeral: registration summary (player linked or pending)
+Bot replies ephemeral: "Check your DMs for the registration link"
+After web completion: user signs in with Continue with Discord on /login
 Bot DMs user: dashboard URL + "/connection" + "/mods" hints
-User can log in and use /connection, /mods immediately
 ```
 
 **Username derivation:** Prefer Discord `global_name` / `username`, sanitized (`[a-z0-9_-]`, max 32 chars) and deduplicated (`michael`, `michael-2`, `michael-3`, …). On collision: **auto-suffix only** — no extra modal field in v1 (§19 O5). Ephemeral confirmation shows the assigned FM username. Admin username rename is out of scope v1; suffix is permanent unless we add rename later.
@@ -295,11 +300,11 @@ See §6.1a — account `status = active` immediately.
 #### Flow when `auto_approve = false`
 
 ```
-User runs /register → modals (in-game name + password)
+User runs /register → OAuth DM → web form (username + in-game name)
         │
         ▼
 Backend creates users row with status = pending_approval
-  (password hash stored; login blocked; /connection blocked)
+  (password_hash NULL; login via Discord after approval)
         │
         ▼
 Bot replies ephemeral: "Registration submitted — waiting for admin approval"
@@ -355,8 +360,8 @@ Admin runs /register user:@michael
 Bot validates: target is guild member, not already registered/linked
         │
         ▼
-Bot DMs @michael: "An admin invited you — tap Complete Registration"
-  (button opens the same modals as self-/register: in-game name + password)
+Bot DMs @michael: OAuth registration link (same flow as self-/register)
+  force_approve = true in OAuth state
         │
         ▼
 Same backend path as §6.1 → always status = active (§6.2 bypass)
@@ -369,9 +374,9 @@ Admin gets ephemeral confirm; target gets welcome DM on completion
 
 **Permission:** Discord role in `admin` command group **or** FM `admin` role (if linked). Not available to viewers.
 
-### 6.4 Linking existing web-only accounts
+### 6.4 Linking existing web-only accounts (M17)
 
-`/link` command + modal (dashboard username + password) to attach external identity to an existing **active** account. One external account ↔ one FactoryMate user (enforced unique on `external_platform` + `external_user_id`). Does not apply to `pending_approval` rows — those must be approved/rejected first.
+**Account → Link Discord** on the dashboard (logged-in OAuth, `purpose=link`). Setup admin and break-glass invite users sign in with password first, then link. **`/link` slash command removed** — one OAuth path, no password collection in Discord.
 
 ---
 
@@ -1512,23 +1517,23 @@ Ephemeral reply; also use as slash-command description seed in discordgo registr
 🏭 FactoryMate — quick start
 
 **New here?**
-1. /register — create your dashboard account
+1. /register — get a DM to finish on the dashboard (Discord sign-in, no password)
 2. /mods export — download SMM profile → import in Satisfactory Mod Manager
-3. /connection — get server host, port, and password (sent to your DMs)
-4. Log in: https://factorymate.example.com
+3. /connection get — get server host, port, and password (sent to your DMs)
+4. Log in: https://factorymate.example.com/login
 
 **Already registered?**
-/connection — join details (DM)
+/connection get — join details (DM)
 /mods — full mod list
 /set-player — fix your in-game name mapping
-/whoami — check your link status
+/whoami — check your account status
 
-**Have a web account but new to Discord?**
-/link — attach Discord to your existing login
+**Have a web account (setup or invite)?**
+Link Discord from **Account** on the dashboard after signing in with your password.
 
 **Admins**
 /connection set — update join details (broadcasts to all players)
-/register user — invite someone to complete registration
+/register-user — DM someone a registration link
 /registration auto-approve — toggle approval gate
 
 Dashboard: https://factorymate.example.com

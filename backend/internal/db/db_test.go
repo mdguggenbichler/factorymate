@@ -168,6 +168,7 @@ func assertTables(t *testing.T, ctx context.Context, database *sql.DB) {
 		"message_types",
 		"notification_log",
 		"notification_targets",
+		"oauth_states",
 		"player_session_events",
 		"player_state",
 		"power_circuit_events",

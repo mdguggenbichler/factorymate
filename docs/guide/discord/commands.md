@@ -1,6 +1,6 @@
 # Slash commands
 
-FactoryMate registers slash commands in your Discord guild when the bot starts. Commands require the bot to be online and the user to meet permission and registration requirements.
+FactoryMate registers slash commands in your Discord guild when the bot starts **and** when an admin saves a new guild ID in **Settings → Discord** (no container restart required).
 
 ## Who can use what
 
@@ -9,7 +9,7 @@ FactoryMate registers slash commands in your Discord guild when the bot starts. 
 | Unregistered member | If role allows | No | No |
 | Pending approval | No | No | No |
 | Active, Discord linked | No (already registered) | Yes | If admin role |
-| Active, not linked | No | No | No — use `/link` |
+| Active, not linked | No | No | No — link Discord from **Account** on the web |
 
 ## Core commands (all users)
 
@@ -17,8 +17,7 @@ FactoryMate registers slash commands in your Discord guild when the bot starts. 
 | --- | --- | --- |
 | `/help` | Anyone | Command list, dashboard URL, onboarding hints |
 | `/whoami` | Anyone | Link status: FM username, role, mapped player, approval state |
-| `/register` | Member with register permission; not already linked | Self-serve account; prompts for in-game name and dashboard password |
-| `/link` | Discord user not yet linked; has existing FM account | Attach Discord to an existing web account |
+| `/register` | Member with register permission; not already linked | DM with OAuth link to finish registration on the web (Discord sign-in, no password) |
 | `/set-player <name>` | Active registered user | Update in-game player mapping |
 | `/clear-player` | Active registered user | Remove in-game player mapping |
 | `/connection get` | Active registered user | DM current game join details |
@@ -28,7 +27,7 @@ FactoryMate registers slash commands in your Discord guild when the bot starts. 
 
 | Command | Permission | Description |
 | --- | --- | --- |
-| `/register-user` | Admin | DM target user to complete registration (always auto-approved) |
+| `/register-user` | Admin | DM target user an OAuth registration link (always auto-approved) |
 | `/connection set` | Admin | Set join host/port/password; DMs all active linked players |
 | `/registration auto-approve` | Admin | Toggle auto-approve (`on` / `off`) |
 | `/registrations list` | Admin | Pending approval queue |
@@ -38,7 +37,7 @@ FactoryMate registers slash commands in your Discord guild when the bot starts. 
 | `/unlink @user` | Admin | Remove Discord link (keeps FM account) |
 | `/broadcast <message>` | Admin | DM all registered players |
 | `/sync-roles` | Admin | Re-apply Discord → FM role mapping |
-| `/password-reset @user` | Admin | Trigger password reset flow |
+| `/password-reset @user` | Admin | Points admin to web **Settings → Users** (no DM temp password) |
 | `/notifications` | Active registered user | View/toggle DM notification preferences by category |
 
 ## Registration flow
@@ -46,12 +45,13 @@ FactoryMate registers slash commands in your Discord guild when the bot starts. 
 Primary onboarding for new players:
 
 1. User runs `/register` in Discord.
-2. Bot opens a modal: in-game username (required) and dashboard password (required, minimum 8 characters).
-3. FactoryMate creates the account, links the Discord identity, and saves the in-game name.
-4. If auto-approve is on, the user can log in and use `/connection` and `/mods` immediately.
-5. If auto-approve is off, an admin must approve before access is granted.
+2. Bot DMs an OAuth link (or shows it ephemerally if DMs are blocked).
+3. User authorizes Discord (`identify` scope only).
+4. Web form at `/register/complete`: choose dashboard username and in-game player name — **no password**.
+5. If auto-approve is on, the user can sign in with **Continue with Discord** immediately.
+6. If auto-approve is off, an admin must approve before access is granted.
 
-Username is derived from the Discord display name with automatic deduplication (`alex`, `alex-2`, …).
+**Setup admin and break-glass invite users:** sign in with username/password, then **Account → Link Discord** (no `/link` slash command).
 
 ## Connection details
 
@@ -71,7 +71,8 @@ The same mod list is available on the web at `/mods`.
 
 | Problem | Check |
 | --- | --- |
-| Commands not visible | Bot invited with `applications.commands` scope; restart after guild ID change |
+| Commands not visible | Bot invited with `applications.commands` scope; save guild ID in Settings → Discord |
 | `/register` rejected | User may lack register role mapping; may already be linked |
+| OAuth link missing | Set `DISCORD_CLIENT_SECRET` and `FACTORYMATE_PUBLIC_URL`; add OAuth redirect in Developer Portal |
 | No DMs received | User must allow DMs from server members; bot needs **Create Private Channels** |
 | Bot appears offline | Verify `DISCORD_BOT_TOKEN`; check container logs |

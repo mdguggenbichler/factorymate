@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"strings"
 	"time"
 )
 
@@ -46,7 +47,8 @@ func (s *Service) CreateUser(ctx context.Context, username, password string, rol
 
 func (s *Service) Authenticate(ctx context.Context, username, password string) (User, error) {
 	var user User
-	var hash, status string
+	var hash sql.NullString
+	var status string
 	err := s.db.QueryRowContext(ctx, `
 		SELECT id, username, password_hash, role, status FROM users WHERE username = ?`,
 		username,
@@ -57,7 +59,10 @@ func (s *Service) Authenticate(ctx context.Context, username, password string) (
 	if err != nil {
 		return User{}, fmt.Errorf("query user: %w", err)
 	}
-	if !CheckPassword(hash, password) {
+	if !hash.Valid || strings.TrimSpace(hash.String) == "" {
+		return User{}, ErrInvalidCredentials
+	}
+	if !CheckPassword(hash.String, password) {
 		return User{}, ErrInvalidCredentials
 	}
 	user.Status = status
@@ -70,7 +75,8 @@ func (s *Service) Authenticate(ctx context.Context, username, password string) (
 // CheckCredentials validates username/password and returns the user even when pending approval.
 func (s *Service) CheckCredentials(ctx context.Context, username, password string) (User, error) {
 	var user User
-	var hash, status string
+	var hash sql.NullString
+	var status string
 	err := s.db.QueryRowContext(ctx, `
 		SELECT id, username, password_hash, role, status FROM users WHERE username = ?`,
 		username,
@@ -81,7 +87,10 @@ func (s *Service) CheckCredentials(ctx context.Context, username, password strin
 	if err != nil {
 		return User{}, fmt.Errorf("query user: %w", err)
 	}
-	if !CheckPassword(hash, password) {
+	if !hash.Valid || strings.TrimSpace(hash.String) == "" {
+		return User{}, ErrInvalidCredentials
+	}
+	if !CheckPassword(hash.String, password) {
 		return User{}, ErrInvalidCredentials
 	}
 	user.Status = status
@@ -180,6 +189,13 @@ func (s *Service) GetMeUser(ctx context.Context, id int64) (MeUser, error) {
 		me.RegistrationSource = &src
 	}
 	me.External = loadExternalFields(extPlatform, extUserID, extUsername, extDisplay, extLinked)
+
+	var passwordHash sql.NullString
+	if err := s.db.QueryRowContext(ctx, `SELECT password_hash FROM users WHERE id = ?`, id).Scan(&passwordHash); err != nil {
+		return MeUser{}, fmt.Errorf("query password_hash: %w", err)
+	}
+	me.HasPassword = passwordHash.Valid && strings.TrimSpace(passwordHash.String) != ""
+
 	return me, nil
 }
 
@@ -391,6 +407,18 @@ func (s *Service) DeleteUser(ctx context.Context, id int64) error {
 		return ErrUserNotFound
 	}
 	return nil
+}
+
+func (s *Service) HasPassword(ctx context.Context, userID int64) (bool, error) {
+	var hash sql.NullString
+	err := s.db.QueryRowContext(ctx, `SELECT password_hash FROM users WHERE id = ?`, userID).Scan(&hash)
+	if err == sql.ErrNoRows {
+		return false, ErrUserNotFound
+	}
+	if err != nil {
+		return false, fmt.Errorf("query password_hash: %w", err)
+	}
+	return hash.Valid && strings.TrimSpace(hash.String) != "", nil
 }
 
 func (s *Service) UpdatePassword(ctx context.Context, userID int64, newPassword string) error {

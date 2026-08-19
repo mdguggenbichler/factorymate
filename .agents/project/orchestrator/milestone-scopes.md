@@ -274,6 +274,54 @@ cd frontend && npm run lint && npm run build
 
 ---
 
+## M16 — Notifications polish & admin commands
+
+(See roadmap — verified.)
+
+---
+
+## M17 — Discord SSO & secure onboarding
+
+**READ:** spec §2.1, §3, §6, §7, §7.1, §7.2, §8, §8.1, §8.2, §9; `docs/discord-bot-plan.md` §6, command tables, Appendix G; plan `web_password_onboarding`; existing auth/registration/discord handlers.
+
+**WRITE:**
+
+```
+docs/factorymate-roadmap.md              # M17 section only (unchecked)
+docs/factorymate-spec.md
+docs/discord-bot-plan.md
+docs/guide/discord/commands.md
+docs/guide/managing/users.md
+docs/guide/first-run.md
+docs/guide/discord/configuration.md
+docs/development.md
+.env.example
+docker-compose.yml
+.agents/project/orchestrator/milestone-scopes.md   # this file — M17 block
+backend/internal/db/migrations/008_*.sql
+backend/internal/auth/**
+backend/internal/registration/**
+backend/internal/discord/**
+backend/internal/api/**
+backend/cmd/server/main.go
+frontend/app/(auth)/**
+frontend/app/(app)/account/**
+frontend/components/**
+frontend/lib/**
+frontend/messages/en.json
+```
+
+**Scoped CI:**
+
+```bash
+cd backend && go test ./... && go vet ./...
+cd frontend && npm run lint && npm run build
+```
+
+**Notes:** OAuth uses same Discord app as bot (`DISCORD_CLIENT_SECRET` + bot token app ID). `FACTORYMATE_PUBLIC_URL` required for redirect URI. Do not mark roadmap checkboxes `[x]` — verifier only.
+
+---
+
 ## M12 — Admin Settings Pages
 
 **READ:** spec §8, §8.1 (template editor gaps), §7.2, §8.2.

@@ -7,6 +7,10 @@ import (
 func (h *Handler) Mount(r chi.Router) {
 	r.Post("/auth/setup", h.Setup)
 	r.Post("/auth/login", h.Login)
+	r.Get("/auth/config", h.AuthConfig)
+	r.Get("/auth/discord", h.DiscordOAuthStart)
+	r.Get("/auth/discord/callback", h.DiscordOAuthCallback)
+	r.Post("/auth/register/complete", h.RegisterComplete)
 	r.Get("/invites/{token}", h.GetInvite)
 	r.Post("/invites/{token}/accept", h.AcceptInvite)
 
@@ -20,6 +24,7 @@ func (h *Handler) Mount(r chi.Router) {
 			r.Use(h.auth.RequireActiveUser(writeError))
 
 			r.Put("/account/password", h.ChangePassword)
+			r.Get("/account/discord/link", h.DiscordOAuthLink)
 			r.Get("/account/notifications", h.GetAccountNotifications)
 			r.Put("/account/notifications", h.PutAccountNotifications)
 

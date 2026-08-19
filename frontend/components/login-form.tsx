@@ -1,14 +1,15 @@
 "use client"
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { useEffect, useState } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import { useTranslations } from "next-intl"
 import { toast } from "sonner"
 
 import { cn } from "@/lib/utils"
+import { apiUrl } from "@/lib/api"
 import { ApiError } from "@/lib/api"
-import { login } from "@/lib/auth-client"
-import { Button } from "@/components/ui/button"
+import { getAuthConfig, login } from "@/lib/auth-client"
+import { Button, buttonVariants } from "@/components/ui/button"
 import {
   Card,
   CardContent,
@@ -29,9 +30,26 @@ export function LoginForm({
 }: React.ComponentProps<"div">) {
   const t = useTranslations("auth")
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [discordOAuthEnabled, setDiscordOAuthEnabled] = useState(false)
+
+  useEffect(() => {
+    getAuthConfig()
+      .then((config) => setDiscordOAuthEnabled(config.discordOAuthEnabled))
+      .catch(() => setDiscordOAuthEnabled(false))
+  }, [])
+
+  useEffect(() => {
+    const error = searchParams.get("error")
+    if (error === "not_registered") {
+      toast.error(t("discordLoginNotRegistered"))
+    } else if (error === "already_registered") {
+      toast.error(t("discordLoginAlreadyRegistered"))
+    }
+  }, [searchParams, t])
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -60,6 +78,8 @@ export function LoginForm({
     }
   }
 
+  const discordHref = apiUrl("/auth/discord")
+
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
       <Card>
@@ -68,6 +88,19 @@ export function LoginForm({
           <CardDescription>{t("loginDescription")}</CardDescription>
         </CardHeader>
         <CardContent>
+          {discordOAuthEnabled ? (
+            <div className="mb-6 flex flex-col gap-3">
+              <a
+                href={discordHref}
+                className={cn(buttonVariants({ variant: "outline" }), "w-full")}
+              >
+                {t("discordLoginButton")}
+              </a>
+              <p className="text-center text-sm text-muted-foreground">
+                {t("loginOrDivider")}
+              </p>
+            </div>
+          ) : null}
           <form onSubmit={handleSubmit}>
             <FieldGroup>
               <Field>

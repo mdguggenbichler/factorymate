@@ -123,6 +123,27 @@
       "description": "An admin must approve your registration before you can use the dashboard.",
       "hint": "You will receive a Discord DM when your account is approved. You can sign out below if needed.",
       "logout": "Sign out"
+    },
+    "discordLoginButton": "Continue with Discord",
+    "loginOrDivider": "or sign in with username and password",
+    "discordLoginNotRegistered": "No FactoryMate account is linked to that Discord user. Use /register in Discord first.",
+    "discordLoginAlreadyRegistered": "That Discord account is already registered. Try signing in.",
+    "discordLinkTitle": "Link Discord",
+    "discordLinkDescription": "Attach your Discord account to sign in with Continue with Discord.",
+    "discordLinkButton": "Link Discord",
+    "discordLinkedDescription": "Your Discord account is linked to this dashboard login.",
+    "discordLinkedAs": "Linked as {name}",
+    "discordAlreadyLinked": "Discord is already linked to this account.",
+    "registerComplete": {
+      "title": "Complete registration",
+      "description": "Choose your dashboard username and in-game player name. No password — sign in with Discord.",
+      "playerName": "In-game player name",
+      "playerNamePlaceholder": "Your Satisfactory character name",
+      "submit": "Create account",
+      "missingToken": "This registration link is invalid or expired. Run /register in Discord again.",
+      "success": "Registration complete.",
+      "pendingSubmitted": "Registration submitted — waiting for admin approval.",
+      "alreadyRegistered": "That Discord account is already registered."
     }
   },
   "invite": {

@@ -57,7 +57,7 @@ Go to **Settings → Notifications → Templates**.
 
 ## 6. Onboard players
 
-Ask new group members to run **`/register`** in your Discord server. This is the primary onboarding path.
+Ask new group members to run **`/register`** in your Discord server. They finish on the web via Discord sign-in (no password). After **`/setup`**, the first admin should open **Account → Link Discord** while logged in.
 
 Optional break-glass recovery: **Settings → Users → Advanced** — create a single-use web invite link if someone cannot use Discord.
 
@@ -77,7 +77,7 @@ Manual checks:
 
 - Dashboard loads with live FRM data.
 - **Send test** on a notification template delivers an embed to your Discord channel.
-- A test player can `/register` and log in to the dashboard.
+- A test player can `/register`, complete the web form, and sign in with **Continue with Discord**.
 - `docker compose restart` — settings and history persist in `./data`.
 
 After first run, see [Managing settings](managing/settings.md) for day-to-day administration.

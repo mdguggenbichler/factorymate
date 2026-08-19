@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"strings"
 )
@@ -17,9 +18,23 @@ type ExternalFields struct {
 }
 
 // MeUser extends User with fields returned by GET /api/auth/me (O15).
-// Do not redeclare User fields here: shadowing breaks User.MarshalJSON flattening.
 type MeUser struct {
 	User
+	HasPassword bool `json:"hasPassword"`
+}
+
+// MarshalJSON includes flattened User fields plus hasPassword.
+func (m MeUser) MarshalJSON() ([]byte, error) {
+	data, err := json.Marshal(m.User)
+	if err != nil {
+		return nil, err
+	}
+	var obj map[string]any
+	if err := json.Unmarshal(data, &obj); err != nil {
+		return nil, err
+	}
+	obj["hasPassword"] = m.HasPassword
+	return json.Marshal(obj)
 }
 
 // ResolvedPlayerLink describes a user whose pending_player_name was auto-linked.

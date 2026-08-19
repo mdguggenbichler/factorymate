@@ -2,6 +2,7 @@ package auth
 
 import (
 	"errors"
+	"strings"
 	"unicode/utf8"
 
 	"golang.org/x/crypto/bcrypt"
@@ -33,5 +34,8 @@ func HashPassword(password string) (string, error) {
 }
 
 func CheckPassword(hash, password string) bool {
+	if strings.TrimSpace(hash) == "" {
+		return false
+	}
 	return bcrypt.CompareHashAndPassword([]byte(hash), []byte(password)) == nil
 }

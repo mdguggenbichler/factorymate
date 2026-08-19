@@ -135,12 +135,16 @@ func (s *Service) Register(ctx context.Context, params RegisterParams) (Register
 	if username == "" {
 		return RegisterResult{}, fmt.Errorf("username is required")
 	}
-	if err := auth.ValidatePassword(params.Password); err != nil {
-		return RegisterResult{}, err
-	}
 	ext := params.External
 	if ext.Platform != PlatformDiscord || strings.TrimSpace(ext.UserID) == "" {
 		return RegisterResult{}, ErrInvalidExternal
+	}
+
+	discordOnly := strings.TrimSpace(params.Password) == ""
+	if !discordOnly {
+		if err := auth.ValidatePassword(params.Password); err != nil {
+			return RegisterResult{}, err
+		}
 	}
 
 	existing, err := s.GetByExternal(ctx, ext.Platform, ext.UserID)
@@ -172,9 +176,13 @@ func (s *Service) Register(ctx context.Context, params RegisterParams) (Register
 		role = auth.RoleViewer
 	}
 
-	hash, err := auth.HashPassword(params.Password)
-	if err != nil {
-		return RegisterResult{}, err
+	var hash any
+	if !discordOnly {
+		hashed, err := auth.HashPassword(params.Password)
+		if err != nil {
+			return RegisterResult{}, err
+		}
+		hash = hashed
 	}
 
 	pendingName := strings.TrimSpace(params.PendingPlayerName)

@@ -22,6 +22,8 @@ Copy `.env.example` to `.env` at the repo root (or export vars in your shell).
 | `SATISFACTORY_NETWORK` | External Docker network shared with `satisfactory-server` (default `satisfactory-server_default`) |
 | `FACTORYMATE_PORT` | Host port mapping for the single compose service (default `3000`) |
 | `DISCORD_BOT_TOKEN` | Discord bot token (soft dependency — bot features disabled when unset) |
+| `DISCORD_CLIENT_SECRET` | Discord OAuth client secret (same application as the bot). With `FACTORYMATE_PUBLIC_URL`, enables **Continue with Discord** and `/register` OAuth completion |
+| `FACTORYMATE_PUBLIC_URL` | Public dashboard base URL — OAuth redirect `{url}/api/auth/discord/callback` and bot copy |
 | `DISCORD_GUILD_ID` | Bootstrap guild ID until set in Settings → Discord |
 | `DISCORD_ADMIN_ROLE_IDS` | Optional comma-separated admin role IDs before UI role mapping is configured |
 | `FACTORYMATE_PUBLIC_URL` | Public dashboard URL used in bot welcome/help copy |
@@ -32,14 +34,15 @@ See `docs/factorymate-spec.md` §9 for the full variable list.
 
 1. Create a Discord application in the [Developer Portal](https://discord.com/developers/applications).
 2. **Bot** tab → create bot → copy token → set `DISCORD_BOT_TOKEN` in `.env`.
-3. **OAuth2 → URL Generator** → scopes: `bot`, `applications.commands`; permissions: View Channels, Send Messages, Embed Links, Use Slash Commands, Send Messages in Threads, Create Private Channels (for DMs).
+3. **OAuth2** → copy **Client Secret** → set `DISCORD_CLIENT_SECRET` in `.env`. Add redirect URI: `{FACTORYMATE_PUBLIC_URL}/api/auth/discord/callback` (e.g. `https://factorymate.example.com/api/auth/discord/callback`).
+4. **OAuth2 → URL Generator** → scopes: `bot`, `applications.commands`; permissions: View Channels, Send Messages, Embed Links, Use Slash Commands, Send Messages in Threads, Create Private Channels (for DMs).
 4. Complete FactoryMate `/setup` (first admin) before or after adding the bot token.
 5. Open **Settings → Discord** in the dashboard → load invite URL → add bot to your guild.
 6. Set guild ID and role mappings; toggle auto-approve if manual registration approval is desired.
 7. **Settings → Notifications → Targets** → pick a channel (replaces legacy webhook URLs).
 8. Ask players to run `/register` in Discord (primary onboarding). Web invites under Settings → Users → break-glass section are for recovery only.
 
-Slash commands register per guild when the bot starts. Restart the backend after changing `DISCORD_GUILD_ID` or bot token.
+Slash commands register per guild when the bot starts and when an admin saves a guild ID in **Settings → Discord**. Set `FACTORYMATE_PUBLIC_URL` before testing OAuth flows locally (e.g. `http://localhost:3000` with the dev proxy).
 
 ## Running locally
 
