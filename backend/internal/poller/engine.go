@@ -135,18 +135,37 @@ func (e *Engine) handleServerReachable(prev serverStateRow, serverName, inGameTi
 
 func (e *Engine) processPlayers(ctx context.Context, players []frm.Player, serverName string, now time.Time) ([]Event, error) {
 	onlineCount := countOnlinePlayers(players)
+	ambiguous := ambiguousPlayerNames(players)
 	var events []Event
 
 	for _, p := range players {
-		prev, err := loadPlayerState(ctx, e.DB, p.ID)
+		nameKey := normalizePlayerName(p.Name)
+		_, isAmbiguous := ambiguous[nameKey]
+
+		prev, err := loadPlayerStateDetailByID(ctx, e.DB, p.ID)
 		if err != nil {
 			return nil, err
+		}
+
+		if !prev.Exists && !isAmbiguous && nameKey != "" {
+			merged, err := reconcilePlayerIdentity(ctx, e.DB, p)
+			if err != nil {
+				return nil, err
+			}
+			if merged.Exists {
+				prev = merged
+			}
 		}
 
 		var lastSeen *string
 		if !prev.Exists {
 			if err := upsertPlayerState(ctx, e.DB, p, nil, now); err != nil {
 				return nil, err
+			}
+			if !isAmbiguous && nameKey != "" {
+				if err := deletePlayerRowsByNameExcept(ctx, e.DB, p.Name, p.ID); err != nil {
+					return nil, err
+				}
 			}
 			continue // First Observation
 		}
@@ -181,6 +200,11 @@ func (e *Engine) processPlayers(ctx context.Context, players []frm.Player, serve
 
 		if err := upsertPlayerState(ctx, e.DB, p, lastSeen, now); err != nil {
 			return nil, err
+		}
+		if !isAmbiguous && nameKey != "" {
+			if err := deletePlayerRowsByNameExcept(ctx, e.DB, p.Name, p.ID); err != nil {
+				return nil, err
+			}
 		}
 	}
 	return events, nil

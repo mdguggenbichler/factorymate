@@ -41,6 +41,9 @@ func main() {
 	if err := db.Init(ctx, database, db.SeedConfigFromEnv()); err != nil {
 		log.Fatalf("database init: %v", err)
 	}
+	if err := poller.DedupePlayerStateByName(ctx, database); err != nil {
+		log.Fatalf("dedupe player_state: %v", err)
+	}
 
 	phases, err := poller.LoadElevatorPhases(poller.DefaultElevatorPhasesPath())
 	if err != nil {

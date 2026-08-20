@@ -633,6 +633,8 @@ Poll upsert rules: `updated_at` on every successful upsert for state tables. Exc
 | `getPlayer` | `Name` | `player_state.name` |
 | `getPlayer` | `Online` | `player_state.online` |
 | `getPlayer` | (on leave) | `player_state.last_seen_at` ← poll timestamp when `Online` `true → false` |
+
+**Player identity reconciliation:** FactoryMate maintains one `player_state` row per in-game display name when that name appears at most once in the current `getPlayer` payload. If FRM returns a new `ID` for an existing name (character recreation / save migration), the poller migrates the canonical row to the new `ID`, relinks any `users.player_id` references, and deletes other same-name rows. If two or more entries share the same name in one poll, reconciliation is skipped for that name and rows remain ID-keyed (ambiguous case). Renames with a stable `ID` update `player_state.name` on the existing row. `player_session_events` are append-only; historical `player_id` values are not rewritten.
 | `getPower` | `CircuitGroupID` | `circuit_state.circuit_id` |
 | `getPower` | `FuseTriggered` | `circuit_state.tripped` |
 | `getPower` | `PowerProduction` … `BatteryTimeFull` | matching `circuit_state.*` columns (see §3) |
@@ -739,6 +741,8 @@ FactoryMate ships this table as a maintained data file (not hardcoded inline), m
 **Self-correcting verification, not exhaustive upfront verification:** Fully confirming this table against live API data for every phase would require playing through the entire game (Phase 5 alone requires tens of thousands of several parts), which is impractical purely for spec verification. Instead, whenever a poll's `CurrentPhase` set doesn't match any table entry, the raw unmatched set (item names + ClassNames as returned by FRM) is written to `elevator_phase_unknown_log` (see §3) — a dedicated diagnostic table, not repurposed notification-send history — rather than being silently discarded. **Dedup rule:** insert a new row only when no unresolved row (`resolved = 0`) already exists with the same sorted ClassName set (compare JSON arrays of ClassNames); do not spam one row per failed poll. Entries are surfaced as an admin-visible alert on the `/elevator` page (see §8) and can be marked resolved once the reference table has been corrected.
 
 On unreachable state, only the `server_offline` transition is evaluated; player/power/schematic/elevator/research/train/vehicle state (i.e. every fast-poll table) is left untouched (not reset), so that when the server comes back, transitions are computed against the last known-good state rather than an empty one.
+
+On startup, `DedupePlayerStateByName` merges any legacy duplicate `player_state` rows that share a name (see §4.1.1 player identity reconciliation).
 
 **`server_state` updates:** On every fast poll, upsert `server_state` row `id=1`. Emit `server_online` when previous poll was unreachable and current is reachable; emit `server_offline` when previous was reachable and current is unreachable. First successful poll when `server_online` IS NULL follows the First Observation rule above (set `true`, do not emit `server_online`).
 
