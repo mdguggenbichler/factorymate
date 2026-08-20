@@ -1,0 +1,942 @@
+{
+  "Desc_CopperDust_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/CopperDust/UI/IconDesc_CopperDust_256",
+    "asset_name": "IconDesc_CopperDust_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/CopperDust/UI/IconDesc_CopperDust_256"
+  },
+  "Desc_OreCopper_C": {
+    "game_path": "/Game/FactoryGame/Resource/RawResources/Nodes/UI/IconDesc_copper_new_256",
+    "asset_name": "IconDesc_copper_new_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/RawResources/Nodes/UI/IconDesc_copper_new_256"
+  },
+  "Desc_Cement_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/Cement/UI/IconDesc_Concrete_256",
+    "asset_name": "IconDesc_Concrete_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/Cement/UI/IconDesc_Concrete_256"
+  },
+  "Desc_Silica_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/Silica/UI/IconDesc_Silica_256",
+    "asset_name": "IconDesc_Silica_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/Silica/UI/IconDesc_Silica_256"
+  },
+  "Desc_CandyCane_C": {
+    "game_path": "/Game/FactoryGame/Events/Christmas/Parts/UI/IconDesc_CanePart_256",
+    "asset_name": "IconDesc_CanePart_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Events/Christmas/Parts/UI/IconDesc_CanePart_256"
+  },
+  "Desc_IronScrew_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/IronScrew/UI/IconDesc_IronScrews_256",
+    "asset_name": "IconDesc_IronScrews_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/IronScrew/UI/IconDesc_IronScrews_256"
+  },
+  "Desc_ModularFrameFused_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/ModularFrameFused/UI/IconDesc_FusedModularFrame_256",
+    "asset_name": "IconDesc_FusedModularFrame_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/ModularFrameFused/UI/IconDesc_FusedModularFrame_256"
+  },
+  "Desc_Wood_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/GenericBiomass/UI/IconDesc_Wood_256",
+    "asset_name": "IconDesc_Wood_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/GenericBiomass/UI/IconDesc_Wood_256"
+  },
+  "Desc_PetroleumCoke_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/PetroleumCoke/UI/IconDesc_PetroleumCoke_256",
+    "asset_name": "IconDesc_PetroleumCoke_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/PetroleumCoke/UI/IconDesc_PetroleumCoke_256"
+  },
+  "Desc_PackagedBiofuel_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/Turbofuel/UI/IconDesc_LiquidBiofuel_256",
+    "asset_name": "IconDesc_LiquidBiofuel_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/Turbofuel/UI/IconDesc_LiquidBiofuel_256"
+  },
+  "Desc_Parachute_C": {
+    "game_path": "/Game/FactoryGame/Resource/Equipment/Beacon/UI/Parachute_256",
+    "asset_name": "Parachute_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Equipment/Beacon/UI/Parachute_256"
+  },
+  "Desc_OreIron_C": {
+    "game_path": "/Game/FactoryGame/Resource/RawResources/Nodes/UI/IconDesc_iron_new_256",
+    "asset_name": "IconDesc_iron_new_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/RawResources/Nodes/UI/IconDesc_iron_new_256"
+  },
+  "Desc_QuartzCrystal_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/QuartzCrystal/UI/IconDesc_QuartzResource_256",
+    "asset_name": "IconDesc_QuartzResource_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/QuartzCrystal/UI/IconDesc_QuartzResource_256"
+  },
+  "Desc_CompactedCoal_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/CompactedCoal/UI/IconDesc_CompactedCoal_256",
+    "asset_name": "IconDesc_CompactedCoal_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/CompactedCoal/UI/IconDesc_CompactedCoal_256"
+  },
+  "Desc_LiquidBiofuel_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/BioFuel/UI/IconDesc_LiquidBiofuel_Pipe_256",
+    "asset_name": "IconDesc_LiquidBiofuel_Pipe_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/BioFuel/UI/IconDesc_LiquidBiofuel_Pipe_256"
+  },
+  "Desc_PlutoniumWaste_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/NuclearWaste/UI/IconDesc_PlutoniumWaste_256",
+    "asset_name": "IconDesc_PlutoniumWaste_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/NuclearWaste/UI/IconDesc_PlutoniumWaste_256"
+  },
+  "Desc_AlienProtein_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/AlienProtein/UI/IconDesc_AlienProtein_256",
+    "asset_name": "IconDesc_AlienProtein_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/AlienProtein/UI/IconDesc_AlienProtein_256"
+  },
+  "Desc_CoolingSystem_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/CoolingSystem/UI/IconDesc_CoolingSystem_256",
+    "asset_name": "IconDesc_CoolingSystem_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/CoolingSystem/UI/IconDesc_CoolingSystem_256"
+  },
+  "Desc_CrystalOscillator_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/CrystalOscillator/UI/IconDesc_CrystalOscillator_256",
+    "asset_name": "IconDesc_CrystalOscillator_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/CrystalOscillator/UI/IconDesc_CrystalOscillator_256"
+  },
+  "Desc_SpaceElevatorPart_8_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/ThermalAntimatterPropulsionRocket/UI/IconDesc_ThermalPropulsionRocket_256",
+    "asset_name": "IconDesc_ThermalPropulsionRocket_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/ThermalAntimatterPropulsionRocket/UI/IconDesc_ThermalPropulsionRocket_256"
+  },
+  "Desc_CopperIngot_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/CopperIngot/UI/IconDesc_CopperIngot_256",
+    "asset_name": "IconDesc_CopperIngot_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/CopperIngot/UI/IconDesc_CopperIngot_256"
+  },
+  "Desc_RawQuartz_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/QuartzCrystal/UI/IconDesc_QuartzCrystal_256",
+    "asset_name": "IconDesc_QuartzCrystal_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/QuartzCrystal/UI/IconDesc_QuartzCrystal_256"
+  },
+  "Desc_XmasDataCartridge4_C": {
+    "game_path": "/Game/FactoryGame/Events/Christmas/Buildings/UI/IconDesc_FICSMAS_Cartridge_256",
+    "asset_name": "IconDesc_FICSMAS_Cartridge_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Events/Christmas/Buildings/UI/IconDesc_FICSMAS_Cartridge_256"
+  },
+  "Desc_ElectromagneticControlRod_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/ElectromagneticControlRod/UI/IconDesc_ElectromagneticControlRod_256",
+    "asset_name": "IconDesc_ElectromagneticControlRod_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/ElectromagneticControlRod/UI/IconDesc_ElectromagneticControlRod_256"
+  },
+  "Desc_LiquidTurboFuel_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/Turbofuel/UI/IconDesc_LiquidTurboFuel_Pipe_256",
+    "asset_name": "IconDesc_LiquidTurboFuel_Pipe_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/Turbofuel/UI/IconDesc_LiquidTurboFuel_Pipe_256"
+  },
+  "Desc_FicsiteIngot_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/FicsiteIngot/UI/IconDesc_FicsiteIngot_256",
+    "asset_name": "IconDesc_FicsiteIngot_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/FicsiteIngot/UI/IconDesc_FicsiteIngot_256"
+  },
+  "Desc_AlienPowerFuel_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/AlienPowerMatrix/UI/IconDesc_AlienPowerMatrix_256",
+    "asset_name": "IconDesc_AlienPowerMatrix_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/AlienPowerMatrix/UI/IconDesc_AlienPowerMatrix_256"
+  },
+  "Desc_Medkit_C": {
+    "game_path": "/Game/FactoryGame/Resource/Equipment/Medkit/UI/Inhaler_256",
+    "asset_name": "Inhaler_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Equipment/Medkit/UI/Inhaler_256"
+  },
+  "Desc_IronIngot_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/IronIngot/UI/IconDesc_IronIngot_256",
+    "asset_name": "IconDesc_IronIngot_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/IronIngot/UI/IconDesc_IronIngot_256"
+  },
+  "Desc_Crystal_C": {
+    "game_path": "/Game/FactoryGame/Resource/Environment/Crystal/UI/PowerSlugGreen_256",
+    "asset_name": "PowerSlugGreen_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Environment/Crystal/UI/PowerSlugGreen_256"
+  },
+  "Desc_RocketFuel_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/RocketFuel/UI/IconDesc_RocketFuelPipe_256",
+    "asset_name": "IconDesc_RocketFuelPipe_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/RocketFuel/UI/IconDesc_RocketFuelPipe_256"
+  },
+  "Desc_Berry_C": {
+    "game_path": "/Game/FactoryGame/Resource/Environment/Berry/UI/IconDesc_Berry_256",
+    "asset_name": "IconDesc_Berry_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Environment/Berry/UI/IconDesc_Berry_256"
+  },
+  "Desc_Mycelia_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/GenericBiomass/UI/IconDesc_Mycelia_256",
+    "asset_name": "IconDesc_Mycelia_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/GenericBiomass/UI/IconDesc_Mycelia_256"
+  },
+  "Desc_SulfuricAcid_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/SulfuricAcid/UI/IconDesc_LiquidSulfuricAcid_Pipe_256",
+    "asset_name": "IconDesc_LiquidSulfuricAcid_Pipe_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/SulfuricAcid/UI/IconDesc_LiquidSulfuricAcid_Pipe_256"
+  },
+  "Desc_Biofuel_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/SolidBiofuel/UI/IconDesc_SolidBiofuel_256",
+    "asset_name": "IconDesc_SolidBiofuel_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/SolidBiofuel/UI/IconDesc_SolidBiofuel_256"
+  },
+  "Desc_SAMFluctuator_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/SAMFluctuator/UI/IconDesc_SamFluctuator_256",
+    "asset_name": "IconDesc_SamFluctuator_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/SAMFluctuator/UI/IconDesc_SamFluctuator_256"
+  },
+  "Desc_XmasBall3_C": {
+    "game_path": "/Game/FactoryGame/Events/Christmas/Parts/UI/IconDesc_XmasBall_Yellow_256",
+    "asset_name": "IconDesc_XmasBall_Yellow_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Events/Christmas/Parts/UI/IconDesc_XmasBall_Yellow_256"
+  },
+  "Desc_IonizedFuel_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/IonizedFuel/UI/IconDesc_IonizedFuel_256",
+    "asset_name": "IconDesc_IonizedFuel_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/IonizedFuel/UI/IconDesc_IonizedFuel_256"
+  },
+  "Desc_SpaceElevatorPart_12_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/AIExpansion/_UI/IconDesc_AIExpension_256",
+    "asset_name": "IconDesc_AIExpension_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/AIExpansion/_UI/IconDesc_AIExpension_256"
+  },
+  "Desc_Sulfur_C": {
+    "game_path": "/Game/FactoryGame/Resource/RawResources/Sulfur/UI/Sulfur_256",
+    "asset_name": "Sulfur_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/RawResources/Sulfur/UI/Sulfur_256"
+  },
+  "Desc_ModularFrameLightweight_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/RadioControlUnit/UI/IconDesc_RadioControlUnit_256",
+    "asset_name": "IconDesc_RadioControlUnit_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/RadioControlUnit/UI/IconDesc_RadioControlUnit_256"
+  },
+  "Desc_XmasStar_C": {
+    "game_path": "/Game/FactoryGame/Events/Christmas/Parts/UI/IconDesc_Star_256",
+    "asset_name": "IconDesc_Star_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Events/Christmas/Parts/UI/IconDesc_Star_256"
+  },
+  "Desc_CircuitBoard_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/CircuitBoard/UI/IconDesc_CircuitBoard_256",
+    "asset_name": "IconDesc_CircuitBoard_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/CircuitBoard/UI/IconDesc_CircuitBoard_256"
+  },
+  "Desc_CrystalShard_C": {
+    "game_path": "/Game/FactoryGame/Resource/Environment/Crystal/UI/PowerShard_256",
+    "asset_name": "PowerShard_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Environment/Crystal/UI/PowerShard_256"
+  },
+  "Desc_FicsoniumFuelRod_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/FicsoniumFuelRod/UI/IconDesc_FicsoniumFuelRod_256",
+    "asset_name": "IconDesc_FicsoniumFuelRod_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/FicsoniumFuelRod/UI/IconDesc_FicsoniumFuelRod_256"
+  },
+  "Desc_SpitterParts_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/AnimalParts/UI/IconDesc_SpitterPart_256",
+    "asset_name": "IconDesc_SpitterPart_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/AnimalParts/UI/IconDesc_SpitterPart_256"
+  },
+  "Desc_Gift_C": {
+    "game_path": "/Game/FactoryGame/Events/Christmas/Parts/UI/IconDesc_Gift_256",
+    "asset_name": "IconDesc_Gift_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Events/Christmas/Parts/UI/IconDesc_Gift_256"
+  },
+  "Desc_QuantumEnergy_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/QuantumEnergy/IconDesc_QuantumEnergy_256",
+    "asset_name": "IconDesc_QuantumEnergy_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/QuantumEnergy/IconDesc_QuantumEnergy_256"
+  },
+  "Desc_Battery_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/Battery/UI/IconDesc_Battery_256",
+    "asset_name": "IconDesc_Battery_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/Battery/UI/IconDesc_Battery_256"
+  },
+  "Desc_PackagedNitrogenGas_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/PackagedNitrogen/UI/IconDesc_PackagedNitrogen_256",
+    "asset_name": "IconDesc_PackagedNitrogen_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/PackagedNitrogen/UI/IconDesc_PackagedNitrogen_256"
+  },
+  "Desc_XmasBow_C": {
+    "game_path": "/Game/FactoryGame/Events/Christmas/Parts/UI/IconDesc_Bow_256",
+    "asset_name": "IconDesc_Bow_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Events/Christmas/Parts/UI/IconDesc_Bow_256"
+  },
+  "Desc_XmasDataCartridge1_C": {
+    "game_path": "/Game/FactoryGame/Events/Christmas/Buildings/UI/IconDesc_FICSMAS_Cartridge_256",
+    "asset_name": "IconDesc_FICSMAS_Cartridge_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Events/Christmas/Buildings/UI/IconDesc_FICSMAS_Cartridge_256"
+  },
+  "Desc_SteelIngot_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/SteelIngot/UI/IconDesc_SteelIngot_256",
+    "asset_name": "IconDesc_SteelIngot_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/SteelIngot/UI/IconDesc_SteelIngot_256"
+  },
+  "Desc_FicsiteMesh_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/FicsiteMesh/UI/IconDesc_FicsiteMesh_256",
+    "asset_name": "IconDesc_FicsiteMesh_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/FicsiteMesh/UI/IconDesc_FicsiteMesh_256"
+  },
+  "Desc_CopperSheet_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/CopperSheet/UI/IconDesc_CopperSheet_256",
+    "asset_name": "IconDesc_CopperSheet_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/CopperSheet/UI/IconDesc_CopperSheet_256"
+  },
+  "Desc_XmasBall1_C": {
+    "game_path": "/Game/FactoryGame/Events/Christmas/Parts/UI/IconDesc_XmasBall_Red_256",
+    "asset_name": "IconDesc_XmasBall_Red_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Events/Christmas/Parts/UI/IconDesc_XmasBall_Red_256"
+  },
+  "Desc_NuclearFuelRod_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/NuclearFuelRod/UI/IconDesc_NuclearFuelRod_256",
+    "asset_name": "IconDesc_NuclearFuelRod_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/NuclearFuelRod/UI/IconDesc_NuclearFuelRod_256"
+  },
+  "Desc_PackagedOil_C": {
+    "game_path": "/Game/FactoryGame/Resource/RawResources/CrudeOil/UI/Oil_256",
+    "asset_name": "Oil_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/RawResources/CrudeOil/UI/Oil_256"
+  },
+  "Desc_XmasDataCartridge3_C": {
+    "game_path": "/Game/FactoryGame/Events/Christmas/Buildings/UI/IconDesc_FICSMAS_Cartridge_256",
+    "asset_name": "IconDesc_FICSMAS_Cartridge_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Events/Christmas/Buildings/UI/IconDesc_FICSMAS_Cartridge_256"
+  },
+  "Desc_Shroom_C": {
+    "game_path": "/Game/FactoryGame/Resource/Environment/DesertShroom/UI/Mushroom_256",
+    "asset_name": "Mushroom_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Environment/DesertShroom/UI/Mushroom_256"
+  },
+  "Desc_Wire_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/Wire/UI/IconDesc_Wire_256",
+    "asset_name": "IconDesc_Wire_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/Wire/UI/IconDesc_Wire_256"
+  },
+  "Desc_SteelPlateReinforced_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/SteelPlateReinforced/UI/IconDesc_EncasedSteelBeam_256",
+    "asset_name": "IconDesc_EncasedSteelBeam_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/SteelPlateReinforced/UI/IconDesc_EncasedSteelBeam_256"
+  },
+  "Desc_Motor_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/Motor/UI/IconDesc_Engine_256",
+    "asset_name": "IconDesc_Engine_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/Motor/UI/IconDesc_Engine_256"
+  },
+  "Desc_AluminumIngot_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/AluminumIngot/UI/IconDesc_AluminiumIngot_256",
+    "asset_name": "IconDesc_AluminiumIngot_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/AluminumIngot/UI/IconDesc_AluminiumIngot_256"
+  },
+  "Desc_IronRod_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/IronRod/UI/IconDesc_IronRods_256",
+    "asset_name": "IconDesc_IronRods_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/IronRod/UI/IconDesc_IronRods_256"
+  },
+  "Desc_Cable_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/Cable/UI/IconDesc_Cables_256",
+    "asset_name": "IconDesc_Cables_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/Cable/UI/IconDesc_Cables_256"
+  },
+  "Desc_WAT2_C": {
+    "game_path": "/Game/FactoryGame/Prototype/WAT/UI/Wat_2_256",
+    "asset_name": "Wat_2_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Prototype/WAT/UI/Wat_2_256"
+  },
+  "Desc_SpaceElevatorPart_2_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/Skeletalframework/UI/IconDesc_SpelevatorPart_2_256",
+    "asset_name": "IconDesc_SpelevatorPart_2_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/Skeletalframework/UI/IconDesc_SpelevatorPart_2_256"
+  },
+  "Desc_AluminumPlate_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/AluminumPlate/UI/IconDesc_AluminiumSheet_256",
+    "asset_name": "IconDesc_AluminiumSheet_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/AluminumPlate/UI/IconDesc_AluminiumSheet_256"
+  },
+  "Desc_SAM_C": {
+    "game_path": "/Game/FactoryGame/Resource/RawResources/SAM/UI/IconDesc_SameOre_256",
+    "asset_name": "IconDesc_SameOre_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/RawResources/SAM/UI/IconDesc_SameOre_256"
+  },
+  "Desc_GasTank_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/GasTank/UI/IconDesc_PressureTank_256",
+    "asset_name": "IconDesc_PressureTank_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/GasTank/UI/IconDesc_PressureTank_256"
+  },
+  "Desc_Gunpowder_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/GunPowder/UI/IconDesc_Gunpowder_256",
+    "asset_name": "IconDesc_Gunpowder_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/GunPowder/UI/IconDesc_Gunpowder_256"
+  },
+  "Desc_IronPlate_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/IronPlate/UI/IconDesc_IronPlates_256",
+    "asset_name": "IconDesc_IronPlates_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/IronPlate/UI/IconDesc_IronPlates_256"
+  },
+  "Desc_NonFissibleUranium_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/Non-FissibleUranium/UI/IconDesc_NonFissileUranium_256",
+    "asset_name": "IconDesc_NonFissileUranium_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/Non-FissibleUranium/UI/IconDesc_NonFissileUranium_256"
+  },
+  "Desc_Nut_C": {
+    "game_path": "/Game/FactoryGame/Resource/Environment/Nut/UI/Nut_256_New",
+    "asset_name": "Nut_256_New",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Environment/Nut/UI/Nut_256_New"
+  },
+  "Desc_OreBauxite_C": {
+    "game_path": "/Game/FactoryGame/Resource/RawResources/Nodes/UI/IconDesc_Bauxite_256",
+    "asset_name": "IconDesc_Bauxite_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/RawResources/Nodes/UI/IconDesc_Bauxite_256"
+  },
+  "Desc_IronPlateReinforced_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/IronPlateReinforced/UI/IconDesc_ReinforcedIronPlates_256",
+    "asset_name": "IconDesc_ReinforcedIronPlates_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/IronPlateReinforced/UI/IconDesc_ReinforcedIronPlates_256"
+  },
+  "Desc_XmasDataCartridge2_C": {
+    "game_path": "/Game/FactoryGame/Events/Christmas/Buildings/UI/IconDesc_FICSMAS_Cartridge_256",
+    "asset_name": "IconDesc_FICSMAS_Cartridge_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Events/Christmas/Buildings/UI/IconDesc_FICSMAS_Cartridge_256"
+  },
+  "Desc_SpaceElevatorPart_7_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/AssemblyControlUnit/UI/IconDesc_AssemblyDirectorSystem_256",
+    "asset_name": "IconDesc_AssemblyDirectorSystem_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/AssemblyControlUnit/UI/IconDesc_AssemblyDirectorSystem_256"
+  },
+  "Desc_HatcherParts_C": {
+    "game_path": "/Game/FactoryGame/Resource/Environment/AnimalParts/UI/IconDesc_HatcherPart_256",
+    "asset_name": "IconDesc_HatcherPart_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Environment/AnimalParts/UI/IconDesc_HatcherPart_256"
+  },
+  "Desc_WAT1_C": {
+    "game_path": "/Game/FactoryGame/Prototype/WAT/UI/Wat_1_256",
+    "asset_name": "Wat_1_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Prototype/WAT/UI/Wat_1_256"
+  },
+  "Desc_Fabric_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/GenericBiomass/UI/IconDesc_Fabric_256",
+    "asset_name": "IconDesc_Fabric_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/GenericBiomass/UI/IconDesc_Fabric_256"
+  },
+  "Desc_SteelPipe_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/SteelPipe/UI/IconDesc_SteelPipe_256",
+    "asset_name": "IconDesc_SteelPipe_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/SteelPipe/UI/IconDesc_SteelPipe_256"
+  },
+  "Desc_SpaceElevatorPart_3_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/AutomatedWiring/UI/SpelevatorPart_3_256",
+    "asset_name": "SpelevatorPart_3_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/AutomatedWiring/UI/SpelevatorPart_3_256"
+  },
+  "Desc_Crystal_mk3_C": {
+    "game_path": "/Game/FactoryGame/Resource/Environment/Crystal/UI/PowerSlugPurple_256",
+    "asset_name": "PowerSlugPurple_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Environment/Crystal/UI/PowerSlugPurple_256"
+  },
+  "Desc_SpaceElevatorPart_5_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/ControlSystem/UI/IconDesc_SpelevatorPart_5_256",
+    "asset_name": "IconDesc_SpelevatorPart_5_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/ControlSystem/UI/IconDesc_SpelevatorPart_5_256"
+  },
+  "Desc_XmasBranch_C": {
+    "game_path": "/Game/FactoryGame/Events/Christmas/Parts/UI/IconDesc_Branch_256",
+    "asset_name": "IconDesc_Branch_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Events/Christmas/Parts/UI/IconDesc_Branch_256"
+  },
+  "Desc_SAMIngot_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/ReanimatedSAM/UI/IconDesc_ReanimatedSam_256",
+    "asset_name": "IconDesc_ReanimatedSam_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/ReanimatedSAM/UI/IconDesc_ReanimatedSam_256"
+  },
+  "Desc_XmasWreath_C": {
+    "game_path": "/Game/FactoryGame/Events/Christmas/Parts/UI/IconDesc_WreathNoBow_256",
+    "asset_name": "IconDesc_WreathNoBow_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Events/Christmas/Parts/UI/IconDesc_WreathNoBow_256"
+  },
+  "Desc_NitricAcid_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/NitricAcid/UI/IconDesc_NitricAcid_256",
+    "asset_name": "IconDesc_NitricAcid_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/NitricAcid/UI/IconDesc_NitricAcid_256"
+  },
+  "Desc_PackagedIonizedFuel_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/IonizedFuel/UI/IconDesc_IonizedRocketFuel_256",
+    "asset_name": "IconDesc_IonizedRocketFuel_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/IonizedFuel/UI/IconDesc_IonizedRocketFuel_256"
+  },
+  "Desc_PackagedSulfuricAcid_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/SulfuricAcid/UI/IconDesc_PckagedSulphuricAcid_256",
+    "asset_name": "IconDesc_PckagedSulphuricAcid_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/SulfuricAcid/UI/IconDesc_PckagedSulphuricAcid_256"
+  },
+  "Desc_SteelPlate_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/SteelPlate/UI/IconDesc_SteelBeam_256",
+    "asset_name": "IconDesc_SteelBeam_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/SteelPlate/UI/IconDesc_SteelBeam_256"
+  },
+  "Desc_ModularFrameHeavy_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/ModularFrameHeavy/UI/IconDesc_ModularFrameHeavy_256",
+    "asset_name": "IconDesc_ModularFrameHeavy_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/ModularFrameHeavy/UI/IconDesc_ModularFrameHeavy_256"
+  },
+  "Desc_DarkEnergy_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/DarkEnergy/UI/IconDesc_DarkEnergy_256",
+    "asset_name": "IconDesc_DarkEnergy_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/DarkEnergy/UI/IconDesc_DarkEnergy_256"
+  },
+  "Desc_GoldIngot_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/GoldIngot/UI/IconDesc_CateriumIngot_256",
+    "asset_name": "IconDesc_CateriumIngot_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/GoldIngot/UI/IconDesc_CateriumIngot_256"
+  },
+  "Desc_LiquidFuel_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/Fuel/UI/IconDesc_LiquidFuel_Pipe_256",
+    "asset_name": "IconDesc_LiquidFuel_Pipe_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/Fuel/UI/IconDesc_LiquidFuel_Pipe_256"
+  },
+  "Desc_SpaceElevatorPart_9_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/NuclearPasta/UI/IconDesc_NuclearPasta_256",
+    "asset_name": "IconDesc_NuclearPasta_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/NuclearPasta/UI/IconDesc_NuclearPasta_256"
+  },
+  "Desc_LiquidOil_C": {
+    "game_path": "/Game/FactoryGame/Resource/RawResources/CrudeOil/UI/LiquidOil_Pipe_512",
+    "asset_name": "LiquidOil_Pipe_512",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/RawResources/CrudeOil/UI/LiquidOil_Pipe_512"
+  },
+  "Desc_PolymerResin_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/PolymerResin/UI/IconDesc_PolymerResin_256",
+    "asset_name": "IconDesc_PolymerResin_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/PolymerResin/UI/IconDesc_PolymerResin_256"
+  },
+  "Desc_TimeCrystal_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/ExoticMatter/UI/IconDesc_ExoticMatter_256",
+    "asset_name": "IconDesc_ExoticMatter_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/ExoticMatter/UI/IconDesc_ExoticMatter_256"
+  },
+  "Desc_AluminumCasing_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/AluminumCasing/UI/IconDesc_AluminiumCasing_256",
+    "asset_name": "IconDesc_AluminiumCasing_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/AluminumCasing/UI/IconDesc_AluminiumCasing_256"
+  },
+  "Desc_Stone_C": {
+    "game_path": "/Game/FactoryGame/Resource/RawResources/Stone/UI/Stone_256",
+    "asset_name": "Stone_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/RawResources/Stone/UI/Stone_256"
+  },
+  "Desc_Fuel_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/Fuel/UI/IconDesc_Fuel_256",
+    "asset_name": "IconDesc_Fuel_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/Fuel/UI/IconDesc_Fuel_256"
+  },
+  "Desc_HogParts_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/AnimalParts/UI/IconDesc_HogPart_256",
+    "asset_name": "IconDesc_HogPart_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/AnimalParts/UI/IconDesc_HogPart_256"
+  },
+  "Desc_OreUranium_C": {
+    "game_path": "/Game/FactoryGame/Resource/RawResources/OreUranium/UI/IconDesc_UraniumOre_256",
+    "asset_name": "IconDesc_UraniumOre_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/RawResources/OreUranium/UI/IconDesc_UraniumOre_256"
+  },
+  "Desc_SpaceElevatorPart_11_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/BallisticWarpdrive/UI/IconDesc_BallisticWarpDrive_256",
+    "asset_name": "IconDesc_BallisticWarpDrive_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/BallisticWarpdrive/UI/IconDesc_BallisticWarpDrive_256"
+  },
+  "Desc_Filter_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/Filter/UI/IconDesc_GasMaskFilter_256",
+    "asset_name": "IconDesc_GasMaskFilter_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/Filter/UI/IconDesc_GasMaskFilter_256"
+  },
+  "Desc_Crystal_mk2_C": {
+    "game_path": "/Game/FactoryGame/Resource/Environment/Crystal/UI/PowerSlugYellow_256",
+    "asset_name": "PowerSlugYellow_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Environment/Crystal/UI/PowerSlugYellow_256"
+  },
+  "Desc_DarkMatter_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/TimeCrystal/UI/IconDesc_TimeCrystal_256",
+    "asset_name": "IconDesc_TimeCrystal_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/TimeCrystal/UI/IconDesc_TimeCrystal_256"
+  },
+  "Desc_Snow_C": {
+    "game_path": "/Game/FactoryGame/Events/Christmas/Parts/UI/IconDesc_Snow_256",
+    "asset_name": "IconDesc_Snow_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Events/Christmas/Parts/UI/IconDesc_Snow_256"
+  },
+  "Desc_PressureConversionCube_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/PressureConversionCube/UI/IconDesc_ConversionCube_256",
+    "asset_name": "IconDesc_ConversionCube_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/PressureConversionCube/UI/IconDesc_ConversionCube_256"
+  },
+  "Desc_PlutoniumPellet_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/PlutoniumPellet/UI/IconDesc_PlutoniumPellet_256",
+    "asset_name": "IconDesc_PlutoniumPellet_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/PlutoniumPellet/UI/IconDesc_PlutoniumPellet_256"
+  },
+  "Desc_ComputerSuper_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/ComputerQuantum/UI/IconDesc_QuantumComputer_256",
+    "asset_name": "IconDesc_QuantumComputer_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/ComputerQuantum/UI/IconDesc_QuantumComputer_256"
+  },
+  "Desc_Computer_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/Computer/UI/IconDesc_Computer_256",
+    "asset_name": "IconDesc_Computer_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/Computer/UI/IconDesc_Computer_256"
+  },
+  "Desc_Coal_C": {
+    "game_path": "/Game/FactoryGame/Resource/RawResources/Coal/UI/IconDesc_CoalOre_256",
+    "asset_name": "IconDesc_CoalOre_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/RawResources/Coal/UI/IconDesc_CoalOre_256"
+  },
+  "Desc_PackagedOilResidue_C": {
+    "game_path": "/Game/FactoryGame/Resource/RawResources/CrudeOil/UI/OilResidue_256",
+    "asset_name": "OilResidue_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/RawResources/CrudeOil/UI/OilResidue_256"
+  },
+  "Desc_PackagedWater_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/PackagedWater/UI/IconDesc_PackagedWater_256",
+    "asset_name": "IconDesc_PackagedWater_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/PackagedWater/UI/IconDesc_PackagedWater_256"
+  },
+  "Desc_MotorLightweight_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/TurboMotor/UI/IconDesc_TurboMotor_256",
+    "asset_name": "IconDesc_TurboMotor_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/TurboMotor/UI/IconDesc_TurboMotor_256"
+  },
+  "Desc_Ficsonium_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/Ficsonium/UI/IconDesc_FicsoniumCell_256",
+    "asset_name": "IconDesc_FicsoniumCell_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/Ficsonium/UI/IconDesc_FicsoniumCell_256"
+  },
+  "Desc_AlienDNACapsule_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/AlienDNACapsule/UI/IconDesc_AlienDNA_256",
+    "asset_name": "IconDesc_AlienDNA_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/AlienDNACapsule/UI/IconDesc_AlienDNA_256"
+  },
+  "Desc_Water_C": {
+    "game_path": "/Game/FactoryGame/Resource/RawResources/Water/UI/LiquidWater_Pipe_256",
+    "asset_name": "LiquidWater_Pipe_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/RawResources/Water/UI/LiquidWater_Pipe_256"
+  },
+  "Desc_NuclearWaste_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/NuclearWaste/UI/IconDesc_NuclearWaste_256",
+    "asset_name": "IconDesc_NuclearWaste_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/NuclearWaste/UI/IconDesc_NuclearWaste_256"
+  },
+  "Desc_XmasBall2_C": {
+    "game_path": "/Game/FactoryGame/Events/Christmas/Parts/UI/IconDesc_XmasBall_Blue_256",
+    "asset_name": "IconDesc_XmasBall_Blue_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Events/Christmas/Parts/UI/IconDesc_XmasBall_Blue_256"
+  },
+  "Desc_TemporalProcessor_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/TemporalProcessor/UI/IconDesc_TemporalProcessor_256",
+    "asset_name": "IconDesc_TemporalProcessor_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/TemporalProcessor/UI/IconDesc_TemporalProcessor_256"
+  },
+  "Desc_Plastic_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/Plastic/UI/IconDesc_Plastic_256",
+    "asset_name": "IconDesc_Plastic_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/Plastic/UI/IconDesc_Plastic_256"
+  },
+  "Desc_OreGold_C": {
+    "game_path": "/Game/FactoryGame/Resource/RawResources/Nodes/UI/IconDesc_CateriumOre_256",
+    "asset_name": "IconDesc_CateriumOre_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/RawResources/Nodes/UI/IconDesc_CateriumOre_256"
+  },
+  "Desc_XmasBall4_C": {
+    "game_path": "/Game/FactoryGame/Events/Christmas/Parts/UI/IconDesc_XmasBall_Silver_256",
+    "asset_name": "IconDesc_XmasBall_Silver_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Events/Christmas/Parts/UI/IconDesc_XmasBall_Silver_256"
+  },
+  "Desc_PackagedAlumina_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/Alumina/UI/IconDesc_PackagedAluminaSolution_256",
+    "asset_name": "IconDesc_PackagedAluminaSolution_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/Alumina/UI/IconDesc_PackagedAluminaSolution_256"
+  },
+  "Desc_HighSpeedConnector_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/HighSpeedConnector/UI/IconDesc_HighSpeedConnector_256",
+    "asset_name": "IconDesc_HighSpeedConnector_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/HighSpeedConnector/UI/IconDesc_HighSpeedConnector_256"
+  },
+  "Desc_NitrogenGas_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/PackagedNitrogen/UI/IconDesc_NitrogenGas_256",
+    "asset_name": "IconDesc_NitrogenGas_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/PackagedNitrogen/UI/IconDesc_NitrogenGas_256"
+  },
+  "Desc_HazmatFilter_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/IodineInfusedFilter/UI/IconDesc_HazmatFilter_256",
+    "asset_name": "IconDesc_HazmatFilter_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/IodineInfusedFilter/UI/IconDesc_HazmatFilter_256"
+  },
+  "Desc_PackagedRocketFuel_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/RocketFuel/UI/IconDesc_PackagedRocketFuel_256",
+    "asset_name": "IconDesc_PackagedRocketFuel_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/RocketFuel/UI/IconDesc_PackagedRocketFuel_256"
+  },
+  "Desc_GunpowderMK2_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/GunPowder/UI/IconDesc_GunpowderMk2_256",
+    "asset_name": "IconDesc_GunpowderMk2_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/GunPowder/UI/IconDesc_GunpowderMk2_256"
+  },
+  "Desc_ModularFrame_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/ModularFrame/UI/IconDesc_ModularFrame_256",
+    "asset_name": "IconDesc_ModularFrame_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/ModularFrame/UI/IconDesc_ModularFrame_256"
+  },
+  "Desc_DissolvedSilica_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/DissolvedSilica/UI/IconDesc_DissolvedSilica_256",
+    "asset_name": "IconDesc_DissolvedSilica_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/DissolvedSilica/UI/IconDesc_DissolvedSilica_256"
+  },
+  "Desc_AluminumScrap_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/AluminumScrap/UI/IconDesc_AluminiumScrap_256",
+    "asset_name": "IconDesc_AluminiumScrap_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/AluminumScrap/UI/IconDesc_AluminiumScrap_256"
+  },
+  "Desc_HighSpeedWire_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/HighSpeedWire/UI/IconDesc_Quickwire_256",
+    "asset_name": "IconDesc_Quickwire_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/HighSpeedWire/UI/IconDesc_Quickwire_256"
+  },
+  "Desc_PackagedNitricAcid_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/NitricAcid/UI/IconDesc_PackagedNitricAcid_256",
+    "asset_name": "IconDesc_PackagedNitricAcid_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/NitricAcid/UI/IconDesc_PackagedNitricAcid_256"
+  },
+  "Desc_GenericBiomass_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/GenericBiomass/UI/IconDesc_Biomass_Final_256",
+    "asset_name": "IconDesc_Biomass_Final_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/GenericBiomass/UI/IconDesc_Biomass_Final_256"
+  },
+  "Desc_Diamond_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/Diamond/UI/IconDesc_Diamonds_256",
+    "asset_name": "IconDesc_Diamonds_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/Diamond/UI/IconDesc_Diamonds_256"
+  },
+  "Desc_PlutoniumFuelRod_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/PlutoniumFuelRods/UI/IconDesc_PlutoniumFuelRod_256",
+    "asset_name": "IconDesc_PlutoniumFuelRod_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/PlutoniumFuelRods/UI/IconDesc_PlutoniumFuelRod_256"
+  },
+  "Desc_Leaves_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/GenericBiomass/IconDesc_Leaves_256",
+    "asset_name": "IconDesc_Leaves_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/GenericBiomass/IconDesc_Leaves_256"
+  },
+  "Desc_Rubber_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/Rubber/UI/IconDesc_Rubber_256",
+    "asset_name": "IconDesc_Rubber_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/Rubber/UI/IconDesc_Rubber_256"
+  },
+  "Desc_Rotor_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/Rotor/UI/IconDesc_Rotor_256",
+    "asset_name": "IconDesc_Rotor_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/Rotor/UI/IconDesc_Rotor_256"
+  },
+  "Desc_SpaceElevatorPart_1_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/SmartPlate/UI/IconDesc_SpelevatorPart_1_256",
+    "asset_name": "IconDesc_SpelevatorPart_1_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/SmartPlate/UI/IconDesc_SpelevatorPart_1_256"
+  },
+  "Desc_TurboFuel_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/Turbofuel/UI/IconDesc_TurboFuel_256",
+    "asset_name": "IconDesc_TurboFuel_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/Turbofuel/UI/IconDesc_TurboFuel_256"
+  },
+  "Desc_XmasBallCluster_C": {
+    "game_path": "/Game/FactoryGame/Events/Christmas/Parts/UI/IconDesc_Balls_256",
+    "asset_name": "IconDesc_Balls_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Events/Christmas/Parts/UI/IconDesc_Balls_256"
+  },
+  "Desc_Stator_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/Stator/UI/IconDesc_Stator_256",
+    "asset_name": "IconDesc_Stator_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/Stator/UI/IconDesc_Stator_256"
+  },
+  "Desc_SpaceElevatorPart_4_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/ModularEngine/UI/IconDesc_SpelevatorPart_4_256",
+    "asset_name": "IconDesc_SpelevatorPart_4_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/ModularEngine/UI/IconDesc_SpelevatorPart_4_256"
+  },
+  "Desc_QuantumOscillator_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/SuperpositionOscillator/UI/IconDesc_SuperPositionOscillator_256",
+    "asset_name": "IconDesc_SuperPositionOscillator_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/SuperpositionOscillator/UI/IconDesc_SuperPositionOscillator_256"
+  },
+  "Desc_StingerParts_C": {
+    "game_path": "/Game/FactoryGame/Resource/Environment/AnimalParts/UI/IconDesc_StingerPart_256",
+    "asset_name": "IconDesc_StingerPart_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Environment/AnimalParts/UI/IconDesc_StingerPart_256"
+  },
+  "Desc_HeavyOilResidue_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/HeavyOilResidue/UI/IconDesc_LiquidHeavyOilResidue_Pipe_256",
+    "asset_name": "IconDesc_LiquidHeavyOilResidue_Pipe_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/HeavyOilResidue/UI/IconDesc_LiquidHeavyOilResidue_Pipe_256"
+  },
+  "Desc_FluidCanister_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/FluidCanister/UI/IconDesc_EmptyCannister_256",
+    "asset_name": "IconDesc_EmptyCannister_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/FluidCanister/UI/IconDesc_EmptyCannister_256"
+  },
+  "Desc_CircuitBoardHighSpeed_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/AIlimiter/UI/IconDesc_AILimiter_256",
+    "asset_name": "IconDesc_AILimiter_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/AIlimiter/UI/IconDesc_AILimiter_256"
+  },
+  "Desc_PlutoniumCell_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/PlutoniumCell/UI/IconDesc_EncasedPlutoniumCell_256",
+    "asset_name": "IconDesc_EncasedPlutoniumCell_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/PlutoniumCell/UI/IconDesc_EncasedPlutoniumCell_256"
+  },
+  "Desc_SpaceElevatorPart_10_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/BiochemicalSculptor/UI/IconDesc_BiochemicalSculptor_256",
+    "asset_name": "IconDesc_BiochemicalSculptor_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/BiochemicalSculptor/UI/IconDesc_BiochemicalSculptor_256"
+  },
+  "Desc_SingularityCell_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/SingularityCell/UI/IconDesc_SingularityCell_256",
+    "asset_name": "IconDesc_SingularityCell_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/SingularityCell/UI/IconDesc_SingularityCell_256"
+  },
+  "Desc_AluminumPlateReinforced_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/HeatSink/UI/IconDesc_Heatsink_256",
+    "asset_name": "IconDesc_Heatsink_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/HeatSink/UI/IconDesc_Heatsink_256"
+  },
+  "Desc_UraniumCell_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/UraniumCell/UI/IconDesc_NuclearCell_256",
+    "asset_name": "IconDesc_NuclearCell_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/UraniumCell/UI/IconDesc_NuclearCell_256"
+  },
+  "Desc_AluminaSolution_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/Alumina/UI/LiquidAlumina_Pipe_256",
+    "asset_name": "LiquidAlumina_Pipe_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/Alumina/UI/LiquidAlumina_Pipe_256"
+  },
+  "Desc_SpaceElevatorPart_6_C": {
+    "game_path": "/Game/FactoryGame/Resource/Parts/MagneticFieldGenerator/UI/IconDesc_MagneticFieldGenerator_256",
+    "asset_name": "IconDesc_MagneticFieldGenerator_256",
+    "fs_path": "FactoryGame/Content/FactoryGame/Resource/Parts/MagneticFieldGenerator/UI/IconDesc_MagneticFieldGenerator_256"
+  },
+  "Desc_AssemblerMk1_C": {
+    "game_path": "/Game/FactoryGame/Buildable/Factory/AssemblerMk1/UI/IconDesc_AssemblerMk1_512",
+    "asset_name": "IconDesc_AssemblerMk1_512",
+    "fs_path": "FactoryGame/Content/FactoryGame/Buildable/Factory/AssemblerMk1/UI/IconDesc_AssemblerMk1_512"
+  },
+  "Desc_QuantumEncoder_C": {
+    "game_path": "/Game/FactoryGame/Buildable/Factory/QuantumEncoder/UI/IconDesc_QuantumEncoder_512",
+    "asset_name": "IconDesc_QuantumEncoder_512",
+    "fs_path": "FactoryGame/Content/FactoryGame/Buildable/Factory/QuantumEncoder/UI/IconDesc_QuantumEncoder_512"
+  },
+  "Desc_Converter_C": {
+    "game_path": "/Game/FactoryGame/Buildable/Factory/Converter/UI/IconDesc_Converter_512",
+    "asset_name": "IconDesc_Converter_512",
+    "fs_path": "FactoryGame/Content/FactoryGame/Buildable/Factory/Converter/UI/IconDesc_Converter_512"
+  },
+  "Desc_SmelterMk1_C": {
+    "game_path": "/Game/FactoryGame/Buildable/Factory/SmelterMk1/UI/IconDesc_SmelterMk1_512",
+    "asset_name": "IconDesc_SmelterMk1_512",
+    "fs_path": "FactoryGame/Content/FactoryGame/Buildable/Factory/SmelterMk1/UI/IconDesc_SmelterMk1_512"
+  },
+  "Desc_FoundryMk1_C": {
+    "game_path": "/Game/FactoryGame/Buildable/Factory/FoundryMk1/UI/IconDesc_Foundry_512",
+    "asset_name": "IconDesc_Foundry_512",
+    "fs_path": "FactoryGame/Content/FactoryGame/Buildable/Factory/FoundryMk1/UI/IconDesc_Foundry_512"
+  },
+  "Desc_Packager_C": {
+    "game_path": "/Game/FactoryGame/Buildable/Factory/Packager/UI/IconDesc_Packager_512",
+    "asset_name": "IconDesc_Packager_512",
+    "fs_path": "FactoryGame/Content/FactoryGame/Buildable/Factory/Packager/UI/IconDesc_Packager_512"
+  },
+  "Desc_ConstructorMk1_C": {
+    "game_path": "/Game/FactoryGame/Buildable/Factory/ConstructorMk1/UI/IconDesc_ConstructorMk1_512",
+    "asset_name": "IconDesc_ConstructorMk1_512",
+    "fs_path": "FactoryGame/Content/FactoryGame/Buildable/Factory/ConstructorMk1/UI/IconDesc_ConstructorMk1_512"
+  },
+  "Desc_Blender_C": {
+    "game_path": "/Game/FactoryGame/Buildable/Factory/Blender/UI/IconDesc_Blender_512",
+    "asset_name": "IconDesc_Blender_512",
+    "fs_path": "FactoryGame/Content/FactoryGame/Buildable/Factory/Blender/UI/IconDesc_Blender_512"
+  },
+  "Desc_OilRefinery_C": {
+    "game_path": "/Game/FactoryGame/Buildable/Factory/OilRefinery/UI/IconDesc_OilRefinery_512",
+    "asset_name": "IconDesc_OilRefinery_512",
+    "fs_path": "FactoryGame/Content/FactoryGame/Buildable/Factory/OilRefinery/UI/IconDesc_OilRefinery_512"
+  },
+  "Desc_HadronCollider_C": {
+    "game_path": "/Game/FactoryGame/Buildable/Factory/HadronCollider/UI/IconDesc_HadronCollider_512",
+    "asset_name": "IconDesc_HadronCollider_512",
+    "fs_path": "FactoryGame/Content/FactoryGame/Buildable/Factory/HadronCollider/UI/IconDesc_HadronCollider_512"
+  },
+  "Desc_ManufacturerMk1_C": {
+    "game_path": "/Game/FactoryGame/Buildable/Factory/ManufacturerMk1/UI/IconDesc_Manufacturer_512",
+    "asset_name": "IconDesc_Manufacturer_512",
+    "fs_path": "FactoryGame/Content/FactoryGame/Buildable/Factory/ManufacturerMk1/UI/IconDesc_Manufacturer_512"
+  },
+  "Desc_WorkBench_C": {
+    "game_path": "/Game/FactoryGame/Buildable/Factory/WorkBench/UI/Workbench_512",
+    "asset_name": "Workbench_512",
+    "fs_path": "FactoryGame/Content/FactoryGame/Buildable/Factory/WorkBench/UI/Workbench_512"
+  },
+  "Desc_Workshop_C": {
+    "game_path": "/Game/FactoryGame/Buildable/Factory/Workshop/UI/Workshop_512",
+    "asset_name": "Workshop_512",
+    "fs_path": "FactoryGame/Content/FactoryGame/Buildable/Factory/Workshop/UI/Workshop_512"
+  },
+  "Desc_GeneratorBiomass_Automated_C": {
+    "game_path": "/Game/FactoryGame/Buildable/Factory/GeneratorBiomass/UI/BiomassGenerator_512",
+    "asset_name": "BiomassGenerator_512",
+    "fs_path": "FactoryGame/Content/FactoryGame/Buildable/Factory/GeneratorBiomass/UI/BiomassGenerator_512"
+  },
+  "Desc_MinerMk1_C": {
+    "game_path": "/Game/FactoryGame/Buildable/Factory/MinerMK1/UI/IconDesc_MinerMk1_512",
+    "asset_name": "IconDesc_MinerMk1_512",
+    "fs_path": "FactoryGame/Content/FactoryGame/Buildable/Factory/MinerMK1/UI/IconDesc_MinerMk1_512"
+  },
+  "Desc_OilPump_C": {
+    "game_path": "/Game/FactoryGame/Buildable/Factory/OilPump/UI/OilPump_512",
+    "asset_name": "OilPump_512",
+    "fs_path": "FactoryGame/Content/FactoryGame/Buildable/Factory/OilPump/UI/OilPump_512"
+  },
+  "Desc_GeneratorCoal_C": {
+    "game_path": "/Game/FactoryGame/Buildable/Factory/GeneratorCoal/UI/IconDesc_CoalGenerator_512",
+    "asset_name": "IconDesc_CoalGenerator_512",
+    "fs_path": "FactoryGame/Content/FactoryGame/Buildable/Factory/GeneratorCoal/UI/IconDesc_CoalGenerator_512"
+  },
+  "Desc_WaterPump_C": {
+    "game_path": "/Game/FactoryGame/Buildable/Factory/WaterPump/UI/Waterpump_512",
+    "asset_name": "Waterpump_512",
+    "fs_path": "FactoryGame/Content/FactoryGame/Buildable/Factory/WaterPump/UI/Waterpump_512"
+  },
+  "Desc_MinerMk2_C": {
+    "game_path": "/Game/FactoryGame/Buildable/Factory/MinerMk2/UI/IconDesc_MinerMk2_512",
+    "asset_name": "IconDesc_MinerMk2_512",
+    "fs_path": "FactoryGame/Content/FactoryGame/Buildable/Factory/MinerMk2/UI/IconDesc_MinerMk2_512"
+  },
+  "Desc_FrackingExtractor_C": {
+    "game_path": "/Game/FactoryGame/Buildable/Factory/FrackingExtractor/UI/IconDesc_Extractor_512",
+    "asset_name": "IconDesc_Extractor_512",
+    "fs_path": "FactoryGame/Content/FactoryGame/Buildable/Factory/FrackingExtractor/UI/IconDesc_Extractor_512"
+  },
+  "Desc_FrackingSmasher_C": {
+    "game_path": "/Game/FactoryGame/Buildable/Factory/FrackingSmasher/UI/IconDesc_Smasher_512",
+    "asset_name": "IconDesc_Smasher_512",
+    "fs_path": "FactoryGame/Content/FactoryGame/Buildable/Factory/FrackingSmasher/UI/IconDesc_Smasher_512"
+  },
+  "Desc_GeneratorNuclear_C": {
+    "game_path": "/Game/FactoryGame/Buildable/Factory/GeneratorNuclear/UI/NuclearPowerplant_512",
+    "asset_name": "NuclearPowerplant_512",
+    "fs_path": "FactoryGame/Content/FactoryGame/Buildable/Factory/GeneratorNuclear/UI/NuclearPowerplant_512"
+  },
+  "Desc_MinerMk3_C": {
+    "game_path": "/Game/FactoryGame/Buildable/Factory/MinerMk3/UI/IconDesc_MinerMk3_512",
+    "asset_name": "IconDesc_MinerMk3_512",
+    "fs_path": "FactoryGame/Content/FactoryGame/Buildable/Factory/MinerMk3/UI/IconDesc_MinerMk3_512"
+  },
+  "Desc_GeneratorGeoThermal_C": {
+    "game_path": "/Game/FactoryGame/Buildable/Factory/GeneratorGeoThermal/UI/GeoThermalPowerGenerator_512",
+    "asset_name": "GeoThermalPowerGenerator_512",
+    "fs_path": "FactoryGame/Content/FactoryGame/Buildable/Factory/GeneratorGeoThermal/UI/GeoThermalPowerGenerator_512"
+  },
+  "Desc_AlienPowerBuilding_C": {
+    "game_path": "/Game/FactoryGame/Buildable/Factory/AlienPower/UI/IconDesc_AlienPowerAugmenter_512",
+    "asset_name": "IconDesc_AlienPowerAugmenter_512",
+    "fs_path": "FactoryGame/Content/FactoryGame/Buildable/Factory/AlienPower/UI/IconDesc_AlienPowerAugmenter_512"
+  },
+  "Desc_GeneratorFuel_C": {
+    "game_path": "/Game/FactoryGame/Buildable/Factory/GeneratorFuel/UI/FuelGenerator_512",
+    "asset_name": "FuelGenerator_512",
+    "fs_path": "FactoryGame/Content/FactoryGame/Buildable/Factory/GeneratorFuel/UI/FuelGenerator_512"
+  }
+}
