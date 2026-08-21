@@ -7,5 +7,5 @@ export default async function PlannerPage() {
     "/planner/plans"
   )
 
-  return <PlannerList initialPlans={data.plans} />
+  return <PlannerList initialPlans={data.plans ?? []} />
 }

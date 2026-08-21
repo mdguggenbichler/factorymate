@@ -835,7 +835,7 @@ func (h *Handler) listFactoryPlans(ctx context.Context, user auth.User, includeA
 		return nil, err
 	}
 
-	var out []map[string]any
+	out := make([]map[string]any, 0)
 	for _, row := range rowsData {
 		if !canReadPlan(user, row) {
 			continue

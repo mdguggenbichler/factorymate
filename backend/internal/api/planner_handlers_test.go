@@ -6,12 +6,41 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"factorymate/internal/auth"
 	"factorymate/internal/db"
 	"factorymate/internal/registration"
 )
+
+func TestListPlannerPlansEmptyReturnsArray(t *testing.T) {
+	t.Chdir("../..")
+
+	ctx := context.Background()
+	database := openTestDB(t)
+	defer database.Close()
+	if err := db.Init(ctx, database, db.SeedConfig{}); err != nil {
+		t.Fatalf("init db: %v", err)
+	}
+
+	svc := auth.NewService(database)
+	regSvc := registration.NewService(database, svc)
+	handler := newTestHandler(database, svc, regSvc, nil)
+	router := newTestRouter(handler, svc)
+
+	setupAdmin(t, router)
+	adminCookie := loginCookie(t, router, "admin", "secret123")
+
+	resp := getWithCookie(t, router, "/api/planner/plans", adminCookie)
+	if resp.Code != http.StatusOK {
+		t.Fatalf("status = %d", resp.Code)
+	}
+	body := resp.Body.String()
+	if !strings.Contains(body, `"plans":[]`) {
+		t.Fatalf("expected empty plans array, got %s", body)
+	}
+}
 
 func TestPlannerPlanAPI(t *testing.T) {
 	t.Chdir("../..")

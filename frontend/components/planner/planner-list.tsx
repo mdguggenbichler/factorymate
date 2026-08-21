@@ -64,7 +64,7 @@ export function PlannerList({ initialPlans }: PlannerListProps) {
   const { formatDateTime } = useFormatDateTime()
   const router = useRouter()
 
-  const [plans, setPlans] = useState(initialPlans)
+  const [plans, setPlans] = useState(() => initialPlans ?? [])
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all")
   const [createOpen, setCreateOpen] = useState(false)
   const [name, setName] = useState("")
@@ -91,7 +91,7 @@ export function PlannerList({ initialPlans }: PlannerListProps) {
     const data = await apiFetch<PlannerPlansListResponse>(
       `/planner/plans${qs ? `?${qs}` : ""}`
     )
-    setPlans(data.plans)
+    setPlans(data.plans ?? [])
   }, [])
 
   async function handleCreate() {
