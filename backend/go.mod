@@ -3,13 +3,14 @@ module factorymate
 go 1.26.5
 
 require (
+	github.com/bwmarrin/discordgo v0.28.1
 	github.com/go-chi/chi/v5 v5.3.1
 	golang.org/x/crypto v0.55.0
+	golang.org/x/text v0.41.0
 	modernc.org/sqlite v1.56.0
 )
 
 require (
-	github.com/bwmarrin/discordgo v0.28.1 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/gorilla/websocket v1.4.2 // indirect

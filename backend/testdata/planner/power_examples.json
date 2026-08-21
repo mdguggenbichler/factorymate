@@ -1,0 +1,42 @@
+[
+  {
+    "id": "constructor_150",
+    "buildingClass": "Build_ConstructorMk1_C",
+    "powerBaseMW": 4,
+    "clockPercent": 150,
+    "somersloopCount": 0,
+    "somersloopSlots": 1,
+    "powerExponent": 1.321929,
+    "expectedMW": 6.84
+  },
+  {
+    "id": "assembler_1_sloop",
+    "buildingClass": "Build_AssemblerMk1_C",
+    "powerBaseMW": 15,
+    "clockPercent": 100,
+    "somersloopCount": 1,
+    "somersloopSlots": 2,
+    "powerExponent": 1.321929,
+    "expectedMW": 33.75
+  },
+  {
+    "id": "constructor_1_sloop",
+    "buildingClass": "Build_ConstructorMk1_C",
+    "powerBaseMW": 4,
+    "clockPercent": 100,
+    "somersloopCount": 1,
+    "somersloopSlots": 1,
+    "powerExponent": 1.321929,
+    "expectedMW": 16
+  },
+  {
+    "id": "constructor_250_sloop",
+    "buildingClass": "Build_ConstructorMk1_C",
+    "powerBaseMW": 4,
+    "clockPercent": 250,
+    "somersloopCount": 1,
+    "somersloopSlots": 1,
+    "powerExponent": 1.321929,
+    "expectedMW": 53.7
+  }
+]

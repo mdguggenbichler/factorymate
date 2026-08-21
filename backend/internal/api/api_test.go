@@ -21,6 +21,7 @@ import (
 	"factorymate/internal/health"
 	"factorymate/internal/mods"
 	"factorymate/internal/notify"
+	"factorymate/internal/planner"
 	"factorymate/internal/registration"
 )
 
@@ -482,6 +483,58 @@ func TestReadEndpoints(t *testing.T) {
 		defer createInviteResp.Body.Close()
 		if createInviteResp.StatusCode != http.StatusForbidden {
 			t.Fatalf("viewer create invite status = %d, want 403", createInviteResp.StatusCode)
+		}
+	})
+}
+
+func TestPlannerEndpoints(t *testing.T) {
+	t.Chdir("../..")
+
+	ctx := context.Background()
+	database := openTestDB(t)
+	defer database.Close()
+	if err := db.Init(ctx, database, db.SeedConfig{}); err != nil {
+		t.Fatalf("init db: %v", err)
+	}
+	seedAPIFixtures(t, ctx, database)
+
+	svc := auth.NewService(database)
+	regSvc := registration.NewService(database, svc)
+	handler := newTestHandler(database, svc, regSvc, notify.NewMockDiscordSession())
+	router := newTestRouter(handler, svc)
+
+	setupAdmin(t, router)
+	adminCookie := loginCookie(t, router, "admin", "secret123")
+
+	t.Run("GET /api/planner/catalog", func(t *testing.T) {
+		resp := getWithCookie(t, router, "/api/planner/catalog", adminCookie)
+		if resp.Code != http.StatusOK {
+			t.Fatalf("status = %d body=%s", resp.Code, resp.Body.String())
+		}
+		var body struct {
+			Items   []any `json:"items"`
+			Recipes []any `json:"recipes"`
+		}
+		decodeJSONRecorder(t, resp, &body)
+		if len(body.Items) == 0 || len(body.Recipes) == 0 {
+			t.Fatalf("catalog = %+v", body)
+		}
+	})
+
+	t.Run("GET /api/planner/icons/{className}", func(t *testing.T) {
+		resp := getWithCookie(t, router, "/api/planner/icons/Desc_ConstructorMk1_C", adminCookie)
+		if resp.Code != http.StatusOK {
+			t.Fatalf("status = %d", resp.Code)
+		}
+		if ct := resp.Header().Get("Content-Type"); ct != "image/png" {
+			t.Fatalf("content-type = %q, want image/png", ct)
+		}
+	})
+
+	t.Run("GET /api/planner/icons missing", func(t *testing.T) {
+		resp := getWithCookie(t, router, "/api/planner/icons/Desc_DoesNotExist_C", adminCookie)
+		if resp.Code != http.StatusNotFound {
+			t.Fatalf("status = %d, want 404", resp.Code)
 		}
 	})
 }
@@ -1262,7 +1315,12 @@ func newTestHandler(database *sql.DB, svc *auth.Service, regSvc *registration.Se
 	modsSvc := mods.NewService(database, func(ctx context.Context) (*frm.Client, error) {
 		return frm.NewClient(frm.Config{Host: "127.0.0.1", Port: 1}), nil
 	})
-	return api.NewHandlerWithDiscordSession(database, svc, regSvc, connSvc, modsSvc, session)
+	plannerCfg := planner.DefaultConfig()
+	plannerCat, err := planner.LoadCatalog(plannerCfg)
+	if err != nil {
+		panic(err)
+	}
+	return api.NewHandlerWithDiscordSession(database, svc, regSvc, connSvc, modsSvc, plannerCat, plannerCfg, session)
 }
 
 func newMockFRMServer(t *testing.T, responses map[string][]byte) *httptest.Server {

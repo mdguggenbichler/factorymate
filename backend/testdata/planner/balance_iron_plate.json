@@ -1,0 +1,39 @@
+{
+  "graph": {
+    "nodes": [
+      {
+        "id": "n_oil",
+        "role": "source",
+        "itemClass": "Desc_LiquidOil_C",
+        "ratePerMin": 90,
+        "count": 1
+      },
+      {
+        "id": "n_refinery",
+        "role": "process",
+        "recipeClass": "Recipe_Plastic_C",
+        "buildingClass": "Build_OilRefinery_C",
+        "count": 3,
+        "clockPercent": 100,
+        "somersloopCount": 0
+      }
+    ],
+    "edges": [
+      {
+        "id": "e_oil",
+        "sourceNodeId": "n_oil",
+        "sourcePort": "out:Desc_LiquidOil_C",
+        "targetNodeId": "n_refinery",
+        "targetPort": "in:Desc_LiquidOil_C",
+        "itemClass": "Desc_LiquidOil_C"
+      }
+    ]
+  },
+  "expectedEdges": {
+    "e_oil": {
+      "flowPerMin": 90,
+      "recommendedMk": 1,
+      "exceedsMax": false
+    }
+  }
+}

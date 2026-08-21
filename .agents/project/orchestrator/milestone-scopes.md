@@ -409,3 +409,39 @@ If `backend/internal/registration` was changed, include it in go test/vet.
 **Notes:** Do not add per-type Discord slash toggles. Do not put prefs URL on game-event DM footers. Do not mark roadmap checkboxes `[x]` — verifier only.
 
 ---
+
+## M19 — Factory Planner: Game Data & Catalog
+
+**READ:** `docs/proposals/factory-planner.md` §4, §7.1, §10; `docs/factorymate-spec.md` §6 (session auth); `docs/FactoryGame-Docs.json`; `assets/icons.json`, `assets/icons/`; `backend/internal/api/` (route patterns); `backend/internal/auth/`; `backend/cmd/server/main.go`.
+
+**WRITE:**
+
+```
+backend/go.mod
+backend/internal/planner/**
+backend/data/factory_catalog.json          # optional generated slim catalog
+backend/cmd/generate-catalog/**
+backend/testdata/planner/**                   # includes committed factory_catalog.json slim file
+backend/internal/api/**                      # planner catalog + icon handlers, routes only
+backend/cmd/server/main.go                   # catalog wiring if needed
+.env.example                                 # PLANNER_* env vars
+.agents/project/orchestrator/milestone-scopes.md
+.agents/project/orchestrator/doc-index.md
+```
+
+**Scoped CI:**
+
+```bash
+cd backend && go vet ./internal/planner/... ./internal/api/...
+cd backend && go test ./internal/planner/... ./internal/api/...
+```
+
+Regenerate slim catalog when `docs/FactoryGame-Docs.json` changes:
+
+```bash
+cd backend && go run ./cmd/generate-catalog
+```
+
+**Notes:** Does not touch FRM poller, Discord, notification pipeline, or frontend planner UI. Verifier marks roadmap checkboxes — execution agents do not.
+
+---

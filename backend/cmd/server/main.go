@@ -20,6 +20,7 @@ import (
 	"factorymate/internal/health"
 	"factorymate/internal/mods"
 	"factorymate/internal/notify"
+	"factorymate/internal/planner"
 	"factorymate/internal/poller"
 	"factorymate/internal/registration"
 
@@ -69,6 +70,13 @@ func main() {
 		log.Printf("discord bot start: %v — dashboard and FRM polling will continue without bot features", err)
 	}
 
+	plannerCfg := planner.DefaultConfig()
+	plannerCat, err := planner.LoadCatalog(plannerCfg)
+	if err != nil {
+		log.Fatalf("load planner catalog: %v", err)
+	}
+	log.Printf("planner catalog loaded: %d items, %d recipes", len(plannerCat.Items), len(plannerCat.Recipes))
+
 	go runPoller(ctx, database, phases, bot)
 	go runSlowPoller(ctx, database)
 	go authSvc.StartCleanupJob(ctx)
@@ -81,7 +89,7 @@ func main() {
 	r := chi.NewRouter()
 	r.Get("/healthz", health.Handler(appVersion))
 	r.Route("/api", func(r chi.Router) {
-		api.NewHandler(database, authSvc, bot, regSvc, connSvc, modsSvc).Mount(r)
+		api.NewHandler(database, authSvc, bot, regSvc, connSvc, modsSvc, plannerCat, plannerCfg).Mount(r)
 	})
 
 	addr := ":" + port

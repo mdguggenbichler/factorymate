@@ -51,6 +51,9 @@ func (h *Handler) Mount(r chi.Router) {
 			r.Get("/mods/smmprofile", h.GetModsSMMProfile)
 			r.Get("/connection-details", h.GetConnectionDetails)
 
+			r.Get("/planner/catalog", h.GetPlannerCatalog)
+			r.Get("/planner/icons/{className}", h.GetPlannerIcon)
+
 			r.Group(func(r chi.Router) {
 				r.Use(h.auth.RequireAdmin(writeError))
 
