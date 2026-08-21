@@ -213,7 +213,8 @@ func TestReadEndpoints(t *testing.T) {
 				Type       string `json:"type"`
 				Schematics []struct {
 					Recipes []struct {
-						Name string `json:"name"`
+						Name          string `json:"name"`
+						IconClassName string `json:"iconClassName"`
 					} `json:"recipes"`
 				} `json:"schematics"`
 			} `json:"groups"`
@@ -224,6 +225,9 @@ func TestReadEndpoints(t *testing.T) {
 		}
 		if body.Groups[0].Schematics[0].Recipes[0].Name != "Plastic" {
 			t.Fatalf("recipes = %+v", body.Groups[0].Schematics[0].Recipes)
+		}
+		if body.Groups[0].Schematics[0].Recipes[0].IconClassName != "Desc_Plastic_C" {
+			t.Fatalf("iconClassName = %q", body.Groups[0].Schematics[0].Recipes[0].IconClassName)
 		}
 	})
 
@@ -245,7 +249,8 @@ func TestReadEndpoints(t *testing.T) {
 						Y int `json:"y"`
 					} `json:"parents"`
 					Cost []struct {
-						Amount int `json:"amount"`
+						Amount    int    `json:"amount"`
+						ClassName string `json:"className"`
 					} `json:"cost"`
 				} `json:"nodes"`
 			} `json:"trees"`
@@ -254,6 +259,9 @@ func TestReadEndpoints(t *testing.T) {
 		node := body.Trees[0].Nodes[0]
 		if node.State != "Purchased" || node.Cost[0].Amount != 100 {
 			t.Fatalf("trees = %+v", body.Trees)
+		}
+		if node.Cost[0].ClassName != "Desc_IronPlate_C" {
+			t.Fatalf("cost className = %q", node.Cost[0].ClassName)
 		}
 		if node.Coordinates == nil || node.Coordinates.X != 2 || node.Coordinates.Y != 3 {
 			t.Fatalf("coordinates = %+v, want (2,3)", node.Coordinates)
@@ -1115,7 +1123,7 @@ func seedAPIFixtures(t *testing.T, ctx context.Context, database *sql.DB) {
 		INSERT INTO schematic_state (
 			schematic_id, name, type, purchased, locked, tech_tier, recipes_json, purchased_at, updated_at
 		) VALUES ('s1', 'Oil Processing', 'Milestone', 1, 0, 5,
-			'[{"Name":"Plastic","ClassName":"Desc_Plastic_C"}]', '2026-08-16T14:30:00Z', ?)`, now)
+			'[{"Name":"Plastic","ClassName":"Desc_Plastic_C","Products":[{"Name":"Plastic","ClassName":"Desc_Plastic_C"}]}]', '2026-08-16T14:30:00Z', ?)`, now)
 	if err != nil {
 		t.Fatalf("seed schematic: %v", err)
 	}
@@ -1134,7 +1142,7 @@ func seedAPIFixtures(t *testing.T, ctx context.Context, database *sql.DB) {
 			coord_x, coord_y, parents_json, updated_at
 		)
 		VALUES ('n1', 'MAM', 'Oil Processing', 'Oil', 'Purchased', 5,
-			'[{"Name":"Iron Plate","Amount":100}]', 2, 3, '[{"x":1,"y":0}]', ?)`, now)
+			'[{"Name":"Iron Plate","ClassName":"Desc_IronPlate_C","Amount":100}]', 2, 3, '[{"x":1,"y":0}]', ?)`, now)
 	if err != nil {
 		t.Fatalf("seed research: %v", err)
 	}

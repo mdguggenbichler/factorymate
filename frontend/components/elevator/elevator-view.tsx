@@ -6,6 +6,7 @@ import { AlertTriangleIcon } from "lucide-react"
 import { toast } from "sonner"
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { ItemIcon } from "@/components/item-icon"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -153,7 +154,10 @@ export function ElevatorView({
               return (
                 <div key={item.className} className="space-y-2">
                   <div className="flex items-center justify-between gap-2 text-sm">
-                    <span className="font-medium">{item.name}</span>
+                    <span className="flex items-center gap-2 font-medium">
+                      <ItemIcon className={item.className} size={20} />
+                      {item.name}
+                    </span>
                     <span className="tabular-nums text-muted-foreground">
                       {t("itemProgress", {
                         delivered,

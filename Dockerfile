@@ -31,9 +31,12 @@ WORKDIR /app
 COPY --from=node-deps /app/node_modules ./node_modules
 COPY frontend/ .
 COPY VERSION /VERSION
+COPY assets/icons /src/assets/icons
+COPY assets/icons.json /src/assets/icons.json
+COPY scripts/sync-item-icons.mjs /src/scripts/sync-item-icons.mjs
 
 ENV NEXT_TELEMETRY_DISABLED=1
-RUN npm run build
+RUN node /src/scripts/sync-item-icons.mjs && npm run build
 
 FROM node:22-alpine AS runtime
 

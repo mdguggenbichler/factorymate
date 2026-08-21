@@ -2,6 +2,7 @@
 
 import { useTranslations } from "next-intl"
 
+import { ItemIcon } from "@/components/item-icon"
 import { Badge } from "@/components/ui/badge"
 import {
   Popover,
@@ -49,15 +50,17 @@ export function ResearchNodeCard({ node }: ResearchNodeCardProps) {
   const t = useTranslations("research")
   const labelKey = stateLabelKey(node.state)
   const stateLabel = labelKey ? t(labelKey) : node.state
+  const thumbnailClassName = node.cost[0]?.className
 
   return (
     <Popover>
       <PopoverTrigger
         className={cn(
-          "flex h-16 w-full max-w-[120px] cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border px-2 py-1.5 text-center text-xs font-medium transition-colors hover:brightness-95",
+          "flex h-20 w-full max-w-[120px] cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border px-2 py-1.5 text-center text-xs font-medium transition-colors hover:brightness-95",
           nodeStateClasses(node.state)
         )}
       >
+        <ItemIcon className={thumbnailClassName} size={32} />
         <span className="line-clamp-2 leading-tight">{node.name}</span>
         <Badge variant="outline" className="px-1.5 py-0 text-[10px]">
           {stateLabel}
@@ -83,7 +86,12 @@ export function ResearchNodeCard({ node }: ResearchNodeCardProps) {
             </p>
             <div className="flex flex-wrap gap-1">
               {node.cost.map((item) => (
-                <Badge key={`${node.id}-${item.name}`} variant="secondary">
+                <Badge
+                  key={`${node.id}-${item.name}`}
+                  variant="secondary"
+                  className="gap-1"
+                >
+                  <ItemIcon className={item.className} size={14} />
                   {t("costItem", {
                     name: item.name,
                     amount: formatNumber(item.amount, 0),

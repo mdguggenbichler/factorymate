@@ -179,3 +179,7 @@ Source: `docs/guide/` + root `mkdocs.yml`.
 ## Orchestrator development
 
 See [`AGENTS.md`](../AGENTS.md) and [`.agents/project/orchestrator/milestone-scopes.md`](../.agents/project/orchestrator/milestone-scopes.md).
+
+## Item icons
+
+Satisfactory item icons under `assets/icons/` are extracted from the game via FRM for dashboard display. They are synced into `frontend/public/icons/` at dev/build time (`scripts/sync-item-icons.mjs`). Game assets remain property of Coffee Stain Studios.

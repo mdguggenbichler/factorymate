@@ -4,6 +4,7 @@ import { useMemo } from "react"
 import { useTranslations } from "next-intl"
 
 import { ResearchNodeCard } from "@/components/research/research-node"
+import { ItemIcon } from "@/components/item-icon"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import type { ResearchNode } from "@/lib/api-types"
@@ -53,9 +54,12 @@ export function ResearchTreeCanvas({ nodes, treeName }: ResearchTreeCanvasProps)
           {nodes.map((node) => (
             <li
               key={node.id}
-              className="flex items-center justify-between rounded-lg border px-3 py-2 text-sm"
+              className="flex items-center justify-between gap-2 rounded-lg border px-3 py-2 text-sm"
             >
-              <span className="font-medium">{node.name}</span>
+              <span className="flex items-center gap-2 font-medium">
+                <ItemIcon className={node.cost[0]?.className} size={20} />
+                {node.name}
+              </span>
               <Badge variant="outline">{node.state}</Badge>
             </li>
           ))}

@@ -2,6 +2,7 @@
 
 import { useTranslations } from "next-intl"
 
+import { ItemIcon } from "@/components/item-icon"
 import { Badge } from "@/components/ui/badge"
 import {
   Popover,
@@ -40,15 +41,17 @@ export function MilestoneSchematicCard({
   const { formatDateTime } = useFormatDateTime()
   const status = schematicStatus(schematic)
   const statusLabel = t(`status.${status === "unlocked" ? "unlocked" : status}`)
+  const thumbnailClassName = schematic.recipes[0]?.iconClassName
 
   return (
     <Popover>
       <PopoverTrigger
         className={cn(
-          "flex h-16 w-full min-w-[100px] max-w-[140px] cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border px-2 py-1.5 text-center text-xs font-medium transition-colors hover:brightness-95",
+          "flex h-20 w-full min-w-[100px] max-w-[140px] cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border px-2 py-1.5 text-center text-xs font-medium transition-colors hover:brightness-95",
           statusClasses(status)
         )}
       >
+        <ItemIcon className={thumbnailClassName} size={32} />
         <span className="line-clamp-2 leading-tight">{schematic.name}</span>
         <Badge variant="outline" className="px-1.5 py-0 text-[10px]">
           {statusLabel}
@@ -76,7 +79,12 @@ export function MilestoneSchematicCard({
             </p>
             <div className="flex flex-wrap gap-1">
               {schematic.recipes.map((recipe) => (
-                <Badge key={recipe.className} variant="secondary">
+                <Badge
+                  key={recipe.className}
+                  variant="secondary"
+                  className="gap-1"
+                >
+                  <ItemIcon className={recipe.iconClassName} size={14} />
                   {recipe.name}
                 </Badge>
               ))}

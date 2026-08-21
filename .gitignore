@@ -5,6 +5,7 @@ frontend/node_modules/
 # Next.js
 frontend/.next/
 frontend/out/
+frontend/public/icons/
 
 # Build / tooling
 *.tsbuildinfo

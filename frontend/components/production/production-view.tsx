@@ -4,6 +4,8 @@ import { Fragment, useCallback, useMemo, useState } from "react"
 import { useTranslations } from "next-intl"
 
 import { IntervalPicker } from "@/components/interval-picker"
+import { ItemIcon } from "@/components/item-icon"
+import { ItemWithLabel } from "@/components/item-with-label"
 import { TimeSeriesChart } from "@/components/time-series-chart"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -24,6 +26,7 @@ import {
   type DateRangePreset,
 } from "@/lib/date-range"
 import { formatNumber, formatPercent } from "@/lib/format"
+import { machineClassNameFromId } from "@/lib/item-icon"
 import type {
   FactoryItem,
   ProductionHistoryResponse,
@@ -153,7 +156,11 @@ function OverallTab({ items }: { items: ProductionItem[] }) {
                       onClick={() => handleRowToggle(item.itemClassName)}
                     >
                       <TableCell className="font-medium">
-                        {item.itemDisplayName}
+                        <ItemWithLabel
+                          className={item.itemClassName}
+                          label={item.itemDisplayName}
+                          size={20}
+                        />
                       </TableCell>
                       <TableCell>{item.prodPerMinLabel}</TableCell>
                       <TableCell>{formatPercent(item.prodPercent)}</TableCell>
@@ -247,7 +254,11 @@ function DetailedTab({ machines }: { machines: ProductionMachine[] }) {
                       }
                     >
                       <TableCell className="font-medium">
-                        {machine.buildingType}
+                        <ItemWithLabel
+                          className={machineClassNameFromId(machine.machineId)}
+                          label={machine.buildingType}
+                          size={20}
+                        />
                       </TableCell>
                       <TableCell>{machine.recipe || "—"}</TableCell>
                       <TableCell>{formatPercent(machine.manuSpeed)}</TableCell>
@@ -306,8 +317,12 @@ function ItemList({ title, items }: { title: string; items: FactoryItem[] }) {
       ) : (
         <ul className="space-y-1 text-sm">
           {items.map((item, index) => (
-            <li key={`${item.className ?? item.name ?? index}-${index}`}>
-              {itemLabel(item)}
+            <li
+              key={`${item.className ?? item.name ?? index}-${index}`}
+              className="flex items-center gap-2"
+            >
+              <ItemIcon className={item.className} size={16} />
+              <span>{itemLabel(item)}</span>
             </li>
           ))}
         </ul>

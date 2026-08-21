@@ -4,6 +4,7 @@ import { useCallback, useMemo, useState } from "react"
 import { useTranslations } from "next-intl"
 
 import { IntervalPicker } from "@/components/interval-picker"
+import { ItemIcon } from "@/components/item-icon"
 import { TimeSeriesChart } from "@/components/time-series-chart"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
@@ -89,7 +90,10 @@ export function ResourceSinkView({
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-semibold tabular-nums">{status.numCoupon}</p>
+            <p className="flex items-center gap-2 text-3xl font-semibold tabular-nums">
+              <ItemIcon className="Desc_ResourceSinkCoupon_C" size={28} />
+              {status.numCoupon}
+            </p>
           </CardContent>
         </Card>
         <Card>

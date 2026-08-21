@@ -31,8 +31,9 @@ type Circuit struct {
 
 // Recipe is a schematic recipe summary.
 type Recipe struct {
-	Name      string `json:"Name"`
-	ClassName string `json:"ClassName"`
+	Name      string            `json:"Name"`
+	ClassName string            `json:"ClassName"`
+	Products  []FactoryFlowItem `json:"Products"`
 }
 
 // Schematic is a FRM getSchematics entry.

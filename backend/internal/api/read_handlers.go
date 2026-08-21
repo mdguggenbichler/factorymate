@@ -762,9 +762,14 @@ func (h *Handler) GetMilestones(w http.ResponseWriter, r *http.Request) {
 		_ = parseJSONColumn(recipesJSON, &recipes)
 		apiRecipes := make([]map[string]any, 0, len(recipes))
 		for _, rec := range recipes {
+			iconClassName := ""
+			if len(rec.Products) > 0 {
+				iconClassName = rec.Products[0].ClassName
+			}
 			apiRecipes = append(apiRecipes, map[string]any{
-				"name":      rec.Name,
-				"className": rec.ClassName,
+				"name":          rec.Name,
+				"className":     rec.ClassName,
+				"iconClassName": iconClassName,
 			})
 		}
 		key := milestoneGroupKey{Type: schematicType, TechTier: techTier}
@@ -836,8 +841,9 @@ func (h *Handler) GetResearch(w http.ResponseWriter, r *http.Request) {
 		cost := make([]map[string]any, 0, len(costItems))
 		for _, item := range costItems {
 			cost = append(cost, map[string]any{
-				"name":   item.Name,
-				"amount": item.Amount,
+				"name":      item.Name,
+				"amount":    item.Amount,
+				"className": item.ClassName,
 			})
 		}
 		var parents []frm.ResearchCoordinate

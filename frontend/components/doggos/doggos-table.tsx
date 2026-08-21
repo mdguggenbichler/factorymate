@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server"
 
 import { Badge } from "@/components/ui/badge"
+import { ItemIcon } from "@/components/item-icon"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Table,
@@ -16,22 +17,28 @@ type DoggosTableProps = {
   doggos: Doggo[]
 }
 
-function inventoryLabel(item: unknown): string {
+function inventoryLabel(item: unknown): { label: string; className?: string } {
   if (typeof item === "string") {
-    return item
+    return { label: item }
   }
 
   if (item && typeof item === "object") {
     const record = item as Record<string, unknown>
+    const className =
+      typeof record.className === "string"
+        ? record.className
+        : typeof record.ClassName === "string"
+          ? record.ClassName
+          : undefined
     if (typeof record.name === "string") {
-      return record.name
+      return { label: record.name, className }
     }
     if (typeof record.Name === "string") {
-      return record.Name
+      return { label: record.Name, className }
     }
   }
 
-  return "?"
+  return { label: "?" }
 }
 
 export async function DoggosTable({ doggos }: DoggosTableProps) {
@@ -70,11 +77,19 @@ export async function DoggosTable({ doggos }: DoggosTableProps) {
                         <span className="text-muted-foreground">{t("emptyInventory")}</span>
                       ) : (
                         <div className="flex flex-wrap gap-1">
-                          {doggo.inventory.map((item, index) => (
-                            <Badge key={`${doggo.doggoId}-${index}`} variant="secondary">
-                              {inventoryLabel(item)}
-                            </Badge>
-                          ))}
+                          {doggo.inventory.map((item, index) => {
+                            const { label, className } = inventoryLabel(item)
+                            return (
+                              <Badge
+                                key={`${doggo.doggoId}-${index}`}
+                                variant="secondary"
+                                className="gap-1"
+                              >
+                                <ItemIcon className={className} size={14} />
+                                {label}
+                              </Badge>
+                            )
+                          })}
                         </div>
                       )}
                     </TableCell>

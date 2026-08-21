@@ -188,6 +188,7 @@ export type DoggosResponse = {
 export type MilestoneRecipe = {
   name: string
   className: string
+  iconClassName?: string
 }
 
 export type MilestoneSchematic = {
@@ -213,6 +214,7 @@ export type MilestonesResponse = {
 export type ResearchCostItem = {
   name: string
   amount: number
+  className?: string
 }
 
 export type ResearchCoordinate = {
