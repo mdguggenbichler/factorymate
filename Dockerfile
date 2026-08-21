@@ -29,17 +29,17 @@ RUN npm ci
 
 FROM node:22-alpine AS node-build
 
-WORKDIR /app
+WORKDIR /src/frontend
 
 COPY --from=node-deps /app/node_modules ./node_modules
 COPY frontend/ .
-COPY VERSION /VERSION
+COPY VERSION /src/VERSION
 COPY assets/icons /src/assets/icons
 COPY assets/icons.json /src/assets/icons.json
 COPY scripts/sync-item-icons.mjs /src/scripts/sync-item-icons.mjs
 
 ENV NEXT_TELEMETRY_DISABLED=1
-RUN node /src/scripts/sync-item-icons.mjs && npm run build
+RUN npm run build
 
 FROM node:22-alpine AS runtime
 
@@ -61,9 +61,9 @@ COPY --from=go-build /out/server /app/server
 COPY --from=go-build /src/backend/data /app/data
 COPY --from=go-build /src/backend/testdata/planner/factory_catalog.json /app/data/factory_catalog.json
 COPY --from=go-build /planner-data /app/planner-data
-COPY --from=node-build /app/public /app/frontend/public
-COPY --from=node-build /app/.next/standalone /app/frontend
-COPY --from=node-build /app/.next/static /app/frontend/.next/static
+COPY --from=node-build /src/frontend/public /app/frontend/public
+COPY --from=node-build /src/frontend/.next/standalone /app/frontend
+COPY --from=node-build /src/frontend/.next/static /app/frontend/.next/static
 
 RUN addgroup --system --gid 10001 app \
     && adduser --system --uid 10001 --ingroup app app \
