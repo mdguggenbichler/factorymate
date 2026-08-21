@@ -16,6 +16,8 @@ permissions:
 jobs:
   ci:
     uses: ./.github/workflows/_ci.yml
+    with:
+      include_docker: false
     permissions:
       contents: read
 

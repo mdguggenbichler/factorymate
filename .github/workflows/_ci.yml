@@ -2,6 +2,12 @@ name: CI
 
 on:
   workflow_call:
+    inputs:
+      include_docker:
+        description: Run Docker smoke build (required PR gate; skip on dev when container-image builds)
+        required: false
+        type: boolean
+        default: true
 
 permissions:
   contents: read
@@ -57,6 +63,7 @@ jobs:
 
   docker:
     name: Docker smoke build
+    if: inputs.include_docker
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout repository

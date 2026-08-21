@@ -8,8 +8,8 @@ Entry-point workflows own triggers; reusable workflows (prefixed `_`) are called
 
 | Entry point | Trigger | Calls |
 |-------------|---------|-------|
-| `pr.yml` | `pull_request` | `_ci.yml` |
-| `dev.yml` | `push` → `dev` | `_ci.yml` → `_container-image.yml` |
+| `pr.yml` | `pull_request` | `_ci.yml` (`include_docker: true`) |
+| `dev.yml` | `push` → `dev` | `_ci.yml` (`include_docker: false`) → `_container-image.yml` |
 | `main.yml` | `push` → `main` | `_release-draft.yml` |
 | `release.yml` | `release` → `published` (`v*`) | `_container-image.yml`, MkDocs → GitHub Pages |
 
@@ -21,7 +21,22 @@ Entry-point workflows own triggers; reusable workflows (prefixed `_`) are called
 
 ## CI (`_ci.yml`)
 
-Runs backend (`go build`, `go vet`, `go test`), frontend (`npm ci`, `lint`, `build`), and a Docker smoke build (`push: false`).
+Reusable CI with optional Docker smoke build via `include_docker` (default `true`).
+
+| Job | What |
+|-----|------|
+| Backend | `go build`, `go vet`, `go test` |
+| Frontend | `npm ci`, `lint`, `build` |
+| Docker smoke | Full image build, `push: false` — **only when `include_docker: true`** |
+
+**Who calls it:**
+
+| Caller | `include_docker` | Why |
+|--------|------------------|-----|
+| `pr.yml` | `true` (default) | PR merge gate — catches Docker-only failures (layout, COPY, `.dockerignore`) that standalone frontend build misses |
+| `dev.yml` | `false` | `container-image` builds the same Dockerfile once and pushes; avoids duplicate build per push |
+
+Both Docker jobs use GHA BuildKit layer cache (`cache-from` / `cache-to`); the smoke job does **not** export a finished image for the push step.
 
 ## Container images (`_container-image.yml`)
 

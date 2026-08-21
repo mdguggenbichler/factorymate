@@ -113,8 +113,8 @@ GitHub Actions uses branch/PR entry workflows with reusable `_*.yml` workflows �
 
 | Branch / event | What runs |
 | --- | --- |
-| Pull request | CI only (`_ci.yml`) — backend, frontend, Docker smoke build |
-| `push` → `dev` | CI + push `ghcr.io/ghotso/factorymate:nightly` and `:{sha7}` |
+| Pull request | CI (`_ci.yml`, `include_docker: true`) — backend, frontend, Docker smoke build (required merge gate) |
+| `push` → `dev` | Backend + frontend CI (`include_docker: false`), then build/push nightly image (`_container-image.yml`) |
 | `push` → `main` | CI + draft release when root `VERSION` semver-increases and `v{VERSION}` tag is missing |
 | Release published (`v*`) | Push `ghcr.io/ghotso/factorymate:{version}` and `:latest`; deploy user docs to GitHub Pages |
 
