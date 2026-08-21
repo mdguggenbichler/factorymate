@@ -322,6 +322,66 @@ Build order:
 
 ---
 
+## M19 — Factory Planner: Game Data & Catalog
+
+**Goal:** Parse Coffee Stain `FactoryGame-Docs.json` into an in-memory catalog and expose slim read-only planner APIs — per `docs/proposals/factory-planner.md` §4, §7.1 (catalog/icons only). Does **not** touch FRM poller, Discord, or notification pipeline.
+
+**Design doc:** `docs/proposals/factory-planner.md` (source of truth for planner schemas, formulas, and API shapes until spec §2–§8 are updated in M21).
+
+- [x] Add `golang.org/x/text` to `backend/go.mod` for UTF-16 LE BOM decode (`docs/FactoryGame-Docs.json` is **not** UTF-8 — see proposal §4.1).
+- [x] `backend/internal/planner/parse_ue.go` — parse Unreal `((ItemClass="...",Amount=N))` ingredient/product strings; extract `Desc_*_C` / `Build_*_C` ClassNames.
+- [x] `backend/internal/planner/catalog.go` — load dump via `unicode.UTF16(LittleEndian, UseBOM)` decoder; ingest `FGRecipe`, item/resource descriptors, manufacturers, extractors/pumps, belts (`mSpeed`), pipes (`mFlowLimit`); fluid/gas amounts **÷1000** to game units; filter `mProducedIn` (drop workbench/workshop/build gun/automated workbench); alternate detection (`/AlternateRecipes/` or `Recipe_Alternate_*`); **Smelter-only** somersloop slot override `{ Build_SmelterMk1_C: 1 }` (Packager stays 0); `Build_*` → `Desc_*` icon ClassName map from `assets/icons.json`.
+- [x] Optional generated slim catalog: `backend/data/factory_catalog.json` (UTF-8) via small `go generate` / cmd — version in repo so tests/Docker need not ship the 10 MiB dump at runtime if slim file present; keep `docs/FactoryGame-Docs.json` as source of truth.
+- [x] `backend/internal/planner/balance.go` — per-node rates from clock (0–250%) + Somersloops; edge flow, proportional split, over/underproduction, belt/pipe Mk recommendation with numeric rate + `exceedsMax`; power formula `P = P_base × (clock/100)^N × (1 + sloops/slots)²` using dump `mPowerConsumptionExponent`.
+- [x] Golden fixtures: `backend/testdata/planner/power_examples.json` (four wiki rows in proposal §4.1) + balance in/out JSON for Vitest parity in M21.
+- [x] `GET /api/planner/catalog` — session + active user; slim JSON (items, recipes, buildings, belts, pipes); mount in `routes.go` like other session routes.
+- [x] `GET /api/planner/icons/{className}` — `image/png` from `assets/icons/` with mapping fallback; 404 when missing (frontend uses placeholder).
+- [x] Env defaults: `PLANNER_DOCS_PATH`, `PLANNER_ICONS_DIR` (proposal §10); local dev paths relative to repo root.
+- [x] Tests: `catalog_test.go` (UTF-16 fixture + dump BOM signature); fluid scaling; alternates; belt/pipe tables; Smelter override; `balance_test.go` power within ±0.01 MW of golden file.
+- [x] Add M19 to `.agents/project/orchestrator/milestone-scopes.md` (READ/WRITE + scoped CI) and update `.agents/project/orchestrator/doc-index.md`.
+
+**DoD:** `go test ./internal/planner/...` passes; authenticated `GET /api/planner/catalog` returns parseable slim catalog; icon route serves PNG or 404; no planner UI yet.
+
+---
+
+## M20 — Factory Planner: Plans, Solver & Edit Lock
+
+**Goal:** Persist factory plans in SQLite; greedy suggest solver; edit-lock concurrency; full REST surface except canvas — per proposal §5–§7. **Viewer write exception:** active viewers may create/edit **shared** plans when holding the lock (proposal §6; spec update in M21).
+
+- [x] Migration `011_factory_plans.sql`: `factory_plans` table per proposal §5.3 (`graph_json`, `baseline_json`, `solver_options_json`, visibility, **status** lifecycle, edit-lock columns, indexes). Follow existing migration runner; `CREATE TABLE` only (no rebuild).
+- [x] `backend/internal/planner/lock.go` — acquire (409 if held), heartbeat (~45 s client / **5 min** expiry), release, force-release (owner or admin); archived plans reject lock acquire and graph writes (403).
+- [x] `backend/internal/planner/solver.go` — greedy recursive tree (not LP): target item + rate → machine counts at default clock/sloops; byproducts as extra output ports **without** auto-sink/edges; raw resources → `source` nodes; cycle detection → 400 with cycle ClassNames; depth-based x/y layout; **Plastic 60/min** fixture (3 refineries, 90 m³/min oil, HOR unterminated).
+- [x] `backend/internal/api/planner_handlers.go` — full API per proposal §7.4: plan CRUD; list with default omit `archived`, `status` filter, `includeArchived`; `canEdit` / `canManage` / `lock` on list+detail; `PUT .../graph` optimistic concurrency (`updatedAt`); suggest preview vs apply (`apply-suggest` sets graph **and** baseline atomically); `reset-baseline`; optional `POST /api/planner/analyze`.
+- [x] Authorization per proposal §6: owner/admin manage metadata without lock; admin lists others’ private plans; shared readable by all active users; graph/suggest/reset require lock + non-archived status.
+- [x] Wire all routes under `/api/planner/...` with `RequireSession` + `RequireActiveUser` (not admin wrapper).
+- [x] Tests: Iron Plate suggest fixture; cycle error; lock 409 + expiry steal + force-release; visibility (viewer cannot GET others’ private); graph PUT without lock → 409; archived → 403 on graph/lock/suggest; PATCH status to archived clears lock; admin private list.
+- [x] Add M20 to `.agents/project/orchestrator/milestone-scopes.md` and `doc-index.md`.
+
+**DoD:** Plan CRUD + suggest + reset + lock verifiable via API tests or curl; solver fixtures pass; no React Flow yet.
+
+---
+
+## M21 — Factory Planner: Canvas UI & Shipping
+
+**Goal:** Hybrid node-graph editor (Suggest + freehand), client-side balance for instant clock/sloop UX, list page, nav, i18n, Docker data assets, spec/guide updates — per proposal §8–§10, §13 success criteria.
+
+- [x] Dependencies: `@xyflow/react` (MIT, client-only `@xyflow/react/dist/style.css`), `@dagrejs/dagre` for suggest apply + optional re-layout. **Do not** use React Flow Pro.
+- [x] `frontend/lib/planner/` — `graph-types.ts`, `catalog-types.ts`, `constants.ts` (`PLANNER_GRAPH_SAVE_DEBOUNCE_MS` default 800), `balance.ts` (mirror Go; shared golden fixtures with `balance.test.ts`), `layout.ts`, `to-react-flow.ts`; add planner types to `frontend/lib/api-types.ts`.
+- [x] Routes: `/planner` (RSC list), `/planner/[id]` (RSC load plan → client editor). **Do not** extend read-only `research-tree-canvas.tsx`.
+- [x] `frontend/components/planner/` — list (`Table`, create `Dialog`, status/visibility `Badge`, status filter default hides archived); editor (lock heartbeat 45 s, debounced save, read-only gate); toolbar (suggest, reset, layout, save status); lock banner; suggest dialog; node inspector (`Sheet`: recipe, clock 0–250, sloops, count); add-node popover; canvas (`dynamic(..., { ssr: false })`) with `process-node`, `source-node`, `sink-node`, `flow-edge` (rate + Mk + imbalance colors).
+- [x] Canvas UX per proposal §8.6: typed handles (`out:Desc_*` / `in:Desc_*`), `isValidConnection` same itemClass; unterminated outputs / starved inputs on nodes; reset via `AlertDialog`; empty plan CTA (suggest or add node).
+- [x] Nav: add **Planner** to `viewerItems` in `app-sidebar.tsx`; fix `NavMain` `isActive` for nested routes (`pathname.startsWith(url + "/")` when `url !== "/"`).
+- [x] i18n: full `planner` namespace in `messages/en.json` (spec §8.2); game display names from catalog API only.
+- [x] Spec updates: §2.1 React Flow exception; §3 `factory_plans`; §6 viewer planner write exception; §7 planner routes + §7.1/§7.2 shapes; §8 page inventory + §8.1 mapping.
+- [x] Docker: copy `docs/FactoryGame-Docs.json` (or slim catalog) + `assets/icons/` + `assets/icons.json` into image; document env in `.env.example` / `docs/development.md`.
+- [x] User guide: `docs/guide/planner.md` (short how-to when shipping).
+- [x] Add M21 to `.agents/project/orchestrator/milestone-scopes.md` and `doc-index.md`.
+- [x] Proposal status line: mark `docs/proposals/factory-planner.md` as on-roadmap (M19–M21) once M21 DoD met.
+
+**DoD (proposal §13):** Suggest Iron Plate at fixture rate → draggable graph; Plastic 60/min → 3 refineries, HOR unconnected; clock/sloop on one node does not rewrite others — edges show under/over + Mk **and numeric rate**; reset restores last applied suggest; private/shared visibility + edit lock work; status filter hides archived by default, archived graph read-only; no hardcoded UI strings; `go test ./internal/planner/...`, Vitest `lib/planner/balance.test.ts`, `npm run lint` + `npm run build` pass.
+
+---
+
 ## M14 — Deferred Backlog
 
 Per **spec §10** — not v1:
