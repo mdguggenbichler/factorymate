@@ -69,6 +69,7 @@
     "overview": "Overview",
     "players": "Players",
     "production": "Production",
+    "planner": "Planner",
     "power": "Power",
     "resourceSink": "Resource Sink",
     "drones": "Drones",
@@ -781,6 +782,124 @@
       "unlinkDiscordConfirm": "Unlink",
       "discordUnlinked": "Discord identity unlinked.",
       "externalUpdated": "External identity updated."
+    }
+  },
+  "planner": {
+    "list": {
+      "title": "Factory Planner",
+      "description": "Design production chains with a node graph — suggest from a target item or build freehand.",
+      "create": "New plan",
+      "createTitle": "Create factory plan",
+      "createDescription": "Start with an empty canvas. Use Suggest to generate a chain from a target item.",
+      "nameLabel": "Plan name",
+      "visibilityLabel": "Visibility",
+      "createConfirm": "Create",
+      "cancel": "Cancel",
+      "createFailed": "Could not create plan.",
+      "columnName": "Name",
+      "columnOwner": "Owner",
+      "columnVisibility": "Visibility",
+      "columnStatus": "Status",
+      "columnLock": "Lock",
+      "columnUpdated": "Updated",
+      "empty": "No plans match this filter.",
+      "filterAll": "Active",
+      "lockHeld": "Editing: {username}",
+      "delete": "Delete plan",
+      "deleteTitle": "Delete plan?",
+      "deleteDescription": "This permanently removes the plan and its graph.",
+      "deleteConfirm": "Delete",
+      "deleted": "Plan deleted.",
+      "deleteFailed": "Could not delete plan."
+    },
+    "status": {
+      "planning": "Planning",
+      "inProgress": "In progress",
+      "completed": "Completed",
+      "archived": "Archived"
+    },
+    "visibility": {
+      "private": "Private",
+      "shared": "Shared"
+    },
+    "lock": {
+      "editing": "You are editing this plan",
+      "heldBy": "Editing: {username}",
+      "expires": "Lock expires {time}",
+      "release": "Release lock",
+      "acquire": "Start editing",
+      "readOnlyHint": "This plan is read-only until you acquire the edit lock.",
+      "forceRelease": "Force release",
+      "acquireFailed": "Could not acquire edit lock.",
+      "releaseFailed": "Could not release lock.",
+      "forceFailed": "Could not force-release lock."
+    },
+    "toolbar": {
+      "suggest": "Suggest",
+      "addNode": "Add building",
+      "layout": "Re-layout",
+      "reset": "Reset to balanced",
+      "saved": "Saved",
+      "saving": "Saving…",
+      "unsaved": "Unsaved changes",
+      "readOnly": "Read-only",
+      "saveError": "Save failed",
+      "power": "{mw} MW"
+    },
+    "suggest": {
+      "title": "Suggest production chain",
+      "description": "Pick a target item and rate. The solver replaces the current graph.",
+      "item": "Target item",
+      "rate": "Rate (per minute)",
+      "searchPlaceholder": "Search items…",
+      "noItems": "No items found.",
+      "apply": "Apply",
+      "cancel": "Cancel",
+      "invalid": "Enter a valid item and positive rate.",
+      "applied": "Suggestion applied.",
+      "failed": "Suggest failed."
+    },
+    "addNode": {
+      "searchPlaceholder": "Search recipes…",
+      "noRecipes": "No recipes found."
+    },
+    "node": {
+      "machineCount": "{count}× {building}",
+      "clock": "{percent}% clock",
+      "sloops": "{count} sloops",
+      "power": "{mw} MW",
+      "sourceRate": "{rate} {unit}",
+      "sink": "Sink"
+    },
+    "edge": {
+      "beltLabel": "{rate}/min · Mk.{mk}",
+      "pipeLabel": "{rate} m³/min · Pipe Mk.{mk}",
+      "overproduction": "Overproduction on this connection",
+      "underproduction": "Underproduction on this connection",
+      "exceedsMax": "Flow exceeds maximum belt/pipe capacity"
+    },
+    "inspector": {
+      "processTitle": "Building",
+      "sourceTitle": "Resource source",
+      "sinkTitle": "Sink",
+      "recipe": "Recipe",
+      "count": "Machine count",
+      "clock": "Clock speed ({percent}%)",
+      "sloops": "Somersloops",
+      "rate": "Output rate"
+    },
+    "empty": {
+      "hint": "This plan is empty. Generate a chain or add a building to start.",
+      "suggest": "Suggest chain",
+      "addNode": "Add building"
+    },
+    "reset": {
+      "title": "Reset to balanced?",
+      "description": "Restore the graph from the last applied suggestion. Manual changes since then will be lost.",
+      "confirm": "Reset",
+      "cancel": "Cancel",
+      "done": "Graph reset to baseline.",
+      "failed": "Reset failed."
     }
   }
 }

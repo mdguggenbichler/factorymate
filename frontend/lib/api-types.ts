@@ -565,3 +565,58 @@ export type RenderedPreview = {
   plain?: string
   embed?: EmbedTemplate
 }
+
+export type PlannerPlanStatus =
+  | "planning"
+  | "inProgress"
+  | "completed"
+  | "archived"
+
+export type PlannerPlanVisibility = "private" | "shared"
+
+export type PlannerLockState = {
+  held: boolean
+  userId?: number
+  username?: string
+  expiresAt?: string
+  mine: boolean
+}
+
+export type PlannerPlanOwner = {
+  id: number
+  username: string
+}
+
+export type PlannerPlanSummary = {
+  id: number
+  name: string
+  visibility: PlannerPlanVisibility
+  status: PlannerPlanStatus
+  owner: PlannerPlanOwner
+  updatedAt: string
+  lock: PlannerLockState
+  canEdit: boolean
+  canManage: boolean
+  visibilityLabel?: string
+  targetItemClass?: string
+  targetRate?: number
+}
+
+export type PlannerPlansListResponse = {
+  plans: PlannerPlanSummary[]
+}
+
+export type PlannerPlanDetail = PlannerPlanSummary & {
+  graph: import("@/lib/planner/graph-types").PlanGraph
+  hasBaseline: boolean
+  solverOptions: Record<string, unknown>
+}
+
+export type PlannerSuggestResponse = {
+  graph: import("@/lib/planner/graph-types").PlanGraph
+  updatedAt?: string
+}
+
+export type PlannerGraphSaveResponse = {
+  updatedAt: string
+}

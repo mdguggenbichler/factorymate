@@ -28,7 +28,9 @@ Copy `.env.example` to `.env` at the repo root (or export vars in your shell).
 | `DISCORD_ADMIN_ROLE_IDS` | Optional comma-separated admin role IDs before UI role mapping is configured |
 | `FACTORYMATE_PUBLIC_URL` | Public dashboard URL used in bot welcome/help copy |
 
-See `docs/factorymate-spec.md` §9 for the full variable list.
+| `PLANNER_DOCS_PATH` | UTF-16 LE BOM `FactoryGame-Docs.json` path for catalog parse fallback (Docker: `/app/planner-data/FactoryGame-Docs.json`) |
+| `PLANNER_CATALOG_PATH` | Slim UTF-8 catalog JSON (preferred at runtime; Docker: `/app/data/factory_catalog.json`) |
+| `PLANNER_ICONS_DIR` / `PLANNER_ICONS_JSON` | Satisfactory icon PNG dir + `Build_*`→`Desc_*` map (Docker: `/app/planner-data/icons`, `/app/planner-data/icons.json`) |
 
 ## Discord bot setup (M15)
 

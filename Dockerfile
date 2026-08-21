@@ -12,6 +12,10 @@ RUN go mod download
 
 COPY backend/ .
 
+COPY docs/FactoryGame-Docs.json /planner-data/FactoryGame-Docs.json
+COPY assets/icons /planner-data/icons
+COPY assets/icons.json /planner-data/icons.json
+
 RUN APP_VERSION="$(cat /VERSION | tr -d '[:space:]')" && \
     CGO_ENABLED=0 GOOS=linux go build -trimpath \
     -ldflags="-s -w -X main.appVersion=${APP_VERSION}" \
@@ -50,9 +54,14 @@ ENV HOSTNAME=0.0.0.0
 ENV PORT=3000
 ENV BACKEND_URL=http://127.0.0.1:8080
 ENV DATABASE_PATH=/data/factorymate.db
+ENV PLANNER_CATALOG_PATH=/app/data/factory_catalog.json
+ENV PLANNER_DOCS_PATH=/app/planner-data/FactoryGame-Docs.json
+ENV PLANNER_ICONS_DIR=/app/planner-data/icons
+ENV PLANNER_ICONS_JSON=/app/planner-data/icons.json
 
 COPY --from=go-build /out/server /app/server
 COPY --from=go-build /src/backend/data /app/data
+COPY --from=go-build /planner-data /app/planner-data
 COPY --from=node-build /app/public /app/frontend/public
 COPY --from=node-build /app/.next/standalone /app/frontend
 COPY --from=node-build /app/.next/static /app/frontend/.next/static

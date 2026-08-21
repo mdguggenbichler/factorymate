@@ -1,6 +1,6 @@
 # Proposal: Satisfactory Factory Calculator / Planner
 
-**Status:** design only — not implemented, not on the M0–M18 roadmap.  
+**Status:** on-roadmap — implemented as **M19–M21** in `docs/factorymate-roadmap.md`.  
 **Related:** spec §2.1 (stack), §3 (SQLite + numbered migrations), §6 (admin/viewer), §7 (REST + camelCase JSON), §8 / §8.1 / §8.2 (pages, shadcn, i18n); `backend/internal/db/migrate.go`; existing custom canvas at `frontend/components/research/research-tree-canvas.tsx` (read-only — not a starting point for this feature).
 
 FactoryMate today is a **live-server sidecar** (FRM poller + Discord + dashboard). This feature is a **second product surface** in the same app: an offline production-chain planner that uses Coffee Stain’s recipe/building dump, not FRM factory state. Interaction should match what players know from the [wiki planner list](https://satisfactory.wiki.gg/wiki/Online_tools) (Suggest like Satisfactory Tools / SC simple mode; canvas like Ferrumium Planner), while avoiding calculator-only UIs, auto-rewriting solvers, and edges that hide Mk and rate (§2).

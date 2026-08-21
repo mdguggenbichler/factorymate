@@ -20,6 +20,10 @@ services:
       DISCORD_GUILD_ID: ${DISCORD_GUILD_ID:-}
       DISCORD_ADMIN_ROLE_IDS: ${DISCORD_ADMIN_ROLE_IDS:-}
       FACTORYMATE_PUBLIC_URL: ${FACTORYMATE_PUBLIC_URL:-}
+      PLANNER_CATALOG_PATH: /app/data/factory_catalog.json
+      PLANNER_DOCS_PATH: /app/planner-data/FactoryGame-Docs.json
+      PLANNER_ICONS_DIR: /app/planner-data/icons
+      PLANNER_ICONS_JSON: /app/planner-data/icons.json
     volumes:
       - ./data:/data
     networks:

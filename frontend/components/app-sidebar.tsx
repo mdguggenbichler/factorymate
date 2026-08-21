@@ -27,6 +27,7 @@ import {
   FlaskConicalIcon,
   GaugeIcon,
   LayoutDashboardIcon,
+  LayoutGridIcon,
   LinkIcon,
   MessageSquareIcon,
   PackageIcon,
@@ -65,6 +66,11 @@ export function AppSidebar({
       title: t("production"),
       url: "/production",
       icon: <FactoryIcon />,
+    },
+    {
+      title: t("planner"),
+      url: "/planner",
+      icon: <LayoutGridIcon />,
     },
     {
       title: t("power"),
@@ -198,6 +204,7 @@ export function usePageTitle(): string {
     "/": t("overview"),
     "/players": t("players"),
     "/production": t("production"),
+    "/planner": t("planner"),
     "/power": t("power"),
     "/resource-sink": t("resourceSink"),
     "/drones": t("drones"),

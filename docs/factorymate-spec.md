@@ -100,6 +100,7 @@ It replaces an earlier n8n-based polling workflow with a single self-contained G
 | Frontend i18n | **next-intl** | All UI strings via locale files — see §8.2; English only in v1 |
 | UI components | shadcn/ui + Tailwind CSS | Copy-paste component model, minimal custom CSS |
 | Charts | Recharts | Pairs natively with shadcn's chart components |
+| Factory planner canvas | **@xyflow/react** (React Flow 12) + **@dagrejs/dagre** | MIT graph editor for `/planner/[id]` only — custom nodes/edges, pan/zoom, typed handles. Surrounding planner UI (list, dialogs, inspector) stays shadcn. CSS: `@xyflow/react/dist/style.css` in the planner client module only. **Do not** use React Flow Pro. |
 | Auth | Session-cookie based; username/password for setup and break-glass invites; **Discord OAuth** (`identify` scope) for linked Discord users when `DISCORD_CLIENT_SECRET` + `FACTORYMATE_PUBLIC_URL` are set | Discord-only users have `password_hash` NULL |
 | Deployment | Docker, **one container** (Go backend + Next.js frontend) | Runs alongside the existing `satisfactory-server` container on the group's host; Next.js proxies `/api` to the Go process on localhost (see §2.4) |
 
@@ -554,6 +555,29 @@ CREATE TABLE app_settings (
     production_snapshot_interval_seconds INTEGER NOT NULL DEFAULT 300,
     production_snapshot_retention_days INTEGER NOT NULL DEFAULT 30
 );
+
+-- Factory planner persisted graphs (M20+)
+CREATE TABLE factory_plans (
+    id INTEGER PRIMARY KEY,
+    owner_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    visibility TEXT NOT NULL DEFAULT 'private'
+        CHECK (visibility IN ('private', 'shared')),
+    status TEXT NOT NULL DEFAULT 'planning'
+        CHECK (status IN ('planning', 'in_progress', 'completed', 'archived')),
+    target_item_class TEXT,
+    target_rate REAL,
+    solver_options_json TEXT NOT NULL DEFAULT '{}',
+    graph_json TEXT NOT NULL,
+    baseline_json TEXT,
+    locked_by_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    lock_expires_at TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+CREATE INDEX idx_factory_plans_owner ON factory_plans(owner_user_id);
+CREATE INDEX idx_factory_plans_visibility ON factory_plans(visibility);
+CREATE INDEX idx_factory_plans_status ON factory_plans(status);
 ```
 
 ---
@@ -950,7 +974,7 @@ All 17 message types (15 game events plus optional `connection_details_changed` 
 - Passwords hashed with bcrypt.
 - Two roles:
   - **admin** — full access: settings, notification targets, message templates, target assignment, user management.
-  - **viewer** — read-only access to all dashboard pages (status, players, production, power, resource sink, drones, doggos, milestones, research, vehicles, elevator); no access to settings/templates/targets/users pages (these routes 403 for viewers, and are hidden from navigation).
+  - **viewer** — read-only access to all dashboard pages (status, players, production, power, resource sink, drones, doggos, milestones, research, vehicles, elevator, **factory planner list/view**); no access to settings/templates/targets/users pages (these routes 403 for viewers, and are hidden from navigation). **Exception:** viewers may create and edit **shared** factory plans when holding the planner edit lock (see §7 planner routes); private plans remain owner-only unless admin.
 - First-run: if the `users` table is empty, the app serves a one-time setup page to create the first admin account instead of the login page.
 - Additional accounts are created primarily via **Discord `/register`** (M15, M17 OAuth completion on web). Admins generate break-glass **web invite links** only when Discord registration is unavailable: single-use links (preset role, 7-day TTL); invitees set their own username and password at `/invite/:token`. No admin-set passwords.
 
@@ -1038,6 +1062,22 @@ All endpoints under `/api`, JSON in/out, session-cookie authenticated unless not
 | POST | `/api/registrations/:id/reject` | admin | `{ comment? }` — reject and notify registrant |
 | GET | `/api/players/unmapped` | admin | Server players with no linked FactoryMate user |
 | PUT | `/api/users/:id/external` | admin | Override or unlink external identity |
+| GET | `/api/planner/catalog` | session, active | Slim game catalog (items, recipes, buildings, belts, pipes) |
+| GET | `/api/planner/icons/{className}` | session, active | Item/building icon PNG or 404 |
+| GET | `/api/planner/plans` | session, active | List visible plans; default omits `archived`; query `status`, `includeArchived` |
+| POST | `/api/planner/plans` | session, active | Create plan `{ name, visibility?, status? }` |
+| GET | `/api/planner/plans/{id}` | can-read | Full plan + graph + lock + permissions |
+| PATCH | `/api/planner/plans/{id}` | can-manage | Metadata `{ name?, visibility?, status? }` — no lock required |
+| DELETE | `/api/planner/plans/{id}` | can-manage | Delete plan |
+| PUT | `/api/planner/plans/{id}/graph` | can-read + lock | `{ graph, updatedAt }` optimistic concurrency |
+| POST | `/api/planner/plans/{id}/suggest` | lock | `{ itemClass, ratePerMin, recipeByProductClass?, apply? }` → `{ graph }` |
+| POST | `/api/planner/plans/{id}/apply-suggest` | lock | Persist graph as current + baseline |
+| POST | `/api/planner/plans/{id}/reset-baseline` | lock | Restore graph from baseline |
+| POST | `/api/planner/plans/{id}/lock` | can-read | Acquire edit lock |
+| POST | `/api/planner/plans/{id}/lock/heartbeat` | lock holder | Extend lock |
+| POST | `/api/planner/plans/{id}/lock/release` | lock holder | Release lock |
+| POST | `/api/planner/plans/{id}/lock/force-release` | owner or admin | Force-release lock |
+| POST | `/api/planner/analyze` | session, active | `{ graph }` → derived balance (optional debug) |
 
 ### 7.1 Response schemas
 
@@ -1146,7 +1186,32 @@ JSON field names use **camelCase** in API responses; DB columns remain snake_cas
 
 `types` keys are `message_types.key` values (not categories). `notifications.dm_defaults_json` stores the same per-type booleans.
 
-**Errors:** `400` validation, `401` unauthenticated, `403` forbidden, `404` not found, `500` internal. Error body: `{ "error": "message" }`.
+**`GET /api/planner/plans`** and **`GET /api/planner/plans/{id}`** (summary fields; detail adds `graph`, `hasBaseline`, `solverOptions`):
+```json
+{
+  "id": 1,
+  "name": "Heavy frames 30/min",
+  "visibility": "shared",
+  "status": "inProgress",
+  "owner": { "id": 2, "username": "ada" },
+  "targetItemClass": "Desc_ModularFrameHeavy_C",
+  "targetRate": 30,
+  "updatedAt": "2026-08-21T07:00:00Z",
+  "lock": {
+    "held": true,
+    "userId": 2,
+    "username": "ada",
+    "expiresAt": "2026-08-21T07:05:00Z",
+    "mine": true
+  },
+  "canEdit": true,
+  "canManage": true
+}
+```
+
+**`GET /api/planner/catalog`:** slim JSON `{ items, recipes, buildings, belts, pipes, iconMap }` — game display names from this payload only (not i18n).
+
+**Errors:** `400` validation, `401` unauthenticated, `403` forbidden, `404` not found, `409` conflict (lock/updatedAt), `500` internal. Error body: `{ "error": "message" }`.
 
 ### 7.2 Request bodies (mutating endpoints)
 
@@ -1171,6 +1236,12 @@ JSON field names use **camelCase** in API responses; DB columns remain snake_cas
 | `POST /api/auth/register/complete` | `{ "token", "username", "pendingPlayerName" }` — Discord OAuth registration after `/register` |
 | `POST /api/invites/:token/accept` | `{ "username", "password" }` |
 | `PUT /api/users/:id` | `{ "role"?, "password"?, "playerId"? }` (`playerId: null` clears mapping) |
+| `POST /api/planner/plans` | `{ "name", "visibility"?: "private" \| "shared", "status"?: "planning" \| "inProgress" \| "completed" \| "archived" }` |
+| `PATCH /api/planner/plans/{id}` | `{ "name"?, "visibility"?, "status"? }` |
+| `PUT /api/planner/plans/{id}/graph` | `{ "graph": { "viewport", "nodes", "edges" }, "updatedAt" }` |
+| `POST /api/planner/plans/{id}/suggest` | `{ "itemClass", "ratePerMin", "recipeByProductClass"?, "apply"?: boolean }` |
+| `POST /api/planner/plans/{id}/apply-suggest` | `{ "graph" }` |
+| `POST /api/planner/analyze` | `{ "graph" }` |
 
 ---
 
@@ -1185,6 +1256,8 @@ JSON field names use **camelCase** in API responses; DB columns remain snake_cas
 | `/` (Dashboard Overview) | viewer, admin | At-a-glance status from `GET /api/status` (server badge, players, fuse warnings, latest milestone, elevator progress) | Status cards, badge, progress bar |
 | `/players` | viewer, admin | Full player roster (online/offline), last-seen timestamps, join/leave history timeline | Table, timeline list |
 | `/production` | viewer, admin | Two views, mirroring FRM's own web UI which this was modeled after: **Overall** — a table of every tracked item (name, `ProdPerMin` label, prod/cons %, current/max produced, current/max consumed, from `prod_stats_state`); clicking a row expands a historical trend chart for that item below the table, backed by `production_snapshots`. **Detailed** — a table of every producer machine (building type, recipe, manufacturing speed %, producing/paused status, from `factory_machine_state`); clicking a row expands that machine's full ingredient/output breakdown. | Recharts line chart (on row expand), item combobox, date-range picker, `Table` for both views, `Tabs` to switch between them |
+| `/planner` | viewer, admin (active) | Factory plan list: create dialog, visibility/status badges, lock indicator, status filter (default hides archived) | `Table`, `Dialog`, `Badge`, `Tabs`/`Select` filter |
+| `/planner/[id]` | can-read | Hybrid node-graph editor: suggest + freehand, client-side balance, edit lock, read-only when archived or lock held by another user | `@xyflow/react` canvas (client-only), shadcn toolbar/inspector/dialogs |
 | `/power` | viewer, admin | Per-circuit table: fuse status, power capacity/production/consumption/max-consumption, battery differential/percent/capacity/time-empty/time-full — full detail from `circuit_state`, not just the trip/restore boolean; a discrete fuse trip/restore event history; and a proper interval-selectable historical chart (production/consumption/battery over time, per circuit), backed by `circuit_snapshots` — not FRM's own fixed-window graphing | Table, history list, Recharts chart with date-range control |
 | `/resource-sink` | viewer, admin | Current A.W.E.S.O.M.E. Sink status (coupon count, progress-to-next-coupon, total points) as cards, plus a proper interval-selectable historical chart of points/coupons over time, backed by `resource_sink_snapshots` — deliberately not a passthrough of FRM's own fixed rolling graph (see §4.1) | Cards, Recharts chart with date-range control |
 | `/drones` | viewer, admin | Drone list: home/paired station, current destination, flying mode, current/max speed | Table |
@@ -1218,6 +1291,8 @@ Concrete shadcn/ui components — and, where one exists, a full shadcn **block**
 | `/` (Overview) | `dashboard-01` as loose layout reference (card grid) | `Card`, `Badge`, `Avatar` (online players), `Progress` (elevator bar from `/api/status`) | Status cards from `GET /api/status` — no elevator unknown-log alert here (admin alert is on `/elevator` only, §8) |
 | `/players` | — | `Table` (+ `@tanstack/react-table` for sort/filter — shadcn's "Data Table" pattern), `Avatar`, `Badge` (online/offline) | **Timeline** for join/leave history has no stock shadcn component — compose from `Card` + `Separator` + a simple vertical list |
 | `/production` | — | `Tabs` (Overall / Detailed), `Table` (Data Table pattern, both views), `Chart` (shadcn's Recharts wrapper: `ChartContainer`/`ChartTooltip`/`ChartLegend`, rendered inline below an expanded row), `Calendar`+`Popover`/`Select` (date-range for the expanded chart), `Badge` (producing/paused status) | The "click a row to expand a chart/detail panel beneath it" interaction (mirroring FRM's own web UI, per the page's purpose in §8) isn't a single stock component — compose from `Table`'s row click handler + a conditionally rendered `Chart`/`Card` block |
+| `/planner` | — | `Table`, `Dialog`, `Badge`, `Tabs`/`Select`, `AlertDialog` | None |
+| `/planner/[id]` | — | `Alert`, `Button`, `Sheet` (node inspector), `Dialog` (suggest), `Popover` (add node), `AlertDialog` (reset) | **React Flow exception (§2.1):** `@xyflow/react` canvas with custom `process`/`source`/`sink` nodes and `flow` edges; `@dagrejs/dagre` for suggest apply / re-layout. Import `@xyflow/react/dist/style.css` in the planner client module only. |
 | `/power` | — | `Table` (Data Table pattern, full battery/power column set), `Progress` (capacity/consumption bars), `Badge`/`Alert` (tripped state), `Chart` (Recharts wrapper, per-circuit historical trend), `Combobox` (circuit picker) + `Calendar`+`Popover`/`Select` (date-range, same pattern as `/production`) | None |
 | `/resource-sink` | — | `Card` (current coupon count, progress, totals), `Chart` (Recharts wrapper, historical trend), `Calendar`+`Popover`/`Select` (date-range, same pattern as `/production`) | None |
 | `/drones` | — | `Table` (Data Table pattern), `Badge` (flying mode) | None |
@@ -1252,7 +1327,7 @@ The frontend uses **proper i18n from the first commit** — no user-facing hardc
 **Rules (mandatory for all frontend work):**
 
 1. **No hardcoded UI strings** in JSX/TSX — labels, buttons, headings, nav items, empty states, validation messages shown in the UI, toast text, dialog titles, table column headers, badge labels for *UI state* (e.g. "Online", "Tripped"), and `aria-label` / `title` attributes must come from locale files.
-2. **Namespace layout** in `en.json` — group by feature, e.g. `nav`, `auth`, `players`, `power`, `settings`, `common` (shared: Save, Cancel, Loading, errors).
+2. **Namespace layout** in `en.json` — group by feature, e.g. `nav`, `auth`, `players`, `power`, `settings`, `planner`, `common` (shared: Save, Cancel, Loading, errors).
 3. **Interpolation** for dynamic UI text: `t('players.onlineCount', { count: n })` — not string concatenation in components.
 4. **Pluralization** where needed: use next-intl ICU message syntax in JSON (e.g. `{count, plural, one {# player} other {# players}}`).
 

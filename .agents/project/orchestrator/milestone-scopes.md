@@ -475,3 +475,41 @@ cd backend && go test ./internal/planner/... ./internal/api/... ./internal/db/..
 **Notes:** No React Flow / frontend planner UI (M21). Verifier marks roadmap checkboxes — execution agents do not.
 
 ---
+
+## M21 — Factory Planner: Canvas UI & Shipping
+
+**READ:** `docs/proposals/factory-planner.md` §8–§10, §13; `docs/factorymate-spec.md` §2.1, §3, §6, §7, §8, §8.1, §8.2; `backend/internal/planner/balance.go`; `backend/testdata/planner/**`; `frontend/` (app-sidebar, NavMain, api-types, shadcn patterns); `Dockerfile`, `docker-compose.yml`, `docs/development.md`.
+
+**WRITE:**
+
+```
+frontend/package.json
+frontend/lib/planner/**
+frontend/lib/api-types.ts
+frontend/app/(app)/planner/**
+frontend/components/planner/**
+frontend/components/app-sidebar.tsx
+frontend/components/nav-main.tsx
+frontend/messages/en.json
+docs/factorymate-spec.md
+docs/proposals/factory-planner.md          # status line only
+docs/guide/planner.md
+docs/development.md
+.env.example
+Dockerfile
+docker-compose.yml                         # if env/assets change
+.agents/project/orchestrator/milestone-scopes.md
+.agents/project/orchestrator/doc-index.md
+```
+
+**Scoped CI:**
+
+```bash
+cd backend && go test ./internal/planner/... && go vet ./internal/planner/...
+cd frontend && npm run lint && npm run build
+cd frontend && npx vitest run lib/planner/balance.test.ts
+```
+
+**Notes:** Do not extend `research-tree-canvas.tsx`. Do not use React Flow Pro. Verifier marks roadmap checkboxes — execution agents do not.
+
+---
