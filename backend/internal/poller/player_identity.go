@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"log"
 	"strings"
 	"time"
 
@@ -121,14 +122,51 @@ func deletePlayerRowsByIDs(ctx context.Context, q execQuerier, ids []string, exc
 	return nil
 }
 
-func deletePlayerRowsByNameExcept(ctx context.Context, q execQuerier, name, keepID string) error {
-	_, err := q.ExecContext(ctx, `
-		DELETE FROM player_state
+func duplicatePlayerIDsByName(ctx context.Context, q interface {
+	QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error)
+}, name, keepID string) ([]string, error) {
+	rows, err := q.QueryContext(ctx, `
+		SELECT player_id FROM player_state
 		WHERE LOWER(name) = LOWER(?) AND player_id != ?`, name, keepID)
 	if err != nil {
-		return fmt.Errorf("delete duplicate player rows for %q: %w", name, err)
+		return nil, fmt.Errorf("query duplicate player rows for %q: %w", name, err)
 	}
-	return nil
+	defer rows.Close()
+
+	var ids []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		ids = append(ids, id)
+	}
+	return ids, rows.Err()
+}
+
+// cleanupDuplicatePlayerRowsByName relinks users off stale same-name rows, then deletes them.
+func cleanupDuplicatePlayerRowsByName(ctx context.Context, db *sql.DB, name, keepID string) error {
+	duplicateIDs, err := duplicatePlayerIDsByName(ctx, db, name, keepID)
+	if err != nil {
+		return err
+	}
+	if len(duplicateIDs) == 0 {
+		return nil
+	}
+
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	if err := relinkUsersToPlayerID(ctx, tx, keepID, duplicateIDs); err != nil {
+		return err
+	}
+	if err := deletePlayerRowsByIDs(ctx, tx, duplicateIDs, keepID); err != nil {
+		return err
+	}
+	return tx.Commit()
 }
 
 type execQuerier interface {
@@ -197,21 +235,27 @@ func DedupePlayerStateByName(ctx context.Context, db *sql.DB) error {
 		return err
 	}
 
+	merged := 0
 	for _, lname := range duplicateNames {
-		if err := dedupePlayerNameGroup(ctx, db, lname); err != nil {
+		deleted, err := dedupePlayerNameGroup(ctx, db, lname)
+		if err != nil {
 			return err
 		}
+		merged += deleted
+	}
+	if merged > 0 {
+		log.Printf("player_state: merged %d duplicate row(s) across %d name(s)", merged, len(duplicateNames))
 	}
 	return nil
 }
 
-func dedupePlayerNameGroup(ctx context.Context, db *sql.DB, lname string) error {
+func dedupePlayerNameGroup(ctx context.Context, db *sql.DB, lname string) (int, error) {
 	candidates, err := loadPlayerCandidates(ctx, db, lname)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	if len(candidates) < 2 {
-		return nil
+		return 0, nil
 	}
 
 	canonical := pickCanonicalPlayer(candidates)
@@ -224,12 +268,12 @@ func dedupePlayerNameGroup(ctx context.Context, db *sql.DB, lname string) error 
 
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	defer tx.Rollback()
 
 	if err := relinkUsersToPlayerID(ctx, tx, canonical.PlayerID, duplicateIDs); err != nil {
-		return err
+		return 0, err
 	}
 
 	mergedLastSeen := canonical.LastSeenAt
@@ -245,13 +289,16 @@ func dedupePlayerNameGroup(ctx context.Context, db *sql.DB, lname string) error 
 		WHERE player_id = ?`,
 		canonical.Name, canonical.Online, nullStringValue(mergedLastSeen), canonical.PlayerID,
 	); err != nil {
-		return fmt.Errorf("update canonical player_state: %w", err)
+		return 0, fmt.Errorf("update canonical player_state: %w", err)
 	}
 
 	if err := deletePlayerRowsByIDs(ctx, tx, duplicateIDs, canonical.PlayerID); err != nil {
-		return err
+		return 0, err
 	}
-	return tx.Commit()
+	if err := tx.Commit(); err != nil {
+		return 0, err
+	}
+	return len(duplicateIDs), nil
 }
 
 func nullStringValue(v sql.NullString) any {

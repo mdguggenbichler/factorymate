@@ -139,5 +139,8 @@ func Init(ctx context.Context, db *sql.DB, cfg SeedConfig) error {
 	if err := Migrate(ctx, db); err != nil {
 		return err
 	}
+	if err := dedupePlayerState(ctx, db); err != nil {
+		return err
+	}
 	return Seed(ctx, db, cfg)
 }

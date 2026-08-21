@@ -11,6 +11,50 @@ import (
 	"factorymate/internal/poller"
 )
 
+func TestPollCleansDuplicatePlayersWithLinkedUser(t *testing.T) {
+	t.Chdir("../..")
+	ctx := context.Background()
+	database := openPollerTestDB(t)
+	defer database.Close()
+	if err := db.Init(ctx, database, db.SeedConfig{}); err != nil {
+		t.Fatalf("init db: %v", err)
+	}
+
+	seedGuggiDuplicates(t, ctx, database)
+
+	phases, err := poller.LoadElevatorPhases(poller.DefaultElevatorPhasesPath())
+	if err != nil {
+		t.Fatalf("load phases: %v", err)
+	}
+	engine := &poller.Engine{DB: database, ElevatorPhases: phases}
+	now := time.Date(2026, 8, 20, 16, 0, 0, 0, time.UTC)
+
+	result := frm.FastPollResult{
+		Players: []frm.Player{{ID: "Char_Player_C_2147456886", Name: "guggi", Online: false}},
+	}
+	if _, err := engine.PollOnce(ctx, result, now); err != nil {
+		t.Fatalf("poll: %v", err)
+	}
+
+	var count int
+	if err := database.QueryRowContext(ctx, `
+		SELECT COUNT(*) FROM player_state WHERE LOWER(name) = 'guggi'`).Scan(&count); err != nil {
+		t.Fatalf("count: %v", err)
+	}
+	if count != 1 {
+		t.Fatalf("want 1 guggi row after poll cleanup, got %d", count)
+	}
+
+	var linkedID sql.NullString
+	if err := database.QueryRowContext(ctx, `
+		SELECT player_id FROM users WHERE username = 'ghotso'`).Scan(&linkedID); err != nil {
+		t.Fatalf("query user: %v", err)
+	}
+	if !linkedID.Valid || linkedID.String != "Char_Player_C_2147456886" {
+		t.Fatalf("user player_id = %v, want Char_Player_C_2147456886", linkedID)
+	}
+}
+
 func TestDedupePlayerStateByName(t *testing.T) {
 	t.Chdir("../..")
 	ctx := context.Background()

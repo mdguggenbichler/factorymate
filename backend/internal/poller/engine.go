@@ -163,7 +163,7 @@ func (e *Engine) processPlayers(ctx context.Context, players []frm.Player, serve
 				return nil, err
 			}
 			if !isAmbiguous && nameKey != "" {
-				if err := deletePlayerRowsByNameExcept(ctx, e.DB, p.Name, p.ID); err != nil {
+				if err := cleanupDuplicatePlayerRowsByName(ctx, e.DB, p.Name, p.ID); err != nil {
 					return nil, err
 				}
 			}
@@ -202,7 +202,7 @@ func (e *Engine) processPlayers(ctx context.Context, players []frm.Player, serve
 			return nil, err
 		}
 		if !isAmbiguous && nameKey != "" {
-			if err := deletePlayerRowsByNameExcept(ctx, e.DB, p.Name, p.ID); err != nil {
+			if err := cleanupDuplicatePlayerRowsByName(ctx, e.DB, p.Name, p.ID); err != nil {
 				return nil, err
 			}
 		}
