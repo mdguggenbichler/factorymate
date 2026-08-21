@@ -445,3 +445,33 @@ cd backend && go run ./cmd/generate-catalog
 **Notes:** Does not touch FRM poller, Discord, notification pipeline, or frontend planner UI. Verifier marks roadmap checkboxes — execution agents do not.
 
 ---
+
+## M20 — Factory Planner: Plans, Solver & Edit Lock
+
+**READ:** `docs/proposals/factory-planner.md` §5–§7; `docs/factorymate-spec.md` §3, §6, §7; `backend/internal/planner/**` (M19 catalog/balance — read only); `backend/internal/api/**` (auth patterns); `backend/internal/db/**` (migration runner); `backend/internal/auth/**`.
+
+**WRITE:**
+
+```
+backend/internal/db/migrations/011_*.sql
+backend/internal/planner/lock.go
+backend/internal/planner/solver.go
+backend/internal/planner/**                    # lock/solver tests only
+backend/internal/api/planner_handlers.go
+backend/internal/api/routes.go
+backend/internal/api/**                        # API tests only
+backend/cmd/server/main.go                     # if wiring needed
+.agents/project/orchestrator/milestone-scopes.md
+.agents/project/orchestrator/doc-index.md
+```
+
+**Scoped CI:**
+
+```bash
+cd backend && go vet ./internal/planner/... ./internal/api/... ./internal/db/...
+cd backend && go test ./internal/planner/... ./internal/api/... ./internal/db/...
+```
+
+**Notes:** No React Flow / frontend planner UI (M21). Verifier marks roadmap checkboxes — execution agents do not.
+
+---

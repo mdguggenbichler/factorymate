@@ -162,6 +162,7 @@ func assertTables(t *testing.T, ctx context.Context, database *sql.DB) {
 		"elevator_phase_unknown_log",
 		"elevator_state",
 		"factory_machine_state",
+		"factory_plans",
 		"invites",
 		"message_templates",
 		"message_type_targets",

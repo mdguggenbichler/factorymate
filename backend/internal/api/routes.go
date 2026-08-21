@@ -54,6 +54,21 @@ func (h *Handler) Mount(r chi.Router) {
 			r.Get("/planner/catalog", h.GetPlannerCatalog)
 			r.Get("/planner/icons/{className}", h.GetPlannerIcon)
 
+			r.Get("/planner/plans", h.ListPlannerPlans)
+			r.Post("/planner/plans", h.CreatePlannerPlan)
+			r.Get("/planner/plans/{id}", h.GetPlannerPlan)
+			r.Patch("/planner/plans/{id}", h.PatchPlannerPlan)
+			r.Delete("/planner/plans/{id}", h.DeletePlannerPlan)
+			r.Put("/planner/plans/{id}/graph", h.PutPlannerPlanGraph)
+			r.Post("/planner/plans/{id}/suggest", h.PostPlannerSuggest)
+			r.Post("/planner/plans/{id}/apply-suggest", h.PostPlannerApplySuggest)
+			r.Post("/planner/plans/{id}/reset-baseline", h.PostPlannerResetBaseline)
+			r.Post("/planner/plans/{id}/lock", h.PostPlannerLock)
+			r.Post("/planner/plans/{id}/lock/heartbeat", h.PostPlannerLockHeartbeat)
+			r.Post("/planner/plans/{id}/lock/release", h.PostPlannerLockRelease)
+			r.Post("/planner/plans/{id}/lock/force-release", h.PostPlannerLockForceRelease)
+			r.Post("/planner/analyze", h.PostPlannerAnalyze)
+
 			r.Group(func(r chi.Router) {
 				r.Use(h.auth.RequireAdmin(writeError))
 
