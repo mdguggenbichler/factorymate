@@ -5,6 +5,9 @@ import (
 	"path/filepath"
 )
 
+// FactoryGameDocsRelPath is the repo-root-relative path to the vendored UTF-16 game dump.
+const FactoryGameDocsRelPath = "backend/testdata/planner/FactoryGame-Docs.json"
+
 const (
 	envDocsPath     = "PLANNER_DOCS_PATH"
 	envCatalogPath  = "PLANNER_CATALOG_PATH"
@@ -23,7 +26,7 @@ type Config struct {
 // DefaultConfig resolves env overrides with local-dev fallbacks.
 func DefaultConfig() Config {
 	return Config{
-		DocsPath:    resolveExistingPath(envDocsPath, "../docs/FactoryGame-Docs.json", "docs/FactoryGame-Docs.json"),
+		DocsPath:    resolveExistingPath(envDocsPath, "testdata/planner/FactoryGame-Docs.json", "backend/testdata/planner/FactoryGame-Docs.json", "../backend/testdata/planner/FactoryGame-Docs.json"),
 		CatalogPath: resolveExistingPath(envCatalogPath, "data/factory_catalog.json", "testdata/planner/factory_catalog.json", "../backend/data/factory_catalog.json", "backend/testdata/planner/factory_catalog.json"),
 		IconsDir:    resolveExistingPath(envIconsDir, "../assets/icons", "assets/icons"),
 		IconsJSON:   resolveExistingPath(envIconsJSON, "../assets/icons.json", "assets/icons.json"),

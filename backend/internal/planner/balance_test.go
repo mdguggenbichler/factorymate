@@ -41,7 +41,7 @@ func TestPowerExamplesGolden(t *testing.T) {
 func TestBuildingPowerFromCatalog(t *testing.T) {
 	t.Chdir("../../..")
 	cat, err := LoadCatalogFromDocs(
-		filepath.Join("docs", "FactoryGame-Docs.json"),
+		FactoryGameDocsRelPath,
 		filepath.Join("assets", "icons.json"),
 	)
 	if err != nil {
@@ -75,7 +75,7 @@ func TestBuildingPowerFromCatalog(t *testing.T) {
 func TestAnalyzeGraphBalanceFixture(t *testing.T) {
 	t.Chdir("../../..")
 	cat, err := LoadCatalogFromDocs(
-		filepath.Join("docs", "FactoryGame-Docs.json"),
+		FactoryGameDocsRelPath,
 		filepath.Join("assets", "icons.json"),
 	)
 	if err != nil {
@@ -117,7 +117,7 @@ func TestAnalyzeGraphBalanceFixture(t *testing.T) {
 func TestRecommendTransportMk(t *testing.T) {
 	t.Chdir("../../..")
 	cat, err := LoadCatalogFromDocs(
-		filepath.Join("docs", "FactoryGame-Docs.json"),
+		FactoryGameDocsRelPath,
 		filepath.Join("assets", "icons.json"),
 	)
 	if err != nil {

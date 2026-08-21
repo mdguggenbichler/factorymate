@@ -50,7 +50,7 @@ func TestDecodeUTF16Fixture(t *testing.T) {
 
 func TestFactoryDumpHasUTF16BOM(t *testing.T) {
 	t.Chdir("../../..")
-	path := filepath.Join("docs", "FactoryGame-Docs.json")
+	path := FactoryGameDocsRelPath
 	raw, err := os.ReadFile(path)
 	if err != nil {
 		t.Skipf("dump not available: %v", err)
@@ -63,7 +63,7 @@ func TestFactoryDumpHasUTF16BOM(t *testing.T) {
 func TestLoadCatalogFromDocs(t *testing.T) {
 	t.Chdir("../../..")
 	cat, err := LoadCatalogFromDocs(
-		filepath.Join("docs", "FactoryGame-Docs.json"),
+		FactoryGameDocsRelPath,
 		filepath.Join("assets", "icons.json"),
 	)
 	if err != nil {
@@ -145,7 +145,7 @@ func TestLoadCatalogFromSlimFile(t *testing.T) {
 func TestSlimCatalogJSONRoundTrip(t *testing.T) {
 	t.Chdir("../../..")
 	cat, err := LoadCatalogFromDocs(
-		filepath.Join("docs", "FactoryGame-Docs.json"),
+		FactoryGameDocsRelPath,
 		filepath.Join("assets", "icons.json"),
 	)
 	if err != nil {

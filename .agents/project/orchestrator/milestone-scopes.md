@@ -412,7 +412,7 @@ If `backend/internal/registration` was changed, include it in go test/vet.
 
 ## M19 — Factory Planner: Game Data & Catalog
 
-**READ:** `docs/proposals/factory-planner.md` §4, §7.1, §10; `docs/factorymate-spec.md` §6 (session auth); `docs/FactoryGame-Docs.json`; `assets/icons.json`, `assets/icons/`; `backend/internal/api/` (route patterns); `backend/internal/auth/`; `backend/cmd/server/main.go`.
+**READ:** `docs/proposals/factory-planner.md` §4, §7.1, §10; `docs/factorymate-spec.md` §6 (session auth); `backend/testdata/planner/FactoryGame-Docs.json`; `assets/icons.json`, `assets/icons/`; `backend/internal/api/` (route patterns); `backend/internal/auth/`; `backend/cmd/server/main.go`.
 
 **WRITE:**
 
@@ -436,7 +436,7 @@ cd backend && go vet ./internal/planner/... ./internal/api/...
 cd backend && go test ./internal/planner/... ./internal/api/...
 ```
 
-Regenerate slim catalog when `docs/FactoryGame-Docs.json` changes:
+Regenerate slim catalog when `backend/testdata/planner/FactoryGame-Docs.json` changes:
 
 ```bash
 cd backend && go run ./cmd/generate-catalog

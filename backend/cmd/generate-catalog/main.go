@@ -8,9 +8,9 @@ import (
 	"factorymate/internal/planner"
 )
 
-// Generate slim UTF-8 catalog from docs/FactoryGame-Docs.json.
+// Generate slim UTF-8 catalog from backend/testdata/planner/FactoryGame-Docs.json.
 func main() {
-	docsPath := envOr("PLANNER_DOCS_PATH", "../docs/FactoryGame-Docs.json")
+	docsPath := envOr("PLANNER_DOCS_PATH", "testdata/planner/FactoryGame-Docs.json")
 	iconsJSON := envOr("PLANNER_ICONS_JSON", "../assets/icons.json")
 	outPath := envOr("PLANNER_CATALOG_PATH", "testdata/planner/factory_catalog.json")
 
