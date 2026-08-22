@@ -23,6 +23,7 @@ import (
 	"factorymate/internal/planner"
 	"factorymate/internal/poller"
 	"factorymate/internal/registration"
+	"factorymate/internal/savegame"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -53,8 +54,9 @@ func main() {
 	modsSvc := mods.NewService(database, func(ctx context.Context) (*frm.Client, error) {
 		return poller.FRMClientFromSettings(ctx, database)
 	})
+	savegameSvc := savegame.NewService(database)
 
-	bot, err := discord.NewBot(database, regSvc, nil, modsSvc)
+	bot, err := discord.NewBot(database, regSvc, nil, modsSvc, savegameSvc)
 	if err != nil {
 		log.Fatalf("discord bot: %v", err)
 	}
@@ -94,7 +96,7 @@ func main() {
 	r := chi.NewRouter()
 	r.Get("/healthz", health.Handler(appVersion))
 	r.Route("/api", func(r chi.Router) {
-		api.NewHandler(database, authSvc, bot, regSvc, connSvc, modsSvc, plannerCat, plannerCfg).Mount(r)
+		api.NewHandler(database, authSvc, bot, regSvc, connSvc, modsSvc, savegameSvc, plannerCat, plannerCfg).Mount(r)
 	})
 
 	addr := ":" + port

@@ -10,8 +10,11 @@ import (
 )
 
 type SeedConfig struct {
-	FRMHost string
-	FRMPort int
+	FRMHost       string
+	FRMPort       int
+	GameAPIHost   string
+	GameAPIPort   int
+	GameAPIToken  string
 }
 
 type messageTypeMeta struct {
@@ -91,14 +94,25 @@ func seedMessageTypes(ctx context.Context, db *sql.DB) error {
 
 func seedAppSettings(ctx context.Context, db *sql.DB, cfg SeedConfig) error {
 	_, err := db.ExecContext(ctx, `
-		INSERT OR IGNORE INTO app_settings (id, server_name, frm_host, frm_port)
-		VALUES (1, 'Satisfactory Server', ?, ?)`,
+		INSERT OR IGNORE INTO app_settings (
+			id, server_name, frm_host, frm_port,
+			game_api_host, game_api_port, game_api_token
+		)
+		VALUES (1, 'Satisfactory Server', ?, ?, ?, ?, ?)`,
 		cfg.FRMHost, cfg.FRMPort,
+		cfg.GameAPIHost, cfg.GameAPIPort, nullIfEmpty(cfg.GameAPIToken),
 	)
 	if err != nil {
 		return fmt.Errorf("seed app_settings: %w", err)
 	}
 	return nil
+}
+
+func nullIfEmpty(s string) any {
+	if s == "" {
+		return nil
+	}
+	return s
 }
 
 func loadMessageDefaults() (map[string]json.RawMessage, error) {
@@ -131,7 +145,20 @@ func SeedConfigFromEnv() SeedConfig {
 			port = parsed
 		}
 	}
-	return SeedConfig{FRMHost: host, FRMPort: port}
+	gameAPIHost := os.Getenv("SATISFACTORY_SERVER_HOST")
+	gameAPIPort := 7777
+	if raw := os.Getenv("SATISFACTORY_SERVER_PORT"); raw != "" {
+		if parsed, err := strconv.Atoi(raw); err == nil {
+			gameAPIPort = parsed
+		}
+	}
+	return SeedConfig{
+		FRMHost:      host,
+		FRMPort:      port,
+		GameAPIHost:  gameAPIHost,
+		GameAPIPort:  gameAPIPort,
+		GameAPIToken: os.Getenv("SATISFACTORY_SERVER_TOKEN"),
+	}
 }
 
 // Init runs migrations and seed in order.

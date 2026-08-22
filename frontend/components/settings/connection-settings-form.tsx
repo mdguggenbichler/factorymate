@@ -17,15 +17,17 @@ import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
 import { apiFetch } from "@/lib/api"
-import type { ConnectionDetails } from "@/lib/api-types"
+import type { AppSettings, ConnectionDetails, GameAPITestResponse } from "@/lib/api-types"
 import { useFormatDateTime } from "@/hooks/use-format-datetime"
 
 type ConnectionSettingsFormProps = {
   initialDetails: ConnectionDetails
+  initialSettings: AppSettings
 }
 
 export function ConnectionSettingsForm({
   initialDetails,
+  initialSettings,
 }: ConnectionSettingsFormProps) {
   const t = useTranslations("settings.connection")
   const { formatDateTime } = useFormatDateTime()
@@ -42,6 +44,14 @@ export function ConnectionSettingsForm({
   )
   const [clearPassword, setClearPassword] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [gameApiSettings, setGameApiSettings] = useState(initialSettings)
+  const [gameApiToken, setGameApiToken] = useState("")
+  const [clearGameApiToken, setClearGameApiToken] = useState(false)
+  const [isSavingGameApi, setIsSavingGameApi] = useState(false)
+  const [isTestingGameApi, setIsTestingGameApi] = useState(false)
+  const [gameApiTestResult, setGameApiTestResult] = useState<GameAPITestResponse | null>(
+    null
+  )
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -67,6 +77,57 @@ export function ConnectionSettingsForm({
       toast.error(tCommon("error"))
     } finally {
       setIsSubmitting(false)
+    }
+  }
+
+  async function handleSaveGameApi(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setIsSavingGameApi(true)
+    try {
+      const body: Record<string, unknown> = {
+        gameApiHost: gameApiSettings.gameApiHost,
+        gameApiPort: Number(gameApiSettings.gameApiPort) || 7777,
+      }
+      if (gameApiToken.trim()) {
+        body.gameApiToken = gameApiToken.trim()
+      }
+      if (clearGameApiToken) {
+        body.clearGameApiToken = true
+      }
+      const updated = await apiFetch<AppSettings>("/settings", {
+        method: "PUT",
+        body: JSON.stringify(body),
+      })
+      setGameApiSettings(updated)
+      setGameApiToken("")
+      setClearGameApiToken(false)
+      setGameApiTestResult(null)
+      toast.success(t("gameApi.saved"))
+    } catch {
+      toast.error(tCommon("error"))
+    } finally {
+      setIsSavingGameApi(false)
+    }
+  }
+
+  async function handleTestGameApi() {
+    setIsTestingGameApi(true)
+    try {
+      const result = await apiFetch<GameAPITestResponse>("/settings/game-api/test", {
+        method: "POST",
+        body: JSON.stringify({
+          gameApiHost: gameApiSettings.gameApiHost,
+          gameApiPort: Number(gameApiSettings.gameApiPort) || 7777,
+          gameApiToken: gameApiToken.trim() || undefined,
+        }),
+      })
+      setGameApiTestResult(result)
+      toast.success(t("gameApi.testOk"))
+    } catch {
+      setGameApiTestResult(null)
+      toast.error(t("gameApi.testFailed"))
+    } finally {
+      setIsTestingGameApi(false)
     }
   }
 
@@ -161,6 +222,97 @@ export function ConnectionSettingsForm({
             ) : null}
             <div className="mt-6 flex justify-end">
               <Button type="submit" disabled={isSubmitting}>
+                {tCommon("save")}
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>{t("gameApi.title")}</CardTitle>
+          <CardDescription>{t("gameApi.description")}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSaveGameApi}>
+            <FieldGroup>
+              <Field>
+                <FieldLabel htmlFor="game-api-host">{t("gameApi.fields.host")}</FieldLabel>
+                <Input
+                  id="game-api-host"
+                  value={gameApiSettings.gameApiHost}
+                  onChange={(event) =>
+                    setGameApiSettings((current) => ({
+                      ...current,
+                      gameApiHost: event.target.value,
+                    }))
+                  }
+                  placeholder={t("gameApi.fields.hostPlaceholder")}
+                />
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="game-api-port">{t("gameApi.fields.port")}</FieldLabel>
+                <Input
+                  id="game-api-port"
+                  type="number"
+                  min={1}
+                  value={gameApiSettings.gameApiPort || 7777}
+                  onChange={(event) =>
+                    setGameApiSettings((current) => ({
+                      ...current,
+                      gameApiPort: Number(event.target.value),
+                    }))
+                  }
+                  placeholder="7777"
+                />
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="game-api-token">{t("gameApi.fields.token")}</FieldLabel>
+                <Input
+                  id="game-api-token"
+                  type="password"
+                  value={gameApiToken}
+                  onChange={(event) => setGameApiToken(event.target.value)}
+                  placeholder={
+                    gameApiSettings.gameApiTokenConfigured
+                      ? t("gameApi.fields.tokenConfiguredPlaceholder")
+                      : t("gameApi.fields.tokenPlaceholder")
+                  }
+                />
+                <p className="text-sm text-muted-foreground">
+                  {t("gameApi.fields.tokenHint")}
+                </p>
+              </Field>
+              <Field className="flex items-center gap-3">
+                <Switch
+                  id="clear-game-api-token"
+                  checked={clearGameApiToken}
+                  onCheckedChange={setClearGameApiToken}
+                />
+                <FieldLabel htmlFor="clear-game-api-token" className="mb-0">
+                  {t("gameApi.fields.clearToken")}
+                </FieldLabel>
+              </Field>
+            </FieldGroup>
+            {gameApiTestResult ? (
+              <p className="mt-4 text-sm text-muted-foreground">
+                {t("gameApi.testResult", {
+                  session: gameApiTestResult.activeSessionName,
+                  save: gameApiTestResult.latestSaveName,
+                })}
+              </p>
+            ) : null}
+            <div className="mt-6 flex flex-wrap justify-end gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={isTestingGameApi}
+                onClick={handleTestGameApi}
+              >
+                {t("gameApi.testButton")}
+              </Button>
+              <Button type="submit" disabled={isSavingGameApi}>
                 {tCommon("save")}
               </Button>
             </div>

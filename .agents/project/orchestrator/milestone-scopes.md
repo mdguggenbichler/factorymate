@@ -513,3 +513,47 @@ cd frontend && npx vitest run lib/planner/balance.test.ts
 **Notes:** Do not extend `research-tree-canvas.tsx`. Do not use React Flow Pro. Verifier marks roadmap checkboxes — execution agents do not.
 
 ---
+
+## M22 — Savegame Download
+
+**READ:** `docs/proposals/savegame-download.md`; `docs/factorymate-spec.md` §1.2, §6, §7, §8, §8.1, §8.2, §9; `backend/internal/mods/` (SMM profile download pattern); `backend/internal/discord/mods_cmds.go`, `permissions.go`; `frontend/components/mods/mods-view.tsx`, `connection/connection-details-view.tsx`.
+
+**WRITE:**
+
+```
+backend/internal/db/migrations/013_savegame.sql
+backend/internal/db/seed.go
+backend/internal/savegame/**
+backend/internal/api/savegame_handlers.go
+backend/internal/api/admin_handlers.go
+backend/internal/api/routes.go
+backend/cmd/server/main.go
+backend/internal/discord/savegame_cmds.go
+backend/internal/discord/commands.go
+backend/internal/discord/interactions.go
+backend/internal/discord/permissions.go
+frontend/lib/api-types.ts
+frontend/components/connection/connection-details-view.tsx
+frontend/components/settings/connection-settings-form.tsx
+frontend/components/settings/discord-settings-form.tsx
+frontend/messages/en.json
+docs/factorymate-spec.md
+docs/proposals/savegame-download.md          # status line only
+docs/guide/managing/settings.md
+docs/development.md
+.env.example
+.agents/project/orchestrator/milestone-scopes.md
+.agents/project/orchestrator/doc-index.md
+docs/factorymate-roadmap.md                  # M22 task checkboxes — verifier only
+```
+
+**Scoped CI:**
+
+```bash
+cd backend && go test ./internal/savegame/... ./internal/api/... ./internal/discord/...
+cd frontend && npm run lint && npm run build
+```
+
+**Notes:** Read-only Dedicated Server API (`DownloadSaveGame` only). No filesystem mount. Verifier marks roadmap checkboxes — execution agents do not.
+
+---

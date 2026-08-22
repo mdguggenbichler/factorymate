@@ -9,11 +9,13 @@ const helpMessageTemplate = `🏭 FactoryMate — quick start
 2. Finish registration on the web: choose username + in-game name
 3. /mods export — download SMM profile → import in Satisfactory Mod Manager
 4. /connection get — get server host, port, and password (sent to your DMs)
-5. %s
+5. /savegame — download the latest server save (sent to your DMs)
+6. %s
 
 **Already registered?**
 /connection get — join details (DM)
 /mods — full mod list
+/savegame — latest autosave download (DM)
 /set-player — fix your in-game name mapping
 /clear-player — remove your in-game player mapping
 /whoami — check your account status

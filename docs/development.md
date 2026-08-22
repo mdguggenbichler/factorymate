@@ -16,6 +16,7 @@ Copy `.env.example` to `.env` at the repo root (or export vars in your shell).
 | `SESSION_SECRET` | **Required in production** for backend cookie signing — set a long random value on GuggiRaid; compose defaults to `dev-secret-change-me` for local builds |
 | `DATABASE_PATH` | SQLite file path (default `./data/factorymate.db` for local dev; `/data/factorymate.db` in compose) |
 | `FRM_HOST` / `FRM_PORT` | Initial FRM endpoint; seeded into `app_settings` on first boot. Group live server: `192.168.178.42:8889` (host) or `satisfactory-server:8080` (Docker network) |
+| `SATISFACTORY_SERVER_HOST` / `PORT` / `TOKEN` | Initial Dedicated Server HTTPS API settings for save download (M22); seeded on first boot; editable in Settings → Connection |
 | `FRM_TEST_HOST` / `FRM_TEST_PORT` | Live FRM for integration tests and fixture capture (read-only) — defaults in `.env.example` |
 | `NEXT_PUBLIC_API_URL` | Frontend dev: direct backend URL (`http://localhost:8080`). **Omit in production** — browser uses same-origin `/api` proxy |
 | `BACKEND_URL` | Next.js rewrite target (`http://localhost:8080` local; `http://127.0.0.1:8080` inside the Docker container) |

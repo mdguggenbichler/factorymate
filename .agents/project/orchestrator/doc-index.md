@@ -13,8 +13,9 @@ Quick reference for orchestrator **DOC REFERENCE** blocks. Sub-agents read these
 | Shorthand | File | Covers |
 | --- | --- | --- |
 | `spec` | `docs/factorymate-spec.md` | Full product spec |
-| `roadmap` | `docs/factorymate-roadmap.md` | Milestones M0–M21 (+ M14 backlog) |
+| `roadmap` | `docs/factorymate-roadmap.md` | Milestones M0–M22 (+ M14 backlog) |
 | `planner` | `docs/proposals/factory-planner.md` | Factory planner design (M19–M21) |
+| `savegame` | `docs/proposals/savegame-download.md` | Savegame download via Dedicated Server API (M22) |
 | `frm` | `docs/frm-docs/modules/ROOT/pages/json/Read/` | FRM endpoint adocs (read-only vendored copy — see `docs/frm-docs-reference.md`) |
 | `frm-ref` | `docs/frm-docs-reference.md` | What `frm-docs/` is and how to refresh it |
 | `frm-live` | `.cursor/rules/04-frm-live.mdc` | Live FRM at `192.168.178.42:8889` — read-only GET for fixtures/tests |
@@ -68,6 +69,7 @@ Reference sections as `§N`, e.g. `spec §4.2`, `spec §7.1`.
 | M19 | `planner` §4, §7.1 (catalog/icons); spec §6 (session auth pattern) |
 | M20 | `planner` §5–§7; spec §3 (migration style), §6, §7 |
 | M21 | `planner` §8–§10, §13; spec §2.1, §3, §6, §7, §8, §8.1, §8.2 |
+| M22 | `savegame`; spec §1.2, §6, §7, §8, §8.1, §8.2, §9; discord-bot-plan §8 |
 
 ## Default verification (from project.config.md)
 

@@ -12,6 +12,7 @@ import (
 	"factorymate/internal/notify"
 	"factorymate/internal/planner"
 	"factorymate/internal/registration"
+	"factorymate/internal/savegame"
 )
 
 // DiscordBot is the bot surface used by admin settings and registration DMs.
@@ -33,6 +34,7 @@ type Handler struct {
 	registration  *registration.Service
 	connection    *connection.Service
 	mods          *mods.Service
+	savegame      *savegame.Service
 	dispatcher    *notify.Dispatcher
 	discord       DiscordBot
 	notifications *notifications.Service
@@ -41,8 +43,8 @@ type Handler struct {
 	oauthExchange func(context.Context, string) (auth.DiscordUserResponse, error)
 }
 
-func NewHandler(db *sql.DB, authSvc *auth.Service, bot *discord.Bot, regSvc *registration.Service, connSvc *connection.Service, modsSvc *mods.Service, plannerCat *planner.Catalog, plannerCfg planner.Config) *Handler {
-	return newHandlerWithProvider(db, authSvc, bot, regSvc, connSvc, modsSvc, plannerCat, plannerCfg, notify.NewDiscordProviderWithSessionFn(func() notify.DiscordSession {
+func NewHandler(db *sql.DB, authSvc *auth.Service, bot *discord.Bot, regSvc *registration.Service, connSvc *connection.Service, modsSvc *mods.Service, savegameSvc *savegame.Service, plannerCat *planner.Catalog, plannerCfg planner.Config) *Handler {
+	return newHandlerWithProvider(db, authSvc, bot, regSvc, connSvc, modsSvc, savegameSvc, plannerCat, plannerCfg, notify.NewDiscordProviderWithSessionFn(func() notify.DiscordSession {
 		if bot == nil {
 			return nil
 		}
@@ -51,11 +53,11 @@ func NewHandler(db *sql.DB, authSvc *auth.Service, bot *discord.Bot, regSvc *reg
 }
 
 // NewHandlerWithDiscordSession is for tests that need a mock Discord session without a live bot.
-func NewHandlerWithDiscordSession(db *sql.DB, authSvc *auth.Service, regSvc *registration.Service, connSvc *connection.Service, modsSvc *mods.Service, plannerCat *planner.Catalog, plannerCfg planner.Config, session notify.DiscordSession) *Handler {
-	return newHandlerWithProvider(db, authSvc, nil, regSvc, connSvc, modsSvc, plannerCat, plannerCfg, notify.NewDiscordProvider(session))
+func NewHandlerWithDiscordSession(db *sql.DB, authSvc *auth.Service, regSvc *registration.Service, connSvc *connection.Service, modsSvc *mods.Service, savegameSvc *savegame.Service, plannerCat *planner.Catalog, plannerCfg planner.Config, session notify.DiscordSession) *Handler {
+	return newHandlerWithProvider(db, authSvc, nil, regSvc, connSvc, modsSvc, savegameSvc, plannerCat, plannerCfg, notify.NewDiscordProvider(session))
 }
 
-func newHandlerWithProvider(db *sql.DB, authSvc *auth.Service, bot *discord.Bot, regSvc *registration.Service, connSvc *connection.Service, modsSvc *mods.Service, plannerCat *planner.Catalog, plannerCfg planner.Config, provider notify.Provider) *Handler {
+func newHandlerWithProvider(db *sql.DB, authSvc *auth.Service, bot *discord.Bot, regSvc *registration.Service, connSvc *connection.Service, modsSvc *mods.Service, savegameSvc *savegame.Service, plannerCat *planner.Catalog, plannerCfg planner.Config, provider notify.Provider) *Handler {
 	var discordBot DiscordBot
 	if bot != nil {
 		discordBot = bot
@@ -66,6 +68,7 @@ func newHandlerWithProvider(db *sql.DB, authSvc *auth.Service, bot *discord.Bot,
 		registration:  regSvc,
 		connection:    connSvc,
 		mods:          modsSvc,
+		savegame:      savegameSvc,
 		discord:       discordBot,
 		notifications: notifications.NewService(db),
 		planner:       plannerCat,

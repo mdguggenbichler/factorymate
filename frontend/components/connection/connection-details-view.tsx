@@ -11,16 +11,19 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import type { ConnectionDetails } from "@/lib/api-types"
+import type { ConnectionDetails, SavegameStatus } from "@/lib/api-types"
 import { useFormatDateTime } from "@/hooks/use-format-datetime"
+import { SavegameDownloadCard } from "@/components/connection/savegame-download-card"
 
 type ConnectionDetailsViewProps = {
   details: ConnectionDetails
+  savegameStatus: SavegameStatus
   showModsLink?: boolean
 }
 
 export function ConnectionDetailsView({
   details,
+  savegameStatus,
   showModsLink = true,
 }: ConnectionDetailsViewProps) {
   const t = useTranslations("connection")
@@ -80,6 +83,8 @@ export function ConnectionDetailsView({
           ) : null}
         </CardContent>
       </Card>
+
+      <SavegameDownloadCard status={savegameStatus} />
     </div>
   )
 }

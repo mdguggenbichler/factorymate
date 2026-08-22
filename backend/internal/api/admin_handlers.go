@@ -100,6 +100,10 @@ type settingsResponse struct {
 	FRMHost                           string `json:"frmHost"`
 	FRMPort                           int    `json:"frmPort"`
 	FRMAuthToken                      string `json:"frmAuthToken"`
+	GameAPIHost                       string `json:"gameApiHost"`
+	GameAPIPort                       int    `json:"gameApiPort"`
+	GameAPITokenConfigured            bool   `json:"gameApiTokenConfigured"`
+	gameAPIToken                      string
 	PollIntervalSeconds               int    `json:"pollIntervalSeconds"`
 	ProductionSnapshotIntervalSeconds int    `json:"productionSnapshotIntervalSeconds"`
 	ProductionSnapshotRetentionDays   int    `json:"productionSnapshotRetentionDays"`
@@ -875,13 +879,15 @@ func (h *Handler) GetNotificationLog(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) GetSettings(w http.ResponseWriter, r *http.Request) {
 	var s settingsResponse
-	var authToken sql.NullString
+	var authToken, gameAPIToken sql.NullString
 	err := h.db.QueryRowContext(r.Context(), `
 		SELECT server_name, frm_host, frm_port, frm_auth_token,
+			game_api_host, game_api_port, game_api_token,
 			poll_interval_seconds, production_snapshot_interval_seconds, production_snapshot_retention_days,
 			frm_recovery_grace_seconds
 		FROM app_settings WHERE id = 1`,
 	).Scan(&s.ServerName, &s.FRMHost, &s.FRMPort, &authToken,
+		&s.GameAPIHost, &s.GameAPIPort, &gameAPIToken,
 		&s.PollIntervalSeconds, &s.ProductionSnapshotIntervalSeconds, &s.ProductionSnapshotRetentionDays,
 		&s.FRMRecoveryGraceSeconds)
 	if err != nil {
@@ -891,6 +897,7 @@ func (h *Handler) GetSettings(w http.ResponseWriter, r *http.Request) {
 	if authToken.Valid {
 		s.FRMAuthToken = authToken.String
 	}
+	s.GameAPITokenConfigured = gameAPIToken.Valid && strings.TrimSpace(gameAPIToken.String) != ""
 	writeJSON(w, http.StatusOK, s)
 }
 
@@ -928,6 +935,25 @@ func (h *Handler) UpdateSettings(w http.ResponseWriter, r *http.Request) {
 	if raw, ok := req["frmRecoveryGraceSeconds"]; ok {
 		_ = json.Unmarshal(raw, &current.FRMRecoveryGraceSeconds)
 	}
+	if raw, ok := req["gameApiHost"]; ok {
+		_ = json.Unmarshal(raw, &current.GameAPIHost)
+	}
+	if raw, ok := req["gameApiPort"]; ok {
+		_ = json.Unmarshal(raw, &current.GameAPIPort)
+	}
+	if raw, ok := req["gameApiToken"]; ok {
+		var tok string
+		if err := json.Unmarshal(raw, &tok); err == nil && strings.TrimSpace(tok) != "" {
+			current.gameAPIToken = tok
+		}
+	}
+	if raw, ok := req["clearGameApiToken"]; ok {
+		var clear bool
+		_ = json.Unmarshal(raw, &clear)
+		if clear {
+			current.gameAPIToken = ""
+		}
+	}
 
 	if current.PollIntervalSeconds <= 0 || current.ProductionSnapshotIntervalSeconds <= 0 || current.ProductionSnapshotRetentionDays <= 0 || current.FRMRecoveryGraceSeconds <= 0 {
 		writeError(w, r, http.StatusBadRequest, "interval and retention values must be positive")
@@ -946,10 +972,12 @@ func (h *Handler) UpdateSettings(w http.ResponseWriter, r *http.Request) {
 	_, err = h.db.ExecContext(r.Context(), `
 		UPDATE app_settings SET
 			server_name = ?, frm_host = ?, frm_port = ?, frm_auth_token = ?,
+			game_api_host = ?, game_api_port = ?, game_api_token = ?,
 			poll_interval_seconds = ?, production_snapshot_interval_seconds = ?,
 			production_snapshot_retention_days = ?, frm_recovery_grace_seconds = ?
 		WHERE id = 1`,
 		current.ServerName, current.FRMHost, current.FRMPort, nullIfEmpty(current.FRMAuthToken),
+		current.GameAPIHost, current.GameAPIPort, nullIfEmpty(current.gameAPIToken),
 		current.PollIntervalSeconds, current.ProductionSnapshotIntervalSeconds,
 		current.ProductionSnapshotRetentionDays, current.FRMRecoveryGraceSeconds,
 	)
@@ -957,18 +985,21 @@ func (h *Handler) UpdateSettings(w http.ResponseWriter, r *http.Request) {
 		writeError(w, r, http.StatusInternalServerError, "internal error")
 		return
 	}
+	current.GameAPITokenConfigured = strings.TrimSpace(current.gameAPIToken) != ""
 	writeJSON(w, http.StatusOK, current)
 }
 
 func (h *Handler) getSettingsRow(ctx context.Context) (settingsResponse, error) {
 	var s settingsResponse
-	var authToken sql.NullString
+	var authToken, gameAPIToken sql.NullString
 	err := h.db.QueryRowContext(ctx, `
 		SELECT server_name, frm_host, frm_port, frm_auth_token,
+			game_api_host, game_api_port, game_api_token,
 			poll_interval_seconds, production_snapshot_interval_seconds, production_snapshot_retention_days,
 			frm_recovery_grace_seconds
 		FROM app_settings WHERE id = 1`,
 	).Scan(&s.ServerName, &s.FRMHost, &s.FRMPort, &authToken,
+		&s.GameAPIHost, &s.GameAPIPort, &gameAPIToken,
 		&s.PollIntervalSeconds, &s.ProductionSnapshotIntervalSeconds, &s.ProductionSnapshotRetentionDays,
 		&s.FRMRecoveryGraceSeconds)
 	if err != nil {
@@ -977,6 +1008,10 @@ func (h *Handler) getSettingsRow(ctx context.Context) (settingsResponse, error) 
 	if authToken.Valid {
 		s.FRMAuthToken = authToken.String
 	}
+	if gameAPIToken.Valid {
+		s.gameAPIToken = gameAPIToken.String
+	}
+	s.GameAPITokenConfigured = strings.TrimSpace(s.gameAPIToken) != ""
 	return s, nil
 }
 

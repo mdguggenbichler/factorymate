@@ -313,10 +313,26 @@ export type AppSettings = {
   frmHost: string
   frmPort: number
   frmAuthToken: string
+  gameApiHost: string
+  gameApiPort: number
+  gameApiTokenConfigured: boolean
   pollIntervalSeconds: number
   productionSnapshotIntervalSeconds: number
   productionSnapshotRetentionDays: number
   frmRecoveryGraceSeconds: number
+}
+
+export type GameAPITestResponse = {
+  reachable: boolean
+  activeSessionName: string
+  latestSaveName: string
+}
+
+export type SavegameStatus = {
+  configured: boolean
+  activeSessionName?: string
+  latestSaveName?: string
+  saveDateTime?: string
 }
 
 export type DiscordTargetConfig = {

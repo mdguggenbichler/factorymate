@@ -20,6 +20,7 @@ const (
 	CommandGroupPlayer     = "player"
 	CommandGroupConnection = "connection"
 	CommandGroupMods       = "mods"
+	CommandGroupSavegame   = "savegame"
 )
 
 // LinkState describes a Discord user's registration/link status for permission checks.
@@ -175,7 +176,7 @@ func CanRunCommand(perms memberPermissions, group string, state LinkState) bool 
 		}
 	case CommandGroupAdmin:
 		return perms.IsAdmin
-	case CommandGroupPlayer, CommandGroupConnection, CommandGroupMods:
+	case CommandGroupPlayer, CommandGroupConnection, CommandGroupMods, CommandGroupSavegame:
 		// Active linked users may run player-group commands regardless of Discord role mapping (§10.2).
 		return state == LinkStateActiveLinked
 	default:

@@ -64,6 +64,19 @@
       "gamePort": "Game port",
       "gamePassword": "Game password",
       "notes": "Notes"
+    },
+    "savegame": {
+      "title": "Download save",
+      "description": "Download the latest autosave of the currently running session for offline backup or single-player use.",
+      "notConfigured": "Save download is not configured yet. Ask an admin to set up the dedicated server API in Settings → Connection.",
+      "session": "Session",
+      "save": "Save file",
+      "savedAt": "Saved at (server time)",
+      "downloadButton": "Download latest autosave",
+      "downloading": "Downloading…",
+      "downloadStarted": "Save download started.",
+      "downloadFailed": "Could not download the save. Try again later.",
+      "rateLimited": "Please wait a few minutes before downloading again."
     }
   },
   "nav": {
@@ -599,7 +612,8 @@
         "register": "Register",
         "player": "Player",
         "connection": "Connection",
-        "mods": "Mods"
+        "mods": "Mods",
+        "savegame": "Savegame"
       }
     },
     "connection": {
@@ -622,6 +636,25 @@
         "smmProfileName": "SMM profile name",
         "smmProfileNamePlaceholder": "FactoryMate Server",
         "smmProfileNameHint": "Used as the profile name when players download the SMM profile from /mods."
+      },
+      "gameApi": {
+        "title": "Save download API",
+        "description": "Dedicated Server HTTPS API credentials used to download the latest autosave. Generate a token with server.GenerateAPIToken in the server console.",
+        "saved": "Save download API settings saved.",
+        "testButton": "Test API",
+        "testOk": "Dedicated server API connection successful.",
+        "testFailed": "Could not reach the dedicated server API.",
+        "testResult": "Active session: {session} — latest autosave: {save}",
+        "fields": {
+          "host": "API host",
+          "hostPlaceholder": "192.168.1.50",
+          "port": "API port",
+          "token": "API token",
+          "tokenPlaceholder": "Paste API token",
+          "tokenConfiguredPlaceholder": "Leave blank to keep existing token",
+          "tokenHint": "Token is stored server-side and never shown again after saving.",
+          "clearToken": "Clear stored API token"
+        }
       }
     },
     "templates": {

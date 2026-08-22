@@ -382,6 +382,23 @@ Build order:
 
 ---
 
+## M22 — Savegame Download
+
+**Goal:** Let active group members download the latest autosave of the running session via web UI and Discord — per `docs/proposals/savegame-download.md`.
+
+- [x] Migration `013_savegame.sql`: `app_settings.game_api_*` columns + `savegame_download_log` table
+- [x] Env seed: `SATISFACTORY_SERVER_HOST` / `PORT` / `TOKEN` → `app_settings` on first boot
+- [x] `backend/internal/savegame/` — HTTPS client (`QueryServerState`, `EnumerateSessions`, `DownloadSaveGame`), latest-autosave selection, rate limit (1/user/5min)
+- [x] REST: `GET /api/savegame` (active users); admin `POST /api/settings/game-api/test`; extend `GET`/`PUT /api/settings` with game API fields (token write-only on GET)
+- [x] Discord `/savegame` — DM file (≤25 MiB) or dashboard link; `savegame` command group in role mappings
+- [x] Web: download card on `/connection`; admin fields on Settings → Connection (game API host/port/token + test)
+- [x] i18n: `connection.savegame.*`, `settings.connection.gameApi.*` in `messages/en.json`
+- [x] Spec §1.2 exception, §6 endpoints, §8.1 `/connection`, §9 env vars; `.env.example`, guide, orchestrator scope block
+
+**DoD:** Mocked or live API test passes; active user downloads valid `.sav` from web and Discord; inactive user denied; rate limit returns 429; admin can configure/test API token; no write Dedicated Server API calls; `go test ./internal/savegame/...` + frontend lint/build pass.
+
+---
+
 ## M14 — Deferred Backlog
 
 Per **spec §10** — not v1:

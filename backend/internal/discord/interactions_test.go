@@ -110,6 +110,7 @@ func TestCanRunCommand_PendingApprovalBlocked(t *testing.T) {
 		discord.CommandGroupPlayer,
 		discord.CommandGroupConnection,
 		discord.CommandGroupMods,
+		discord.CommandGroupSavegame,
 	} {
 		if discord.CanRunCommand(perms, group, discord.LinkStatePendingApproval) {
 			t.Fatalf("pending approval user should not run %q commands", group)
@@ -221,6 +222,7 @@ func TestCanRunCommand_LinkedUserWithoutDiscordRoleMapping(t *testing.T) {
 		discord.CommandGroupPlayer,
 		discord.CommandGroupConnection,
 		discord.CommandGroupMods,
+		discord.CommandGroupSavegame,
 	} {
 		if !discord.CanRunCommand(perms, group, discord.LinkStateActiveLinked) {
 			t.Fatalf("linked user should run %q without Discord role mapping", group)

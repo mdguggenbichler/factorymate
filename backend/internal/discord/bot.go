@@ -13,6 +13,7 @@ import (
 	"factorymate/internal/connection"
 	"factorymate/internal/mods"
 	"factorymate/internal/registration"
+	"factorymate/internal/savegame"
 
 	"github.com/bwmarrin/discordgo"
 )
@@ -41,10 +42,11 @@ type Bot struct {
 	registration *registration.Service
 	connection   *connection.Service
 	mods         *mods.Service
+	savegame     *savegame.Service
 }
 
 // NewBot constructs a bot from env. token may be empty (soft dependency).
-func NewBot(db *sql.DB, regSvc *registration.Service, connSvc *connection.Service, modsSvc *mods.Service) (*Bot, error) {
+func NewBot(db *sql.DB, regSvc *registration.Service, connSvc *connection.Service, modsSvc *mods.Service, savegameSvc *savegame.Service) (*Bot, error) {
 	token := strings.TrimSpace(os.Getenv("DISCORD_BOT_TOKEN"))
 	return &Bot{
 		db:           db,
@@ -52,6 +54,7 @@ func NewBot(db *sql.DB, regSvc *registration.Service, connSvc *connection.Servic
 		registration: regSvc,
 		connection:   connSvc,
 		mods:         modsSvc,
+		savegame:     savegameSvc,
 	}, nil
 }
 

@@ -50,6 +50,8 @@ func (h *Handler) Mount(r chi.Router) {
 			r.Get("/mods", h.GetMods)
 			r.Get("/mods/smmprofile", h.GetModsSMMProfile)
 			r.Get("/connection-details", h.GetConnectionDetails)
+			r.Get("/savegame/status", h.GetSavegameStatus)
+			r.Get("/savegame", h.GetSavegame)
 
 			r.Get("/planner/catalog", h.GetPlannerCatalog)
 			r.Get("/planner/icons/{className}", h.GetPlannerIcon)
@@ -98,6 +100,7 @@ func (h *Handler) Mount(r chi.Router) {
 				r.Get("/settings/notification-defaults", h.GetNotificationDefaults)
 				r.Put("/settings/notification-defaults", h.PutNotificationDefaults)
 				r.Post("/settings/frm/test", h.TestFRMConnection)
+				r.Post("/settings/game-api/test", h.TestGameAPIConnection)
 				r.Get("/users", h.ListUsers)
 				r.Put("/users/{id}", h.UpdateUser)
 				r.Delete("/users/{id}", h.DeleteUser)

@@ -31,10 +31,13 @@ Game join details separate from FRM monitoring:
 - Join host and port
 - Optional client password
 - SMM profile name for mod export
+- **Save download API** — host, port, and API token for downloading the latest autosave via the Dedicated Server HTTPS API (`DownloadSaveGame` only). Generate a token in the server console with `server.GenerateAPIToken`.
 
 When connection details change (here or via `/connection set`), all active linked players receive a DM.
 
-Viewers can read connection details on the dashboard; only admins can edit.
+Active users can download the latest autosave from the **Connection** dashboard page or Discord `/savegame` (rate-limited to once per five minutes per user).
+
+Viewers can read connection details on the dashboard; only admins can edit API settings.
 
 ## Settings → Notifications
 
@@ -72,6 +75,7 @@ Per-type toggles for personal Discord DMs (independent of guild-channel posts). 
 | Power | `/power` | All authenticated users |
 | Production | `/production` | All authenticated users |
 | Mods | `/mods` | All authenticated users |
+| Connection | `/connection` | All active users (join details + save download) |
 | Milestones, research, vehicles, etc. | Various | All authenticated users |
 
 ## Roles

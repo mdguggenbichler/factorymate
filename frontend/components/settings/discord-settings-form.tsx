@@ -44,6 +44,7 @@ const COMMAND_GROUPS = [
   "player",
   "connection",
   "mods",
+  "savegame",
 ] as const
 
 function defaultRoleMappings(guildId: string): RoleMappingsConfig {
@@ -401,7 +402,7 @@ export function DiscordSettingsForm({
                     {
                       discord_role_id: "",
                       fm_role: "viewer",
-                      bot_commands: ["register", "player", "connection", "mods"],
+                      bot_commands: ["register", "player", "connection", "mods", "savegame"],
                     },
                   ],
                 }))

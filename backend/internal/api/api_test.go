@@ -23,6 +23,7 @@ import (
 	"factorymate/internal/notify"
 	"factorymate/internal/planner"
 	"factorymate/internal/registration"
+	"factorymate/internal/savegame"
 )
 
 func TestHealthz(t *testing.T) {
@@ -1324,7 +1325,7 @@ func newTestHandler(database *sql.DB, svc *auth.Service, regSvc *registration.Se
 	if err != nil {
 		panic(err)
 	}
-	return api.NewHandlerWithDiscordSession(database, svc, regSvc, connSvc, modsSvc, plannerCat, plannerCfg, session)
+	return api.NewHandlerWithDiscordSession(database, svc, regSvc, connSvc, modsSvc, savegame.NewService(database), plannerCat, plannerCfg, session)
 }
 
 func newMockFRMServer(t *testing.T, responses map[string][]byte) *httptest.Server {

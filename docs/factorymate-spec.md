@@ -25,7 +25,7 @@ It replaces an earlier n8n-based polling workflow with a single self-contained G
 
 - No support for multiple concurrent Satisfactory servers (single FRM endpoint per deployment).
 - No mobile app / push notifications outside of chat-style notification providers.
-- No write-access to the game (no remote admin actions against the Dedicated Server API in v1).
+- No write-access to the game (no remote admin actions against the Dedicated Server API in v1), **except** read-only `DownloadSaveGame` via the Dedicated Server HTTPS API for active users (M22 — web `/connection` download and Discord `/savegame`).
 - No fine-grained per-user permission system — all logged-in users see the same dashboard; only distinction is "admin" (can edit settings/templates/targets) vs. "viewer" (read-only dashboard).
 - No multi-tenancy — this is a single-group, single-save deployment.
 - No in-app UI language switcher in v1 — i18n infrastructure ships with English only (§8.2); additional locale files are a post-MVP addition (§10).
@@ -555,8 +555,21 @@ CREATE TABLE app_settings (
     poll_interval_seconds INTEGER NOT NULL DEFAULT 20,
     production_snapshot_interval_seconds INTEGER NOT NULL DEFAULT 300,
     production_snapshot_retention_days INTEGER NOT NULL DEFAULT 30,
-    frm_recovery_grace_seconds INTEGER NOT NULL DEFAULT 60  -- wait after game TCP probe before resuming FRM (§4.2)
+    frm_recovery_grace_seconds INTEGER NOT NULL DEFAULT 60, -- wait after game TCP probe before resuming FRM (§4.2)
+    game_api_host TEXT NOT NULL DEFAULT '',               -- Dedicated Server HTTPS API host (M22 save download)
+    game_api_port INTEGER NOT NULL DEFAULT 7777,
+    game_api_token TEXT                                 -- API token from server.GenerateAPIToken; write-only in GET /api/settings
 );
+
+CREATE TABLE savegame_download_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL REFERENCES users(id),
+    channel TEXT NOT NULL,                              -- 'web' | 'discord'
+    save_name TEXT NOT NULL,
+    bytes INTEGER NOT NULL,
+    downloaded_at TEXT NOT NULL
+);
+CREATE INDEX idx_savegame_download_user_time ON savegame_download_log (user_id, downloaded_at);
 
 -- Factory planner persisted graphs (M20+)
 CREATE TABLE factory_plans (
@@ -1030,6 +1043,8 @@ All endpoints under `/api`, JSON in/out, session-cookie authenticated unless not
 | GET | `/api/mods` | session, active | Cached server mod list + `gameBuild`, `smlVersion`, `cachedAt`, `frmReachable` |
 | GET | `/api/mods/smmprofile` | session, active | Downloadable `.smmprofile` file |
 | GET | `/api/connection-details` | session, active | Game join details (`gameHost`, `gamePort`, `gamePassword`, `notes`, `smmProfileName`) |
+| GET | `/api/savegame/status` | session, active | `{ configured, activeSessionName?, latestSaveName?, saveDateTime? }` |
+| GET | `/api/savegame` | session, active | Latest autosave for the active session (`.sav` attachment); rate-limited 1/user/5min |
 | GET | `/api/elevator/unknown-log` | admin | Unresolved entries plus resolved entries from the last 30 days (`resolved_at` within window), max 50 rows total |
 | POST | `/api/elevator/unknown-log/:id/resolve` | admin | Mark a diagnostic entry as resolved (after correcting the reference table) |
 | GET | `/api/notification-targets` | admin | List targets |
@@ -1049,6 +1064,7 @@ All endpoints under `/api`, JSON in/out, session-cookie authenticated unless not
 | GET | `/api/settings/notification-defaults` | admin | Admin per-type DM defaults for new users plus catalog (see §7.1) |
 | PUT | `/api/settings/notification-defaults` | admin | Partial update of admin DM defaults for new users |
 | POST | `/api/settings/frm/test` | admin | `{ frmHost, frmPort, frmAuthToken? }` → `{ sessionName, reachable: true }` (preview only) |
+| POST | `/api/settings/game-api/test` | admin | `{ gameApiHost, gameApiPort, gameApiToken? }` → `{ activeSessionName, latestSaveName, reachable: true }` |
 | GET | `/api/users` | admin | List users (includes `status`, optional `playerId`/`playerName`) |
 | PUT | `/api/users/:id` | admin | Update user (`role?`, `password?`, `playerId?` — `null` clears mapping) |
 | DELETE | `/api/users/:id` | admin | Delete user (cannot delete last admin) |
@@ -1237,6 +1253,7 @@ JSON field names use **camelCase** in API responses; DB columns remain snake_cas
 | `PUT /api/settings` | subset of settings fields from `GET /api/settings` (excluding `serverName` — read-only, auto-synced) |
 | `PUT /api/settings/notification-defaults` | `{ "types"?: { "<message_type_key>": bool }, "dmPlayerPersonalDefault"?: bool }` — partial; omitted keys unchanged |
 | `POST /api/settings/frm/test` | `{ "frmHost", "frmPort", "frmAuthToken"? }` |
+| `POST /api/settings/game-api/test` | `{ "gameApiHost", "gameApiPort", "gameApiToken"? }` |
 | `POST /api/invites` | `{ "role": "admin" \| "viewer" }` |
 | `POST /api/auth/register/complete` | `{ "token", "username", "pendingPlayerName" }` — Discord OAuth registration after `/register` |
 | `POST /api/invites/:token/accept` | `{ "username", "password" }` |
@@ -1272,13 +1289,14 @@ JSON field names use **camelCase** in API responses; DB columns remain snake_cas
 | `/vehicles` | viewer, admin | Trains (derailed/pending-derail flags, self-driving status, current station) and wheeled vehicles (type, driver, fuel status, autopilot/route status) as two grouped tables | Tabs (Trains / Wheeled Vehicles), Table, Badge |
 | `/elevator` | viewer, admin | Current phase required-items progress bars, upgrade-ready indicator; admins additionally see an alert banner if `elevator_phase_unknown_log` has unresolved entries, with the raw mismatched data and a "mark resolved" action | Progress bars, card, admin-only alert |
 | `/mods` | viewer, admin (active users) | Full server mod list from FRM `getModList`; game build + SML header; disclaimer; download SMM profile; admin refresh | Table, cards, alert |
+| `/connection` | viewer, admin (active users) | Game join details; download latest autosave (Dedicated Server API) | Cards, download button |
 | `/settings/notifications/targets` | admin only | CRUD for Notification Targets (Discord channel picker), per-target "Send test" button; legacy webhook deprecation banner | Data table, dialog forms |
 | `/settings/notifications/defaults` | admin only | Admin per-type DM defaults for newly registered users (`dmPlayerPersonalDefault` included); two-layer copy + overlap hints | Form, switches |
 | `/settings/notifications/templates` | admin only | List of message types (17 keys including optional `connection_details_changed` and `connection_details`); selecting one opens the template editor (plain-text + embed fields, variable picker, live preview, target assignment checkboxes for that type, reset-to-default). Short callout that this page is the channel layer vs personal DMs. | Data table + detail panel, live preview card |
 | `/settings/notifications/log` | admin only | Recent sent notifications with success/failure status | Data table |
 | `/settings/general` | admin only | FRM host/port/token, poll interval, production snapshot interval/retention; server display name shown read-only (auto-fetched from FRM) | Form, test-connection button |
 | `/settings/discord` | admin only | Bot status, invite URL, guild ID, role mapping editor, auto-approve toggle | Form, table, badges |
-| `/settings/connection` | admin only | Game join details + SMM profile name | Form |
+| `/settings/connection` | admin only | Game join details, SMM profile name, save-download API host/port/token | Form |
 | `/settings/users` | admin only | User management: Discord-first onboarding copy, break-glass invites, pending approval queue, unmapped players panel, external identity columns, promote to admin, optional player mapping, edit/delete | Data table, dialog forms |
 | `/account` | viewer, admin | Change own password (when set); **Link Discord** when OAuth configured | Form, button |
 | `/account/notifications` | viewer, admin (active users) | Per-type DM checkboxes grouped by category, two-layer intro, overlap hints, personal player-event toggle | Form, switches |
@@ -1370,6 +1388,9 @@ Verifier checks for M11 edge cases — concrete acceptance beyond "renders real 
 | `SESSION_SECRET` | — (**required**) | Cookie signing secret — process refuses to start if unset |
 | `FRM_HOST` | `""` | Initial FRM host; seeded into `app_settings.frm_host` on first boot (editable via UI) |
 | `FRM_PORT` | `8080` | Initial FRM port; seeded into `app_settings.frm_port` |
+| `SATISFACTORY_SERVER_HOST` | `""` | Initial Dedicated Server HTTPS API host; seeded into `app_settings.game_api_host` on first boot |
+| `SATISFACTORY_SERVER_PORT` | `7777` | Initial game API port; seeded into `app_settings.game_api_port` |
+| `SATISFACTORY_SERVER_TOKEN` | `""` | Initial game API token; seeded into `app_settings.game_api_token` on first boot (editable via Settings → Connection) |
 | `NEXT_PUBLIC_API_URL` | `http://localhost:8080` | Frontend dev: direct backend URL. Production: omit (same-origin `/api` proxy) |
 | `DISCORD_BOT_TOKEN` | `""` | Discord bot gateway token (slash commands, channel posts, DMs) |
 | `DISCORD_CLIENT_SECRET` | `""` | Discord OAuth client secret (same application as bot). Required with `FACTORYMATE_PUBLIC_URL` for SSO |

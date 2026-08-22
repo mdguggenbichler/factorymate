@@ -179,6 +179,7 @@ func assertTables(t *testing.T, ctx context.Context, database *sql.DB) {
 		"research_node_state",
 		"resource_sink_snapshots",
 		"resource_sink_state",
+		"savegame_download_log",
 		"schema_migrations",
 		"schematic_state",
 		"server_state",

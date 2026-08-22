@@ -160,6 +160,12 @@ func (b *Bot) handleApplicationCommand(ctx context.Context, s *discordgo.Session
 		b.handleConnectionCommand(ctx, s, i, data, externalID, perms, state, user)
 	case "mods":
 		b.handleModsCommand(ctx, s, i, data, externalID, perms, state)
+	case "savegame":
+		if user == nil {
+			respondEphemeral(ctx, s, i, "You must be registered first.")
+			return
+		}
+		b.handleSavegameCommand(ctx, s, i, data, externalID, user.ID, perms, state)
 	case "registration":
 		if len(data.Options) == 0 || data.Options[0].Name != "auto-approve" {
 			respondEphemeral(ctx, s, i, "Unknown subcommand.")

@@ -1,9 +1,14 @@
 import { ConnectionDetailsView } from "@/components/connection/connection-details-view"
 import { serverApiFetch } from "@/lib/api-server"
-import type { ConnectionDetails } from "@/lib/api-types"
+import type { ConnectionDetails, SavegameStatus } from "@/lib/api-types"
 
 export default async function ConnectionPage() {
-  const details = await serverApiFetch<ConnectionDetails>("/connection-details")
+  const [details, savegameStatus] = await Promise.all([
+    serverApiFetch<ConnectionDetails>("/connection-details"),
+    serverApiFetch<SavegameStatus>("/savegame/status"),
+  ])
 
-  return <ConnectionDetailsView details={details} />
+  return (
+    <ConnectionDetailsView details={details} savegameStatus={savegameStatus} />
+  )
 }

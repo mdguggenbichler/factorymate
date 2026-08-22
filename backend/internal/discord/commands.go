@@ -136,6 +136,18 @@ func slashCommands() []*discordgo.ApplicationCommand {
 			},
 		},
 		{
+			Name:        "savegame",
+			Description: "Download the latest server savegame",
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Type:        discordgo.ApplicationCommandOptionBoolean,
+					Name:        "delivery",
+					Description: "Send to your DMs instead of ephemeral reply (default: true)",
+					Required:    false,
+				},
+			},
+		},
+		{
 			Name:        "help",
 			Description: "Quick start guide and command list",
 		},
