@@ -77,8 +77,13 @@ func main() {
 	}
 	log.Printf("planner catalog loaded: %d items, %d recipes", len(plannerCat.Items), len(plannerCat.Recipes))
 
-	go runPoller(ctx, database, phases, bot)
-	go runSlowPoller(ctx, database)
+	gate, err := poller.NewGate(database)
+	if err != nil {
+		log.Fatalf("poller gate: %v", err)
+	}
+
+	go runPoller(ctx, database, phases, bot, gate)
+	go runSlowPoller(ctx, database, gate)
 	go authSvc.StartCleanupJob(ctx)
 
 	port := os.Getenv("PORT")
@@ -109,9 +114,9 @@ func main() {
 	bot.Stop()
 }
 
-func runSlowPoller(ctx context.Context, database *sql.DB) {
+func runSlowPoller(ctx context.Context, database *sql.DB, gate *poller.Gate) {
 	fetcher := &settingsSlowFetcher{db: database}
-	sp := poller.NewSlowPoller(database, fetcher)
+	sp := poller.NewSlowPoller(database, fetcher, gate)
 	sp.Run(ctx)
 }
 
@@ -127,8 +132,9 @@ func (f *settingsSlowFetcher) GetSlow(ctx context.Context) frm.SlowPollResult {
 	return client.GetSlow(ctx)
 }
 
-func runPoller(ctx context.Context, database *sql.DB, phases *poller.ElevatorPhases, bot *discord.Bot) {
+func runPoller(ctx context.Context, database *sql.DB, phases *poller.ElevatorPhases, bot *discord.Bot, gate *poller.Gate) {
 	fetcher := &settingsFetcher{db: database}
+	sessionProber := &poller.SettingsSessionProber{DB: database}
 	provider := notify.NewDiscordProviderWithSessionFn(func() notify.DiscordSession {
 		if bot == nil {
 			return nil
@@ -151,7 +157,7 @@ func runPoller(ctx context.Context, database *sql.DB, phases *poller.ElevatorPha
 	onEvent := func(ctx context.Context, ev poller.Event) error {
 		return dispatcher.HandleEvent(ctx, ev.MessageTypeKey, ev.Variables)
 	}
-	p := poller.New(database, fetcher, phases, onEvent)
+	p := poller.New(database, fetcher, sessionProber, gate, phases, onEvent)
 	p.Run(ctx)
 }
 

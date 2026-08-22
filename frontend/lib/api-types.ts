@@ -3,8 +3,11 @@ export type PaginatedResponse<T> = {
   total: number
 }
 
+export type RecoveryPhase = "healthy" | "down" | "recovering"
+
 export type StatusResponse = {
   serverOnline: boolean
+  recoveryPhase: RecoveryPhase
   serverName: string
   onlinePlayerCount: number
   trippedCircuits: number[]
@@ -313,6 +316,7 @@ export type AppSettings = {
   pollIntervalSeconds: number
   productionSnapshotIntervalSeconds: number
   productionSnapshotRetentionDays: number
+  frmRecoveryGraceSeconds: number
 }
 
 export type DiscordTargetConfig = {

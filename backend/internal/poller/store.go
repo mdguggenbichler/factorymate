@@ -24,16 +24,19 @@ type appSettings struct {
 	PollIntervalSeconds               int
 	ProductionSnapshotIntervalSeconds int
 	ProductionSnapshotRetentionDays   int
+	FRMRecoveryGraceSeconds           int
 }
 
 func loadAppSettings(ctx context.Context, db *sql.DB) (appSettings, error) {
 	var s appSettings
 	err := db.QueryRowContext(ctx, `
 		SELECT server_name, frm_host, frm_port, frm_auth_token, poll_interval_seconds,
-			production_snapshot_interval_seconds, production_snapshot_retention_days
+			production_snapshot_interval_seconds, production_snapshot_retention_days,
+			frm_recovery_grace_seconds
 		FROM app_settings WHERE id = 1`,
 	).Scan(&s.ServerName, &s.FRMHost, &s.FRMPort, &s.FRMAuthToken, &s.PollIntervalSeconds,
-		&s.ProductionSnapshotIntervalSeconds, &s.ProductionSnapshotRetentionDays)
+		&s.ProductionSnapshotIntervalSeconds, &s.ProductionSnapshotRetentionDays,
+		&s.FRMRecoveryGraceSeconds)
 	if err != nil {
 		return s, fmt.Errorf("load app_settings: %w", err)
 	}
@@ -45,6 +48,9 @@ func loadAppSettings(ctx context.Context, db *sql.DB) (appSettings, error) {
 	}
 	if s.ProductionSnapshotRetentionDays <= 0 {
 		s.ProductionSnapshotRetentionDays = 30
+	}
+	if s.FRMRecoveryGraceSeconds <= 0 {
+		s.FRMRecoveryGraceSeconds = 60
 	}
 	return s, nil
 }
@@ -81,15 +87,16 @@ func syncSessionFromFRM(ctx context.Context, db *sql.DB, settings appSettings) (
 }
 
 type serverStateRow struct {
-	Exists       bool
-	ServerOnline sql.NullBool
+	Exists         bool
+	ServerOnline   sql.NullBool
+	RecoveryPhase  string
 }
 
 func loadServerState(ctx context.Context, db *sql.DB) (serverStateRow, error) {
 	var row serverStateRow
 	err := db.QueryRowContext(ctx, `
-		SELECT server_online FROM server_state WHERE id = 1`,
-	).Scan(&row.ServerOnline)
+		SELECT server_online, recovery_phase FROM server_state WHERE id = 1`,
+	).Scan(&row.ServerOnline, &row.RecoveryPhase)
 	if err == sql.ErrNoRows {
 		return row, nil
 	}
@@ -102,8 +109,8 @@ func loadServerState(ctx context.Context, db *sql.DB) (serverStateRow, error) {
 
 func upsertServerState(ctx context.Context, db *sql.DB, online bool, now time.Time) error {
 	_, err := db.ExecContext(ctx, `
-		INSERT INTO server_state (id, server_online, updated_at)
-		VALUES (1, ?, ?)
+		INSERT INTO server_state (id, server_online, updated_at, recovery_phase)
+		VALUES (1, ?, ?, 'healthy')
 		ON CONFLICT(id) DO UPDATE SET
 			server_online = excluded.server_online,
 			updated_at = excluded.updated_at`,
@@ -111,6 +118,21 @@ func upsertServerState(ctx context.Context, db *sql.DB, online bool, now time.Ti
 	)
 	if err != nil {
 		return fmt.Errorf("upsert server_state: %w", err)
+	}
+	return nil
+}
+
+func upsertRecoveryPhase(ctx context.Context, db *sql.DB, phase RecoveryPhase, now time.Time) error {
+	_, err := db.ExecContext(ctx, `
+		INSERT INTO server_state (id, server_online, updated_at, recovery_phase)
+		VALUES (1, 0, ?, ?)
+		ON CONFLICT(id) DO UPDATE SET
+			recovery_phase = excluded.recovery_phase,
+			updated_at = excluded.updated_at`,
+		now.UTC().Format(time.RFC3339), string(phase),
+	)
+	if err != nil {
+		return fmt.Errorf("upsert recovery_phase: %w", err)
 	}
 	return nil
 }

@@ -18,14 +18,16 @@ type SlowFetcher interface {
 type SlowPoller struct {
 	DB      *sql.DB
 	Fetcher SlowFetcher
+	Gate    *Gate
 	Logger  *log.Logger
 }
 
 // NewSlowPoller creates a SlowPoller.
-func NewSlowPoller(db *sql.DB, fetcher SlowFetcher) *SlowPoller {
+func NewSlowPoller(db *sql.DB, fetcher SlowFetcher, gate *Gate) *SlowPoller {
 	return &SlowPoller{
 		DB:      db,
 		Fetcher: fetcher,
+		Gate:    gate,
 		Logger:  log.Default(),
 	}
 }
@@ -65,6 +67,9 @@ func (p *SlowPoller) snapshotInterval(ctx context.Context) (time.Duration, error
 
 // Poll runs a single slow-poll cycle.
 func (p *SlowPoller) Poll(ctx context.Context) error {
+	if p.Gate != nil && !p.Gate.AllowFRMPoll() {
+		return nil
+	}
 	result := p.Fetcher.GetSlow(ctx)
 	engine := &SlowEngine{DB: p.DB, Logger: p.Logger}
 	return engine.PollOnce(ctx, result, time.Now().UTC())

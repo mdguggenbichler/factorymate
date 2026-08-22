@@ -32,6 +32,7 @@
     "serverStatus": "Server status",
     "serverOnline": "Online",
     "serverOffline": "Offline",
+    "serverRecovering": "Recovering",
     "playersOnline": "Players online",
     "fuseTrips": "Power circuits",
     "trippedCount": "{count, plural, one {# tripped} other {# tripped}}",
@@ -492,6 +493,8 @@
       "connectionOk": "Connection successful.",
       "connectionFailed": "Could not reach the FRM server.",
       "pollIntervalSeconds": "Fast poll interval (seconds)",
+      "frmRecoveryGraceSeconds": "FRM recovery grace (seconds)",
+      "frmRecoveryGraceSecondsHint": "After the game server port is reachable again, wait this long before resuming FRM polling.",
       "productionSnapshotIntervalSeconds": "Production snapshot interval (seconds)",
       "productionSnapshotRetentionDays": "Snapshot retention (days)",
       "saved": "Settings saved."

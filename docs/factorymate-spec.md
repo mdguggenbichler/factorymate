@@ -343,7 +343,8 @@ CREATE TABLE elevator_phase_unknown_log (
 CREATE TABLE server_state (
     id INTEGER PRIMARY KEY CHECK (id = 1),
     server_online BOOLEAN,
-    updated_at TEXT NOT NULL
+    updated_at TEXT NOT NULL,
+    recovery_phase TEXT NOT NULL DEFAULT 'healthy'  -- healthy | down | recovering (§4.2 safe reconnect)
 );
 
 CREATE TABLE player_state (
@@ -553,7 +554,8 @@ CREATE TABLE app_settings (
     frm_auth_token TEXT,                -- optional; sent as X-FRM-Authorization when set (see §4.1)
     poll_interval_seconds INTEGER NOT NULL DEFAULT 20,
     production_snapshot_interval_seconds INTEGER NOT NULL DEFAULT 300,
-    production_snapshot_retention_days INTEGER NOT NULL DEFAULT 30
+    production_snapshot_retention_days INTEGER NOT NULL DEFAULT 30,
+    frm_recovery_grace_seconds INTEGER NOT NULL DEFAULT 60  -- wait after game TCP probe before resuming FRM (§4.2)
 );
 
 -- Factory planner persisted graphs (M20+)
@@ -769,6 +771,8 @@ On unreachable state, only the `server_offline` transition is evaluated; player/
 On startup, `DedupePlayerStateByName` merges any legacy duplicate `player_state` rows that share a name (see §4.1.1 player identity reconciliation).
 
 **`server_state` updates:** On every fast poll, upsert `server_state` row `id=1`. Emit `server_online` when previous poll was unreachable and current is reachable; emit `server_offline` when previous was reachable and current is unreachable. First successful poll when `server_online` IS NULL follows the First Observation rule above (set `true`, do not emit `server_online`).
+
+**FRM safe reconnect (poller gate):** When a fast poll is unreachable (connection refused, timeout, or any endpoint error), background FRM HTTP polling stops entirely until recovery completes. The poller enters `recovery_phase = down` and TCP-probes the game server using **Settings → Connection** `gameHost`/`gamePort` only (no fallback to `frm_host`). Probe interval is 5s (not user-configurable). When TCP connect succeeds, `recovery_phase = recovering` and the poller waits `app_settings.frm_recovery_grace_seconds` (default 60, editable in Settings → General) before resuming FRM — a successful TCP probe does **not** mean FRM is ready. After grace, a single `getSessionInfo` probe runs; on success the full fast poll resumes and `recovery_phase` returns to `healthy`. On `getSessionInfo` or full-poll failure, return to `down` without a second `server_offline` (already offline). Slow poll skips all FRM calls while `recovery_phase != healthy`. Admin-initiated FRM test (`POST /api/settings/frm/test`) and settings PUT validation are not gated. `GET /api/status` exposes `recoveryPhase` (`healthy` | `down` | `recovering`) alongside `serverOnline`. On FactoryMate startup, if `server_online = false`, the gate initializes in `down` to avoid an immediate FRM hit during an ongoing outage.
 
 ### 4.2.1 Event variable population
 
@@ -1092,6 +1096,7 @@ JSON field names use **camelCase** in API responses; DB columns remain snake_cas
 ```json
 {
   "serverOnline": true,
+  "recoveryPhase": "healthy",
   "serverName": "GuggiRaid Factory",
   "onlinePlayerCount": 3,
   "trippedCircuits": [1],

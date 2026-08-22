@@ -68,6 +68,7 @@ export function GeneralSettingsForm({ initialSettings }: GeneralSettingsFormProp
           productionSnapshotRetentionDays: Number(
             settings.productionSnapshotRetentionDays
           ),
+          frmRecoveryGraceSeconds: Number(settings.frmRecoveryGraceSeconds),
         }),
       })
       setSettings(updated)
@@ -184,6 +185,27 @@ export function GeneralSettingsForm({ initialSettings }: GeneralSettingsFormProp
                   }
                   required
                 />
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="frm-recovery-grace">
+                  {t("frmRecoveryGraceSeconds")}
+                </FieldLabel>
+                <Input
+                  id="frm-recovery-grace"
+                  type="number"
+                  min={1}
+                  value={settings.frmRecoveryGraceSeconds ?? 60}
+                  onChange={(event) =>
+                    setSettings((current) => ({
+                      ...current,
+                      frmRecoveryGraceSeconds: Number(event.target.value),
+                    }))
+                  }
+                  required
+                />
+                <p className="text-sm text-muted-foreground">
+                  {t("frmRecoveryGraceSecondsHint")}
+                </p>
               </Field>
               <Field>
                 <FieldLabel htmlFor="snapshot-interval">

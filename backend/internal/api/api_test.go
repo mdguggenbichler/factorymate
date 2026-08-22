@@ -76,6 +76,10 @@ func TestReadEndpoints(t *testing.T) {
 		if err := json.Unmarshal(body["serverOnline"], &serverOnline); err != nil || !serverOnline {
 			t.Fatalf("serverOnline = %v, want true", serverOnline)
 		}
+		var recoveryPhase string
+		if err := json.Unmarshal(body["recoveryPhase"], &recoveryPhase); err != nil || recoveryPhase != "healthy" {
+			t.Fatalf("recoveryPhase = %q, want healthy", recoveryPhase)
+		}
 		var serverName string
 		if err := json.Unmarshal(body["serverName"], &serverName); err != nil || serverName != "GuggiRaid Factory" {
 			t.Fatalf("serverName = %q, want GuggiRaid Factory", serverName)

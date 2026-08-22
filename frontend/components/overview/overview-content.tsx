@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { MilestoneUnlockMeta } from "@/components/overview/milestone-unlock-meta"
+import { ServerStatusBadge } from "@/components/overview/server-status-badge"
 import { ConnectionJoinCard } from "@/components/connection/connection-details-view"
 import { formatPercent } from "@/lib/format"
 import type { ConnectionDetails, StatusResponse } from "@/lib/api-types"
@@ -38,9 +39,11 @@ export async function OverviewContent({ status, connection }: OverviewContentPro
               {t("serverStatus")}
             </CardDescription>
             <CardTitle className="text-xl">
-              <Badge variant={status.serverOnline ? "default" : "destructive"}>
-                {status.serverOnline ? t("serverOnline") : t("serverOffline")}
-              </Badge>
+              <ServerStatusBadge
+                key={`${status.recoveryPhase}-${status.serverOnline}`}
+                initialPhase={status.recoveryPhase ?? "healthy"}
+                initialServerOnline={status.serverOnline}
+              />
             </CardTitle>
           </CardHeader>
         </Card>

@@ -82,6 +82,8 @@ docker compose logs -f factorymate
 
 If FRM is unreachable, the poller logs errors until settings are corrected. You may receive a `server_offline` Discord notification once configured.
 
+**Automatic recovery after restarts:** Configure **Settings → Connection** (game host and port). When the game server restarts, FactoryMate stops FRM HTTP polling, TCP-probes the game port, waits the configured grace period (Settings → General → FRM recovery grace), then resumes FRM polling. The overview dashboard shows **Offline** while down and **Recovering** during the grace window.
+
 ## FRM auth token
 
 If your FRM instance requires authentication, set the token in **Settings → General** (`frm_auth_token`). This is stored in the database, not in `.env`.

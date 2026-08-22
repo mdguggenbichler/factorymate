@@ -364,7 +364,7 @@ func TestDispatchWiredInPollLoop(t *testing.T) {
 		},
 	}
 
-	p := poller.New(database, fetcher, phases, func(ctx context.Context, ev poller.Event) error {
+	p := poller.New(database, fetcher, nil, nil, phases, func(ctx context.Context, ev poller.Event) error {
 		return dispatcher.HandleEvent(ctx, ev.MessageTypeKey, ev.Variables)
 	})
 

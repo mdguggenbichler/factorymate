@@ -103,6 +103,7 @@ type settingsResponse struct {
 	PollIntervalSeconds               int    `json:"pollIntervalSeconds"`
 	ProductionSnapshotIntervalSeconds int    `json:"productionSnapshotIntervalSeconds"`
 	ProductionSnapshotRetentionDays   int    `json:"productionSnapshotRetentionDays"`
+	FRMRecoveryGraceSeconds           int    `json:"frmRecoveryGraceSeconds"`
 }
 
 type updateUserRequest struct {
@@ -877,10 +878,12 @@ func (h *Handler) GetSettings(w http.ResponseWriter, r *http.Request) {
 	var authToken sql.NullString
 	err := h.db.QueryRowContext(r.Context(), `
 		SELECT server_name, frm_host, frm_port, frm_auth_token,
-			poll_interval_seconds, production_snapshot_interval_seconds, production_snapshot_retention_days
+			poll_interval_seconds, production_snapshot_interval_seconds, production_snapshot_retention_days,
+			frm_recovery_grace_seconds
 		FROM app_settings WHERE id = 1`,
 	).Scan(&s.ServerName, &s.FRMHost, &s.FRMPort, &authToken,
-		&s.PollIntervalSeconds, &s.ProductionSnapshotIntervalSeconds, &s.ProductionSnapshotRetentionDays)
+		&s.PollIntervalSeconds, &s.ProductionSnapshotIntervalSeconds, &s.ProductionSnapshotRetentionDays,
+		&s.FRMRecoveryGraceSeconds)
 	if err != nil {
 		writeError(w, r, http.StatusInternalServerError, "internal error")
 		return
@@ -922,8 +925,11 @@ func (h *Handler) UpdateSettings(w http.ResponseWriter, r *http.Request) {
 	if raw, ok := req["productionSnapshotRetentionDays"]; ok {
 		_ = json.Unmarshal(raw, &current.ProductionSnapshotRetentionDays)
 	}
+	if raw, ok := req["frmRecoveryGraceSeconds"]; ok {
+		_ = json.Unmarshal(raw, &current.FRMRecoveryGraceSeconds)
+	}
 
-	if current.PollIntervalSeconds <= 0 || current.ProductionSnapshotIntervalSeconds <= 0 || current.ProductionSnapshotRetentionDays <= 0 {
+	if current.PollIntervalSeconds <= 0 || current.ProductionSnapshotIntervalSeconds <= 0 || current.ProductionSnapshotRetentionDays <= 0 || current.FRMRecoveryGraceSeconds <= 0 {
 		writeError(w, r, http.StatusBadRequest, "interval and retention values must be positive")
 		return
 	}
@@ -941,11 +947,11 @@ func (h *Handler) UpdateSettings(w http.ResponseWriter, r *http.Request) {
 		UPDATE app_settings SET
 			server_name = ?, frm_host = ?, frm_port = ?, frm_auth_token = ?,
 			poll_interval_seconds = ?, production_snapshot_interval_seconds = ?,
-			production_snapshot_retention_days = ?
+			production_snapshot_retention_days = ?, frm_recovery_grace_seconds = ?
 		WHERE id = 1`,
 		current.ServerName, current.FRMHost, current.FRMPort, nullIfEmpty(current.FRMAuthToken),
 		current.PollIntervalSeconds, current.ProductionSnapshotIntervalSeconds,
-		current.ProductionSnapshotRetentionDays,
+		current.ProductionSnapshotRetentionDays, current.FRMRecoveryGraceSeconds,
 	)
 	if err != nil {
 		writeError(w, r, http.StatusInternalServerError, "internal error")
@@ -959,10 +965,12 @@ func (h *Handler) getSettingsRow(ctx context.Context) (settingsResponse, error) 
 	var authToken sql.NullString
 	err := h.db.QueryRowContext(ctx, `
 		SELECT server_name, frm_host, frm_port, frm_auth_token,
-			poll_interval_seconds, production_snapshot_interval_seconds, production_snapshot_retention_days
+			poll_interval_seconds, production_snapshot_interval_seconds, production_snapshot_retention_days,
+			frm_recovery_grace_seconds
 		FROM app_settings WHERE id = 1`,
 	).Scan(&s.ServerName, &s.FRMHost, &s.FRMPort, &authToken,
-		&s.PollIntervalSeconds, &s.ProductionSnapshotIntervalSeconds, &s.ProductionSnapshotRetentionDays)
+		&s.PollIntervalSeconds, &s.ProductionSnapshotIntervalSeconds, &s.ProductionSnapshotRetentionDays,
+		&s.FRMRecoveryGraceSeconds)
 	if err != nil {
 		return s, err
 	}

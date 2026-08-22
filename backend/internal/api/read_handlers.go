@@ -18,12 +18,13 @@ func (h *Handler) GetStatus(w http.ResponseWriter, r *http.Request) {
 
 	var serverOnline sql.NullBool
 	var serverName string
+	var recoveryPhase string
 	err := h.db.QueryRowContext(ctx, `
-		SELECT ss.server_online, a.server_name
+		SELECT ss.server_online, a.server_name, COALESCE(ss.recovery_phase, 'healthy')
 		FROM app_settings a
 		LEFT JOIN server_state ss ON ss.id = 1
 		WHERE a.id = 1`,
-	).Scan(&serverOnline, &serverName)
+	).Scan(&serverOnline, &serverName, &recoveryPhase)
 	if err != nil {
 		writeError(w, r, http.StatusInternalServerError, "internal error")
 		return
@@ -74,6 +75,7 @@ func (h *Handler) GetStatus(w http.ResponseWriter, r *http.Request) {
 
 	out := map[string]any{
 		"serverOnline":      serverOnline.Valid && serverOnline.Bool,
+		"recoveryPhase":   recoveryPhase,
 		"serverName":        serverName,
 		"onlinePlayerCount": onlineCount,
 		"trippedCircuits":   tripped,
